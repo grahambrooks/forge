@@ -1,0 +1,125 @@
+forge "Payment Platform" {
+  description "Architecture and delivery model for Payments"
+
+  model {
+    customer = person "Customer" {
+      description "End user making payments"
+    }
+
+    payments = system "Payment Service" {
+      description "Processes card and bank payments"
+      tags "core" "pci"
+
+      api = container "Payment API" {
+        technology "Rust / Actix"
+        description "REST + gRPC gateway"
+      }
+
+      processor = container "Payment Processor" {
+        technology "Rust"
+        description "Core payment processing logic"
+      }
+
+      notifier = container "Notification Service" {
+        technology "Go"
+        description "Sends email and SMS receipts"
+      }
+
+      db = container "Ledger DB" {
+        technology "PostgreSQL 16"
+        tags "database"
+      }
+
+      cache = container "Session Cache" {
+        technology "Redis"
+        tags "database"
+      }
+
+      api -> processor "delegates to" "gRPC"
+      api -> cache "reads sessions" "Redis protocol"
+      processor -> db "reads/writes" "SQL"
+      processor -> notifier "sends receipt" "async message"
+    }
+
+    customer -> payments.api "makes payments" "HTTPS"
+  }
+
+  process {
+    repo = repository "payments-api" {
+      url "https://github.com/acme/payments-api"
+      system payments
+    }
+
+    strategy "trunk-based" {
+      trunk = branch "main" {
+        protection "require-review" "require-ci"
+      }
+      feature = branch "feature/*" {
+        branchesFrom trunk
+        mergesInto trunk
+      }
+    }
+
+    pipeline "payments-ci" {
+      triggers repo.main on "push"
+
+      build = stage "Build & Test" {
+        step "cargo build --release"
+        step "cargo test"
+      }
+
+      security = stage "Security Scan" {
+        needs build
+        step "trivy image payments-api:latest"
+        gate "no-critical-vulns"
+      }
+
+      staging = stage "Deploy Staging" {
+        needs security
+        environment staging
+        gate "integration-tests-pass"
+      }
+
+      prod = stage "Deploy Production" {
+        needs staging
+        environment production
+        gate "manual-approval" {
+          approvers "platform-team"
+        }
+      }
+    }
+  }
+
+  views {
+    systemContext payments "SystemContext" {
+      include *
+      autoLayout lr
+      title "Payment Platform — System Context"
+    }
+
+    container payments "Containers" {
+      include *
+      autoLayout tb
+      title "Payment Platform — Containers"
+    }
+
+    pipelineView "payments-ci" "Pipeline" {
+      include *
+      autoLayout lr
+      title "Payment API — CI/CD Pipeline"
+    }
+  }
+
+  styles {
+    element "person" {
+      shape person
+      background "#08427B"
+      color "#ffffff"
+    }
+    element "container" {
+      shape roundedBox
+      background "#438DD5"
+      color "#ffffff"
+    }
+  }
+}

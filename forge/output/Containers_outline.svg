@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000.0 711.0" width="1000.0" height="711.0" class="forge-diagram">
+  <rect width="1000.0" height="711.0" fill="#ffffff" />
+  <defs>
+    <style>
+    .forge-diagram {
+      font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    }
+    .forge-title {
+      font-size: 20px; font-weight: 600; fill: #333; text-anchor: middle;
+    }
+
+    /* ── No drop shadow in outline mode ── */
+    .forge-shadow { filter: none; }
+
+    /* ── Element base ── */
+    .forge-element text { text-anchor: middle; }
+    .forge-label--name { font-size: 14px; font-weight: 600; }
+    .forge-label--desc { font-size: 11px; font-weight: 400; opacity: 0.7; }
+    .forge-label--tech { font-size: 11px; font-weight: 400; font-style: italic; opacity: 0.6; }
+    .forge-label--kind { font-size: 10px; font-weight: 400; opacity: 0.5; }
+
+    /* ── Person (outline) ── */
+    .forge-element--person .forge-person-head { fill: none; stroke: #08427B; stroke-width: 2; }
+    .forge-element--person .forge-person-body { fill: none; stroke: #08427B; stroke-width: 2; }
+    .forge-element--person rect { fill: none; stroke: #08427B; stroke-width: 2; rx: 8; ry: 8; }
+    .forge-element--person .forge-label--name { fill: #08427B; }
+    .forge-element--person .forge-label--desc { fill: #555; }
+    .forge-element--person .forge-label--kind { fill: #888; }
+
+    /* ── Software System (outline) ── */
+    .forge-element--system rect { fill: none; stroke: #1168BD; stroke-width: 2; rx: 8; ry: 8; }
+    .forge-element--system .forge-label--name { fill: #1168BD; }
+    .forge-element--system .forge-label--desc { fill: #555; }
+    .forge-element--system .forge-label--tech { fill: #777; }
+    .forge-element--system .forge-label--kind { fill: #888; }
+
+    /* ── Container (outline) ── */
+    .forge-element--container rect { fill: none; stroke: #438DD5; stroke-width: 2; rx: 8; ry: 8; }
+    .forge-element--container .forge-label--name { fill: #438DD5; }
+    .forge-element--container .forge-label--desc { fill: #555; }
+    .forge-element--container .forge-label--tech { fill: #777; }
+    .forge-element--container .forge-label--kind { fill: #888; }
+
+    /* ── Component (outline) ── */
+    .forge-element--component rect { fill: none; stroke: #6BA3D6; stroke-width: 2; rx: 8; ry: 8; }
+    .forge-element--component .forge-label--name { fill: #6BA3D6; }
+    .forge-element--component .forge-label--desc { fill: #555; }
+    .forge-element--component .forge-label--tech { fill: #777; }
+
+    /* ── Database cylinder (outline) ── */
+    .forge-element--database .forge-label--name { fill: #438DD5; }
+    .forge-element--database .forge-label--tech { fill: #777; }
+    .forge-element--database .forge-label--kind { fill: #888; }
+
+    /* ── Stage (outline) ── */
+    .forge-element--stage rect { fill: none; stroke: #9E9E9E; stroke-width: 2; rx: 6; ry: 6; }
+    .forge-element--stage .forge-label--name { fill: #333; }
+    .forge-element--stage .forge-label--desc { fill: #757575; }
+    .forge-element--stage .forge-label--tech { fill: #757575; }
+
+    /* ── Gate diamond (outline) ── */
+    .forge-element--gate polygon { fill: none; stroke: #E65100; stroke-width: 2; }
+    .forge-element--gate .forge-label--name { fill: #BF360C; font-size: 9px; }
+
+    /* ── Relationships ── */
+    .forge-relationship line { stroke: #707070; stroke-width: 1.5; }
+    .forge-relationship path { stroke: #707070; stroke-width: 1.5; fill: none; }
+    .forge-relationship--arrow { fill: #707070; }
+    .forge-label--rel { font-size: 11px; fill: #555; text-anchor: middle; }
+    .forge-label--rel-tech { font-size: 10px; fill: #888; font-style: italic; text-anchor: middle; }
+
+    /* ── Pipeline connectors ── */
+    .forge-connector line { stroke: #9E9E9E; stroke-width: 2.5; stroke-dasharray: 8,4; }
+    .forge-connector--arrow { fill: #9E9E9E; }
+
+    /* ── Legend ── */
+    .forge-legend rect.forge-legend-bg { fill: #fff; stroke: #ccc; stroke-width: 1; rx: 4; ry: 4; }
+    .forge-legend text { font-size: 10px; fill: #555; }
+    .forge-legend .forge-legend-title { font-size: 11px; font-weight: 600; fill: #333; }
+    .forge-legend rect.forge-legend-swatch { stroke-width: 2; rx: 2; ry: 2; }
+    </style>
+    <filter id="dropShadow" x="-4%" y="-4%" width="110%" height="114%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 8 5 L 0 9 z" fill="#707070"/></marker>
+    <marker id="arrow-pipe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 1 L 8 5 L 0 9 z" fill="#9E9E9E"/></marker>
+  </defs>
+  <text x="500" y="30" class="forge-title">Payment Platform — Containers</text>
+  <g class="forge-relationships">
+    <g class="forge-relationship" data-from="payments.api" data-to="payments.processor">
+      <line x1="300.0" y1="361.0" x2="380.0" y2="361.0" marker-end="url(#arrow)" />
+      <rect x="293" y="335" width="94" height="34" rx="4" ry="4" fill="#fff" fill-opacity="0.85" />
+      <text x="340.0" y="347.0" class="forge-label--rel">delegates to</text>
+      <text x="340.0" y="361.0" class="forge-label--rel-tech">[gRPC]</text>
+    </g>
+    <g class="forge-relationship" data-from="payments.api" data-to="payments.cache">
+      <line x1="281.1" y1="421.0" x2="398.9" y2="491.0" marker-end="url(#arrow)" />
+      <rect x="280" y="430" width="120" height="34" rx="4" ry="4" fill="#fff" fill-opacity="0.85" />
+      <text x="340.0" y="442.0" class="forge-label--rel">reads sessions</text>
+      <text x="340.0" y="456.0" class="forge-label--rel-tech">[Redis protocol]</text>
+    </g>
+    <g class="forge-relationship" data-from="payments.processor" data-to="payments.db">
+      <line x1="398.9" y1="421.0" x2="281.1" y2="491.0" marker-end="url(#arrow)" />
+      <rect x="293" y="430" width="94" height="34" rx="4" ry="4" fill="#fff" fill-opacity="0.85" />
+      <text x="340.0" y="442.0" class="forge-label--rel">reads/writes</text>
+      <text x="340.0" y="456.0" class="forge-label--rel-tech">[SQL]</text>
+    </g>
+    <g class="forge-relationship" data-from="payments.processor" data-to="payments.notifier">
+      <line x1="620.0" y1="361.0" x2="700.0" y2="361.0" marker-end="url(#arrow)" />
+      <rect x="603" y="335" width="114" height="34" rx="4" ry="4" fill="#fff" fill-opacity="0.85" />
+      <text x="660.0" y="347.0" class="forge-label--rel">sends receipt</text>
+      <text x="660.0" y="361.0" class="forge-label--rel-tech">[async message]</text>
+    </g>
+    <g class="forge-relationship" data-from="customer" data-to="payments.api">
+      <line x1="389.2" y1="210.0" x2="263.1" y2="301.0" marker-end="url(#arrow)" />
+      <rect x="273" y="230" width="107" height="34" rx="4" ry="4" fill="#fff" fill-opacity="0.85" />
+      <text x="326.1" y="241.5" class="forge-label--rel">makes payments</text>
+      <text x="326.1" y="255.5" class="forge-label--rel-tech">[HTTPS]</text>
+    </g>
+  </g>
+  <g class="forge-elements">
+    <g class="forge-element forge-element--person" data-id="customer">
+      <path d="M 388 210 Q 380 210 380 202 L 380 112 L 464 112 Q 464 94 500 94 Q 536 94 536 112 L 620 112 L 620 202 Q 620 210 612 210 Z" fill="none" stroke="#073B6F" stroke-width="2" />
+      <circle cx="500" cy="72" r="20" fill="none" stroke="#073B6F" stroke-width="2" />
+      <text x="500" y="132" class="forge-label--name">Customer</text>
+      <text x="500" y="148" class="forge-label--kind">[Person]</text>
+      <text x="500" y="164" class="forge-label--desc">End user making payments</text>
+    </g>
+    <g class="forge-element forge-element--container" data-id="payments.api">
+      <rect x="60" y="301" width="240" height="120" class="forge-shadow" />
+      <text x="180" y="343" class="forge-label--name">Payment API</text>
+      <text x="180" y="359" class="forge-label--kind">[Container]</text>
+      <text x="180" y="375" class="forge-label--desc">REST + gRPC gateway</text>
+      <text x="180" y="391" class="forge-label--tech">[Rust / Actix]</text>
+    </g>
+    <g class="forge-element forge-element--container" data-id="payments.processor">
+      <rect x="380" y="301" width="240" height="120" class="forge-shadow" />
+      <text x="500" y="343" class="forge-label--name">Payment Processor</text>
+      <text x="500" y="359" class="forge-label--kind">[Container]</text>
+      <text x="500" y="375" class="forge-label--desc">Core payment processing logic</text>
+      <text x="500" y="391" class="forge-label--tech">[Rust]</text>
+    </g>
+    <g class="forge-element forge-element--container" data-id="payments.notifier">
+      <rect x="700" y="301" width="240" height="120" class="forge-shadow" />
+      <text x="820" y="343" class="forge-label--name">Notification Service</text>
+      <text x="820" y="359" class="forge-label--kind">[Container]</text>
+      <text x="820" y="375" class="forge-label--desc">Sends email and SMS receipts</text>
+      <text x="820" y="391" class="forge-label--tech">[Go]</text>
+    </g>
+    <g class="forge-element forge-element--container forge-element--database" data-id="payments.db">
+      <path d="M 60 503 A 120 12 0 0 1 300 503 L 300 599 A 120 12 0 0 1 60 599 Z" fill="none" stroke="#3178B9" stroke-width="2" />
+      <path d="M 60 503 A 120 12 0 0 0 300 503" fill="none" stroke="#3178B9" stroke-width="2" />
+      <text x="180" y="547" class="forge-label--name">Ledger DB</text>
+      <text x="180" y="563" class="forge-label--tech">[PostgreSQL 16]</text>
+      <text x="180" y="579" class="forge-label--kind">[Database]</text>
+    </g>
+    <g class="forge-element forge-element--container forge-element--database" data-id="payments.cache">
+      <path d="M 380 503 A 120 12 0 0 1 620 503 L 620 599 A 120 12 0 0 1 380 599 Z" fill="none" stroke="#3178B9" stroke-width="2" />
+      <path d="M 380 503 A 120 12 0 0 0 620 503" fill="none" stroke="#3178B9" stroke-width="2" />
+      <text x="500" y="547" class="forge-label--name">Session Cache</text>
+      <text x="500" y="563" class="forge-label--tech">[Redis]</text>
+      <text x="500" y="579" class="forge-label--kind">[Database]</text>
+    </g>
+  </g>
+  <g class="forge-legend">
+    <rect class="forge-legend-bg" x="820" y="605" width="160" height="96" />
+    <text x="830" y="625" class="forge-legend-title">Legend</text>
+    <rect class="forge-legend-swatch" x="830" y="633" width="14" height="14" fill="none" stroke="#08427B" />
+    <text x="852" y="644">Person</text>
+    <rect class="forge-legend-swatch" x="830" y="653" width="14" height="14" fill="none" stroke="#438DD5" />
+    <text x="852" y="664">Container</text>
+    <rect class="forge-legend-swatch" x="830" y="673" width="14" height="14" fill="none" stroke="#438DD5" />
+    <text x="852" y="684">Database</text>
+  </g>
+</svg>
