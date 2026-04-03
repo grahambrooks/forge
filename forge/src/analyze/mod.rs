@@ -8,6 +8,7 @@ pub mod ci;
 pub mod code;
 pub mod docker;
 pub mod emit;
+pub mod git;
 
 use std::path::{Path, PathBuf};
 
@@ -28,7 +29,7 @@ impl Default for AnalyzeConfig {
     fn default() -> Self {
         Self {
             paths: vec![PathBuf::from(".")],
-            scanners: vec!["code".into(), "ci".into(), "docker".into()],
+            scanners: vec!["code".into(), "ci".into(), "docker".into(), "git".into()],
             out: PathBuf::from("forge.forge"),
             dry_run: false,
             exclude: vec![
@@ -92,6 +93,7 @@ pub fn analyze(config: &AnalyzeConfig) -> Model {
                 "code" => code::scan(&mut model, scan_path, config),
                 "ci" => ci::scan(&mut model, scan_path, config),
                 "docker" => docker::scan(&mut model, scan_path, config),
+                "git" => git::scan(&mut model, scan_path, config),
                 _ => {
                     eprintln!("  Warning: unknown scanner '{}'", scanner_name);
                 }

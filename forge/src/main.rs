@@ -6,6 +6,7 @@ mod diff;
 mod generate;
 mod layout;
 mod lsp;
+mod mcp;
 mod model;
 mod parser;
 mod preprocess;
@@ -149,6 +150,12 @@ enum Commands {
         /// Baseline .forge file for diff highlighting
         #[arg(long)]
         baseline: Option<PathBuf>,
+    },
+    /// Start the MCP server for AI agent integration (stdio)
+    Mcp {
+        /// Input .forge file
+        #[arg(long, default_value = "forge.forge")]
+        source: PathBuf,
     },
     /// Start the Language Server Protocol server (stdio)
     Lsp,
@@ -384,6 +391,9 @@ fn main() {
                 .build()
                 .expect("failed to create tokio runtime");
             rt.block_on(serve::run_serve(source, out, style, baseline, port));
+        }
+        Commands::Mcp { source } => {
+            mcp::run(source);
         }
         Commands::Lsp => {
             tokio::runtime::Builder::new_current_thread()

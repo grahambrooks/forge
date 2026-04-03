@@ -48,13 +48,13 @@ model-diagram/
 |---------|--------|-------------|
 | `forge build` | Working | Parse .forge → render SVGs (11 view types) |
 | `forge check` | Working | 8 built-in rules + custom `.forge-rules` |
-| `forge analyze` | Working | Scan codebases (code, CI, Docker) → .forge |
+| `forge analyze` | Working | Scan codebases (code, CI, Docker, git) → .forge |
 | `forge generate` | Working | Model → static documentation website |
 | `forge generate --baseline` | Working | Diff highlighting (green/amber) vs baseline |
 | `forge watch` | Working | Auto-rebuild on .forge/.md changes |
 | `forge serve` | Working | Live-reload preview server (SSE) |
 | `forge lsp` | Working | IDE integration (diagnostics, hover, completion, go-to-def) |
-| `forge mcp` | Not started | MCP server for AI agent access |
+| `forge mcp` | Working | MCP server for AI agent access (6 tools) |
 | `forge export` | Not started | JSON/YAML export (JSON exists inside generate) |
 | `forge import` | Not started | Import from PlantUML/Mermaid |
 
