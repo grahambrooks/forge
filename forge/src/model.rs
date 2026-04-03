@@ -124,3 +124,60 @@ impl Model {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_element_sets_parent_children() {
+        let mut model = Model::default();
+        let parent = Element::new("sys", ElementKind::System, "System");
+        model.add_element(parent);
+
+        let mut child = Element::new("sys.api", ElementKind::Container, "API");
+        child.parent = Some("sys".into());
+        model.add_element(child);
+
+        let parent = model.elements.get("sys").unwrap();
+        assert!(parent.children.contains(&"sys.api".to_string()));
+    }
+
+    #[test]
+    fn add_element_no_duplicate_children() {
+        let mut model = Model::default();
+        model.add_element(Element::new("sys", ElementKind::System, "System"));
+
+        let mut child = Element::new("sys.api", ElementKind::Container, "API");
+        child.parent = Some("sys".into());
+        model.add_element(child.clone());
+        model.add_element(child);
+
+        let parent = model.elements.get("sys").unwrap();
+        assert_eq!(parent.children.iter().filter(|c| c.as_str() == "sys.api").count(), 1);
+    }
+
+    #[test]
+    fn relationships_between_filters_correctly() {
+        let mut model = Model::default();
+        model.add_relationship(Relationship { frm: "a".into(), to: "b".into(), label: "1".into(), technology: None });
+        model.add_relationship(Relationship { frm: "a".into(), to: "c".into(), label: "2".into(), technology: None });
+        model.add_relationship(Relationship { frm: "c".into(), to: "d".into(), label: "3".into(), technology: None });
+
+        let ids: HashSet<String> = ["a", "b", "c"].iter().map(|s| s.to_string()).collect();
+        let between = model.relationships_between(&ids);
+        assert_eq!(between.len(), 2); // a->b and a->c
+    }
+
+    #[test]
+    fn relationships_involving_includes_partial() {
+        let mut model = Model::default();
+        model.add_relationship(Relationship { frm: "a".into(), to: "b".into(), label: "1".into(), technology: None });
+        model.add_relationship(Relationship { frm: "c".into(), to: "d".into(), label: "2".into(), technology: None });
+
+        let ids: HashSet<String> = ["a"].iter().map(|s| s.to_string()).collect();
+        let involving = model.relationships_involving(&ids);
+        assert_eq!(involving.len(), 1);
+        assert_eq!(involving[0].label, "1");
+    }
+}

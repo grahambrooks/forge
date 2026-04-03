@@ -777,3 +777,170 @@ fn esc(s: &str) -> String {
         .replace('"', "&quot;")
         .replace('\'', "&#x27;")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{layout, parser};
+
+    fn render_view(view_key: &str, style: &str) -> String {
+        let text = include_str!("../examples/payments.forge");
+        let model = parser::parse(text).unwrap();
+        let view = model.views.iter().find(|v| v.key == view_key).unwrap();
+        let lo = layout::compute_layout(&model, view);
+        render_svg(&lo, style)
+    }
+
+    #[test]
+    fn svg_is_valid_xml_structure() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.starts_with("<svg "));
+        assert!(svg.trim_end().ends_with("</svg>"));
+        assert!(svg.contains("xmlns=\"http://www.w3.org/2000/svg\""));
+    }
+
+    #[test]
+    fn svg_contains_title() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("Payment Platform"));
+        assert!(svg.contains("class=\"forge-title\""));
+    }
+
+    #[test]
+    fn svg_contains_element_groups() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("class=\"forge-elements\""));
+        assert!(svg.contains("class=\"forge-relationships\""));
+    }
+
+    #[test]
+    fn svg_contains_person_element() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("forge-element--person"));
+        assert!(svg.contains("Customer"));
+        assert!(svg.contains("[Person]"));
+    }
+
+    #[test]
+    fn svg_contains_system_element() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("forge-element--system"));
+        assert!(svg.contains("Payment Service"));
+    }
+
+    #[test]
+    fn svg_filled_has_drop_shadow() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("id=\"dropShadow\""));
+        assert!(svg.contains("filter: url(#dropShadow)"));
+    }
+
+    #[test]
+    fn svg_outline_disables_shadow() {
+        let svg = render_view("SystemContext", "outline");
+        assert!(svg.contains("filter: none"));
+    }
+
+    #[test]
+    fn svg_outline_uses_no_fill() {
+        let svg = render_view("SystemContext", "outline");
+        assert!(svg.contains("fill: none"));
+    }
+
+    #[test]
+    fn svg_contains_relationship_labels() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("forge-label--rel"));
+    }
+
+    #[test]
+    fn svg_containers_has_database_cylinder() {
+        let svg = render_view("Containers", "filled");
+        assert!(svg.contains("forge-element--database"));
+        assert!(svg.contains("ellipse")); // cylinder cap
+        assert!(svg.contains("[Database]"));
+    }
+
+    #[test]
+    fn svg_containers_outline_cylinder() {
+        let svg = render_view("Containers", "outline");
+        assert!(svg.contains("forge-element--database"));
+        // outline cylinder uses path arcs, not ellipse
+        assert!(svg.contains("<path d=\"M"));
+    }
+
+    #[test]
+    fn svg_containers_has_technology_labels() {
+        let svg = render_view("Containers", "filled");
+        assert!(svg.contains("[Rust / Actix]"));
+        assert!(svg.contains("[PostgreSQL 16]"));
+        assert!(svg.contains("[Redis]"));
+    }
+
+    #[test]
+    fn svg_pipeline_has_stages() {
+        let svg = render_view("Pipeline", "filled");
+        assert!(svg.contains("forge-element--stage"));
+        assert!(svg.contains("Build &amp; Test"));
+        assert!(svg.contains("Security Scan"));
+        assert!(svg.contains("Deploy Staging"));
+        assert!(svg.contains("Deploy Production"));
+    }
+
+    #[test]
+    fn svg_pipeline_has_gates() {
+        let svg = render_view("Pipeline", "filled");
+        assert!(svg.contains("forge-element--gate"));
+        assert!(svg.contains("<polygon")); // diamond shape
+    }
+
+    #[test]
+    fn svg_pipeline_has_connectors() {
+        let svg = render_view("Pipeline", "filled");
+        assert!(svg.contains("forge-connector"));
+        assert!(svg.contains("arrow-pipe"));
+    }
+
+    #[test]
+    fn svg_contains_legend() {
+        let svg = render_view("SystemContext", "filled");
+        assert!(svg.contains("forge-legend"));
+        assert!(svg.contains("Legend"));
+    }
+
+    #[test]
+    fn svg_legend_outline_swatches() {
+        let svg = render_view("SystemContext", "outline");
+        assert!(svg.contains("forge-legend-swatch"));
+        assert!(svg.contains(r#"fill="none""#));
+    }
+
+    #[test]
+    fn svg_has_white_background() {
+        let svg = render_view("Containers", "filled");
+        assert!(svg.contains(r##"fill="#ffffff""##));
+    }
+
+    #[test]
+    fn svg_has_arrowhead_markers() {
+        let svg = render_view("Containers", "filled");
+        assert!(svg.contains("id=\"arrow\""));
+        assert!(svg.contains("marker-end="));
+    }
+
+    #[test]
+    fn esc_html_entities() {
+        assert_eq!(esc("a<b>c&d\"e"), "a&lt;b&gt;c&amp;d&quot;e");
+    }
+
+    #[test]
+    fn all_three_views_render_both_styles() {
+        for key in &["SystemContext", "Containers", "Pipeline"] {
+            for style in &["filled", "outline"] {
+                let svg = render_view(key, style);
+                assert!(svg.contains("<svg "), "{key}/{style} missing svg tag");
+                assert!(svg.contains("</svg>"), "{key}/{style} missing closing svg");
+            }
+        }
+    }
+}

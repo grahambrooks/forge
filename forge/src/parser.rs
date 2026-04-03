@@ -756,3 +756,186 @@ pub fn parse(text: &str) -> Result<Model, ParseError> {
     let p = Parser::new(text);
     p.parse()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn payments_model() -> Model {
+        let text = include_str!("../examples/payments.forge");
+        parse(text).expect("payments.forge should parse")
+    }
+
+    #[test]
+    fn parse_model_name() {
+        let m = payments_model();
+        assert_eq!(m.name, "Payment Platform");
+    }
+
+    #[test]
+    fn parse_element_counts() {
+        let m = payments_model();
+        assert_eq!(m.elements.len(), 16);
+        assert_eq!(m.relationships.len(), 5);
+        assert_eq!(m.views.len(), 3);
+    }
+
+    #[test]
+    fn parse_person() {
+        let m = payments_model();
+        let cust = m.elements.get("customer").expect("customer element");
+        assert_eq!(cust.kind, ElementKind::Person);
+        assert_eq!(cust.name, "Customer");
+        assert_eq!(cust.description.as_deref(), Some("End user making payments"));
+        assert!(cust.parent.is_none());
+    }
+
+    #[test]
+    fn parse_system_with_children() {
+        let m = payments_model();
+        let sys = m.elements.get("payments").expect("payments system");
+        assert_eq!(sys.kind, ElementKind::System);
+        assert_eq!(sys.name, "Payment Service");
+        assert!(sys.tags.contains(&"core".to_string()));
+        assert!(sys.tags.contains(&"pci".to_string()));
+        assert!(!sys.children.is_empty());
+    }
+
+    #[test]
+    fn parse_container_technology() {
+        let m = payments_model();
+        let api = m.elements.get("payments.api").expect("api container");
+        assert_eq!(api.kind, ElementKind::Container);
+        assert_eq!(api.technology.as_deref(), Some("Rust / Actix"));
+        assert_eq!(api.parent.as_deref(), Some("payments"));
+    }
+
+    #[test]
+    fn parse_database_tags() {
+        let m = payments_model();
+        let db = m.elements.get("payments.db").expect("db container");
+        assert!(db.tags.contains(&"database".to_string()));
+        assert_eq!(db.technology.as_deref(), Some("PostgreSQL 16"));
+    }
+
+    #[test]
+    fn parse_relationships() {
+        let m = payments_model();
+        let api_to_proc = m.relationships.iter().find(|r| r.frm == "payments.api" && r.to == "payments.processor");
+        assert!(api_to_proc.is_some());
+        let rel = api_to_proc.unwrap();
+        assert_eq!(rel.label, "delegates to");
+        assert_eq!(rel.technology.as_deref(), Some("gRPC"));
+    }
+
+    #[test]
+    fn parse_cross_scope_relationship() {
+        let m = payments_model();
+        let cust_to_api = m.relationships.iter().find(|r| r.frm == "customer" && r.to == "payments.api");
+        assert!(cust_to_api.is_some());
+        assert_eq!(cust_to_api.unwrap().label, "makes payments");
+    }
+
+    #[test]
+    fn parse_pipeline() {
+        let m = payments_model();
+        let pipeline = m.elements.get("payments-ci").expect("pipeline element");
+        assert_eq!(pipeline.kind, ElementKind::Pipeline);
+    }
+
+    #[test]
+    fn parse_stages() {
+        let m = payments_model();
+        let stages: Vec<_> = m.elements.values().filter(|e| e.kind == ElementKind::Stage).collect();
+        assert_eq!(stages.len(), 4);
+        let build = m.elements.get("payments-ci.build").expect("build stage");
+        assert_eq!(build.name, "Build & Test");
+        assert_eq!(build.parent.as_deref(), Some("payments-ci"));
+    }
+
+    #[test]
+    fn parse_stage_links() {
+        let m = payments_model();
+        assert_eq!(m.stage_links.len(), 3);
+        assert!(m.stage_links.iter().any(|l| l.frm == "payments-ci.build" && l.to == "payments-ci.security"));
+    }
+
+    #[test]
+    fn parse_gates() {
+        let m = payments_model();
+        let gates: Vec<_> = m.elements.values().filter(|e| e.kind == ElementKind::Gate).collect();
+        assert_eq!(gates.len(), 3);
+        let manual = m.elements.get("payments-ci.prod.gate").expect("prod gate");
+        assert_eq!(manual.name, "manual-approval");
+        assert_eq!(manual.properties.get("approvers").map(|s| s.as_str()), Some("platform-team"));
+    }
+
+    #[test]
+    fn parse_views() {
+        let m = payments_model();
+        let sc = m.views.iter().find(|v| v.kind == ViewKind::SystemContext).unwrap();
+        assert_eq!(sc.key, "SystemContext");
+        assert_eq!(sc.auto_layout, AutoLayout::LeftRight);
+        assert!(sc.include_all);
+
+        let cont = m.views.iter().find(|v| v.kind == ViewKind::Container).unwrap();
+        assert_eq!(cont.key, "Containers");
+        assert_eq!(cont.auto_layout, AutoLayout::TopBottom);
+
+        let pipe = m.views.iter().find(|v| v.kind == ViewKind::PipelineView).unwrap();
+        assert_eq!(pipe.key, "Pipeline");
+        assert_eq!(pipe.scope.as_deref(), Some("payments-ci"));
+    }
+
+    #[test]
+    fn parse_view_titles() {
+        let m = payments_model();
+        let sc = m.views.iter().find(|v| v.key == "SystemContext").unwrap();
+        assert_eq!(sc.title.as_deref(), Some("Payment Platform — System Context"));
+    }
+
+    #[test]
+    fn parse_minimal() {
+        let m = parse(r#"forge "Tiny" { model {} views {} }"#).unwrap();
+        assert_eq!(m.name, "Tiny");
+        assert!(m.elements.is_empty());
+        assert!(m.views.is_empty());
+    }
+
+    #[test]
+    fn parse_error_missing_forge() {
+        let err = parse(r#"notforge "X" {}"#);
+        assert!(err.is_err());
+        assert!(err.unwrap_err().msg.contains("expected 'forge'"));
+    }
+
+    #[test]
+    fn parse_error_unterminated_string() {
+        let err = parse(r#"forge "oops"#);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn parse_comments_ignored() {
+        let m = parse(r#"
+            forge "Test" {
+                // this is a comment
+                model {
+                    // another comment
+                    a = person "Alice" {}
+                }
+                views {}
+            }
+        "#).unwrap();
+        assert_eq!(m.elements.len(), 1);
+    }
+
+    #[test]
+    fn parse_repository() {
+        let m = payments_model();
+        let repo = m.elements.get("repo").expect("repository element");
+        assert_eq!(repo.kind, ElementKind::Repository);
+        assert_eq!(repo.name, "payments-api");
+        assert!(repo.properties.contains_key("url"));
+    }
+}
