@@ -1,15 +1,13 @@
-/// Forge semantic model — a typed directed graph of elements and relationships.
+//! Forge semantic model — typed directed graph of elements and relationships.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ElementKind {
-    // Structure domain
     Person,
     System,
     Container,
     Component,
-    // Process domain
     Repository,
     Branch,
     Pipeline,
@@ -18,6 +16,19 @@ pub enum ElementKind {
     Gate,
     Step,
     Artifact,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewKind {
+    SystemContext,
+    Container,
+    PipelineView,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutoLayout {
+    TopBottom,
+    LeftRight,
 }
 
 #[derive(Debug, Clone)]
@@ -33,112 +44,83 @@ pub struct Element {
     pub children: Vec<String>,
 }
 
+impl Element {
+    pub fn new(id: impl Into<String>, kind: ElementKind, name: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            kind,
+            name: name.into(),
+            description: None,
+            technology: None,
+            tags: Vec::new(),
+            parent: None,
+            properties: HashMap::new(),
+            children: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Relationship {
-    pub from: String,
+    pub frm: String,
     pub to: String,
     pub label: String,
     pub technology: Option<String>,
 }
 
 #[derive(Debug, Clone)]
-pub enum ViewKind {
-    SystemContext,
-    Container,
-    PipelineView,
-}
-
-#[derive(Debug, Clone)]
-pub enum AutoLayout {
-    TopBottom,
-    LeftRight,
+pub struct StageLink {
+    pub frm: String,
+    pub to: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct View {
     pub kind: ViewKind,
-    pub scope: Option<String>, // element id the view is scoped to
     pub key: String,
+    pub scope: Option<String>,
     pub title: Option<String>,
     pub auto_layout: AutoLayout,
     pub include_all: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct StageLink {
-    pub from: String,
-    pub to: String,
-}
-
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Model {
     pub name: String,
     pub description: String,
     pub elements: HashMap<String, Element>,
     pub relationships: Vec<Relationship>,
     pub views: Vec<View>,
-    pub stage_links: Vec<StageLink>, // "needs" edges between pipeline stages
+    pub stage_links: Vec<StageLink>,
 }
 
 impl Model {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn add_element(&mut self, el: Element) {
-        let id = el.id.clone();
         if let Some(ref parent_id) = el.parent {
             if let Some(parent) = self.elements.get_mut(parent_id) {
-                parent.children.push(id.clone());
+                if !parent.children.contains(&el.id) {
+                    parent.children.push(el.id.clone());
+                }
             }
         }
-        self.elements.insert(id, el);
+        self.elements.insert(el.id.clone(), el);
     }
 
     pub fn add_relationship(&mut self, rel: Relationship) {
         self.relationships.push(rel);
     }
 
-    pub fn add_view(&mut self, view: View) {
-        self.views.push(view);
-    }
-
-    /// Get all children of an element that match a given kind.
-    pub fn children_of_kind(&self, parent_id: &str, kind: &ElementKind) -> Vec<&Element> {
-        self.elements
-            .values()
-            .filter(|e| e.parent.as_deref() == Some(parent_id) && e.kind == *kind)
-            .collect()
-    }
-
-    /// Get all relationships where `from` or `to` match any of the given ids.
-    pub fn relationships_involving(&self, ids: &[&str]) -> Vec<&Relationship> {
+    pub fn relationships_between(&self, ids: &HashSet<String>) -> Vec<&Relationship> {
         self.relationships
             .iter()
-            .filter(|r| ids.contains(&r.from.as_str()) || ids.contains(&r.to.as_str()))
+            .filter(|r| ids.contains(&r.frm) && ids.contains(&r.to))
             .collect()
     }
 
-    /// Get relationships where both endpoints are in the given set.
-    pub fn relationships_between(&self, ids: &[&str]) -> Vec<&Relationship> {
+    pub fn relationships_involving(&self, ids: &HashSet<String>) -> Vec<&Relationship> {
         self.relationships
             .iter()
-            .filter(|r| ids.contains(&r.from.as_str()) && ids.contains(&r.to.as_str()))
+            .filter(|r| ids.contains(&r.frm) || ids.contains(&r.to))
             .collect()
-    }
-
-    /// Resolve a dotted identifier like "payments.api" to a full element id.
-    pub fn resolve_id(&self, dotted: &str) -> Option<String> {
-        // Direct match first
-        if self.elements.contains_key(dotted) {
-            return Some(dotted.to_string());
-        }
-        // Try as a dotted child reference: "parent.child"
-        if let Some((_parent, _child)) = dotted.split_once('.') {
-            if self.elements.contains_key(dotted) {
-                return Some(dotted.to_string());
-            }
-        }
-        None
     }
 }

@@ -1,0 +1,22 @@
+# Rust
+target/
+**/*.rs.bk
+
+# macOS
+.DS_Store
+
+# Python (legacy prototype)
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Generated output
+forge/output/

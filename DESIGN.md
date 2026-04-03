@@ -10,8 +10,9 @@ Forge is a text-based modeling language and toolchain for describing the *struct
 2. **Process is a first-class citizen.** Git-flow, trunk-based development, release trains, CI/CD pipelines, and incident runbooks live alongside containers and components.
 3. **SVG-native, CSS-styled.** All output is clean SVG with well-named CSS classes, so users can theme diagrams with their own stylesheets.
 4. **Embeddable everywhere.** Output works inline in Markdown, Hugo, MkDocs, Docusaurus, and any static-site generator.
-5. **Fast and dependency-light.** Core engine in Rust; optional Go helper for site-generator plugins. Zero runtime JavaScript required for rendered output.
-6. **AI-augmentable.** The model format is designed to be both human-writable and machine-generatable from source code, git history, and CI config.
+5. **Single binary, zero dependencies.** The entire toolchain — parser, renderer, analyzer, doc generator, linter, and MCP server — ships as one statically-linked Rust binary. No JVM, no Node, no Python runtime required.
+6. **AI-augmentable.** The model format is designed to be both human-writable and machine-generatable from source code, git history, and CI config. Forge exposes its capabilities as an MCP server so AI agents can query, build, and lint models programmatically.
+7. **Living documentation.** `forge analyze` extracts models from real code; `forge generate` publishes them as a browsable static site; `forge generate --diff` highlights what changed. Architecture documentation stays in sync with the codebase.
 
 ---
 
@@ -725,76 +726,103 @@ forge build --animate webm      # Render as WebM video
 
 ## 4. Architecture
 
-### 4.1 Component Overview
+### 4.1 Single Binary Design
+
+Forge ships as a single statically-linked Rust binary (`forge`) containing every capability. No language runtimes, no external dependencies, no plugins to install. Copy the binary to your PATH and you have the full toolchain.
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   forge (CLI)                    │
-│                                                  │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │
-│  │  Parser   │  │  Model   │  │   Renderer    │  │
-│  │ (pest/   │─▶│  Graph   │─▶│  (SVG writer) │  │
-│  │  nom)    │  │          │  │               │  │
-│  └──────────┘  └──────────┘  └───────────────┘  │
-│                      │              │            │
-│                      ▼              ▼            │
-│               ┌──────────┐  ┌───────────────┐   │
-│               │ Validator │  │ Layout Engine │   │
-│               └──────────┘  └───────────────┘   │
-│                                     │            │
-│                              ┌──────────────┐   │
-│                              │  CSS Theming  │   │
-│                              └──────────────┘   │
-└─────────────────────────────────────────────────┘
-        │              │              │
-        ▼              ▼              ▼
-   .forge files    model.json     *.svg output
-                   (intermediate)
+┌──────────────────────────────────────────────────────────────────┐
+│                       forge (single Rust binary)                 │
+│                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────────┐  │
+│  │  Parser   │  │  Model   │  │ Analyzer  │  │   Renderer     │  │
+│  │ (pest/   │─▶│  Graph   │◀─│ (code,git │  │  (SVG writer)  │  │
+│  │  nom)    │  │          │  │  CI,k8s)  │  │               │  │
+│  └──────────┘  └──────────┘  └──────────┘  └────────────────┘  │
+│                      │              │              │              │
+│                      ▼              ▼              ▼              │
+│               ┌──────────┐  ┌───────────┐  ┌───────────────┐    │
+│               │  Checker  │  │  Layout   │  │  Site Gen     │    │
+│               │ (linter)  │  │  Engine   │  │ (HTML/static) │    │
+│               └──────────┘  └───────────┘  └───────────────┘    │
+│                                     │              │              │
+│                              ┌──────────────┐ ┌──────────┐      │
+│                              │  CSS Theming  │ │ MCP Srvr │      │
+│                              └──────────────┘ └──────────┘      │
+└──────────────────────────────────────────────────────────────────┘
+        │              │              │              │
+        ▼              ▼              ▼              ▼
+   .forge files   model.json     *.svg output   _site/ (static)
 ```
 
-### 4.2 Module Breakdown
+### 4.2 Crate / Module Breakdown
 
-| Module            | Language | Responsibility                                                  |
-|-------------------|----------|-----------------------------------------------------------------|
-| `forge-parser`    | Rust     | PEG/packrat parser (pest) for `.forge` files → AST; handles `!include`, `!extends`, `!fragment`, `!use`, `!if`, globs, and cycle detection |
-| `forge-model`     | Rust     | Semantic graph: nodes, edges, properties, validation, queries   |
-| `forge-layout`    | Rust     | Auto-layout algorithms — layered (Sugiyama), force-directed, grid |
-| `forge-render`    | Rust     | Model → SVG with CSS class annotations; animation frame generation (CSS keyframes, SMIL, GIF/WebM export) |
-| `forge-cli`       | Rust     | CLI entry point: `forge build`, `forge watch`, `forge export`   |
-| `forge-lsp`       | Rust     | Language Server Protocol for editor integration                 |
-| `forge-ai`        | Rust/Python | AI bridge: scan source code, git log, CI config → `.forge`   |
-| `forge-plugin-hugo`   | Go   | Hugo shortcode / render-hook plugin                            |
-| `forge-plugin-mkdocs` | Python | MkDocs plugin (thin wrapper calling forge CLI)              |
+All modules compile into one binary via Cargo workspace with a single `[[bin]]` target. Feature flags control optional heavyweight dependencies (e.g. `resvg` for PNG export, `tower` for MCP server).
+
+| Module            | Crate              | Responsibility                                                  |
+|-------------------|--------------------|-----------------------------------------------------------------|
+| `forge-parser`    | `forge-parser`     | PEG/packrat parser (pest) for `.forge` files → AST; handles `!include`, `!extends`, `!fragment`, `!use`, `!if`, globs, and cycle detection |
+| `forge-model`     | `forge-model`      | Semantic graph: nodes, edges, properties, validation, queries   |
+| `forge-analyze`   | `forge-analyze`    | Codebase scanners: Rust/Go/TS/Java source → components; git log → flow; GitHub Actions / GitLab CI → pipelines; Dockerfiles → containers; K8s manifests → deployment nodes; OpenAPI → API containers. All scanners produce `.forge` fragments or merge directly into a `Model` |
+| `forge-check`     | `forge-check`      | Architectural linter: rule engine with built-in and custom rules; detects cycles, orphaned elements, missing descriptions, overly-coupled components, security anti-patterns, naming violations |
+| `forge-layout`    | `forge-layout`     | Auto-layout algorithms — layered (Sugiyama), force-directed, grid, pipeline |
+| `forge-render`    | `forge-render`     | Model → SVG with CSS class annotations; animation frame generation (CSS keyframes, SMIL, GIF/WebM export); filled and outline rendering modes |
+| `forge-sitegen`   | `forge-sitegen`    | Static documentation site generator: model → multi-page HTML with navigation, search index, embedded SVGs, and architectural diff overlays |
+| `forge-diff`      | `forge-diff`       | Model differencing engine: compares two model snapshots (or git revisions) and produces a typed changeset (added/removed/modified elements and relationships) |
+| `forge-mcp`       | `forge-mcp`        | MCP (Model Context Protocol) server: exposes all Forge capabilities as tools for AI agents — query model, render views, run checks, analyze code, generate diffs |
+| `forge-cli`       | `forge-cli`        | CLI entry point: `forge build`, `forge analyze`, `forge generate`, `forge check`, `forge mcp`, `forge watch`, `forge export` |
+| `forge-lsp`       | `forge-lsp`        | Language Server Protocol for editor integration                 |
 
 ### 4.3 Data Flow
 
 ```
- Source Code ──┐
- Git History ──┤    ┌──────────┐    ┌───────────┐    ┌──────────┐
- CI Config  ───┼──▶ │ forge-ai │──▶ │  .forge   │──▶ │  Parser  │
- Manual Edit ──┘    └──────────┘    │  files    │    └────┬─────┘
-                                    └───────────┘         │
-                                                          ▼
-                                                   ┌──────────┐
-                                         ┌────────▶│  Model   │◀── validate
-                                         │         │  Graph   │
-                                         │         └────┬─────┘
-                                         │              │
-                                    ┌────┴────┐   ┌─────▼──────┐
-                                    │  JSON   │   │   Views    │
-                                    │ export  │   │ (filtered  │
-                                    └─────────┘   │  subgraphs)│
-                                                  └─────┬──────┘
-                                                        │
-                                                  ┌─────▼──────┐
-                                                  │   Layout   │
-                                                  │   Engine   │
-                                                  └─────┬──────┘
-                                                        │
-                                                  ┌─────▼──────┐
-                                                  │  SVG + CSS │──▶ embed in
-                                                  │  Render    │    Markdown
-                                                  └────────────┘
+                          ┌───────────────────────────────────────────────┐
+                          │            forge analyze                       │
+ Source Code ──┐          │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ │
+ Git History ──┤          │  │ code   │ │ git    │ │ CI     │ │ k8s/   │ │
+ CI Config  ───┼────────▶ │  │scanner │ │scanner │ │scanner │ │docker  │ │
+ K8s / Docker──┤          │  └───┬────┘ └───┬────┘ └───┬────┘ └───┬────┘ │
+ OpenAPI ──────┘          │      └──────────┴──────────┴──────────┘      │
+                          └──────────────────────┬────────────────────────┘
+                                                 │
+                                                 ▼
+ Manual Edit ──────────────────────────▶  ┌───────────┐
+                                          │  .forge   │
+                                          │  files    │
+                                          └─────┬─────┘
+                                                │
+                                          ┌─────▼─────┐
+                                          │  Parser   │
+                                          └─────┬─────┘
+                                                │
+                          ┌─────────────────────▼──────────────────────┐
+                          │              Model Graph                    │
+                          │                                            │
+                          │  ◄── forge check (lint rules)              │
+                          │  ◄── forge diff (compare revisions)        │
+                          └──┬────────────┬────────────┬───────────────┘
+                             │            │            │
+                        ┌────▼────┐ ┌─────▼──────┐ ┌──▼──────────┐
+                        │  JSON   │ │   Views    │ │  Site Gen   │
+                        │ export  │ │ (filtered  │ │  (forge     │
+                        └─────────┘ │  subgraphs)│ │  generate)  │
+                                    └─────┬──────┘ └──────┬──────┘
+                                          │               │
+                                    ┌─────▼──────┐  ┌─────▼──────┐
+                                    │   Layout   │  │  _site/    │
+                                    │   Engine   │  │  static    │
+                                    └─────┬──────┘  │  HTML docs │
+                                          │         └────────────┘
+                                    ┌─────▼──────┐
+                                    │  SVG + CSS │──▶ embed in Markdown
+                                    │  Render    │
+                                    └────────────┘
+                                          │
+                                    ┌─────▼──────┐
+                                    │  MCP Srvr  │──▶ AI agent access
+                                    │  (forge    │    (query, render,
+                                    │   mcp)     │     check, analyze)
+                                    └────────────┘
 ```
 
 ---
@@ -924,43 +952,57 @@ The plugin calls `forge build` at build time and injects inline SVG into the ren
 
 ---
 
-## 7. AI Model Generation
+## 7. AI Integration
 
-### 7.1 Source Scanners
+### 7.1 `forge analyze` as the AI Bridge
 
-Forge ships with pluggable scanners that produce `.forge` fragments:
+Rather than a separate `forge ai` command, Forge's AI capabilities are built into `forge analyze` and exposed via the MCP server (§8.6). The analyze command's scanners are deterministic (AST parsing, config parsing), but the results can be enriched by AI agents using the MCP tools.
 
-| Scanner              | Input                        | Output                          |
-|----------------------|------------------------------|---------------------------------|
-| `forge scan code`    | Source tree                  | Components, dependencies        |
-| `forge scan git`     | Git log + branch refs        | Flow definitions, branch strategy |
-| `forge scan ci`      | GitHub Actions / GitLab CI   | Pipeline and stage definitions  |
-| `forge scan k8s`     | Kubernetes manifests         | Deployment nodes, artifacts     |
-| `forge scan docker`  | Dockerfiles, Compose files   | Containers, networking          |
-| `forge scan openapi` | OpenAPI specs                | API containers, relationships   |
-
-### 7.2 AI Augmentation
+Typical AI-assisted workflow:
 
 ```bash
-# Use an LLM to infer high-level system descriptions from code
-forge ai describe --source ./src --model claude
+# 1. Deterministic scan produces a baseline model
+forge analyze --out baseline.forge ./src
 
-# Merge AI-generated fragments into an existing model
-forge ai merge --base architecture.forge --fragments ai-output/
+# 2. AI agent (via MCP) reviews the model and fills gaps
+#    e.g. "Describe the purpose of each container based on its code"
+#    The agent calls forge_query to list elements, reads source files,
+#    then calls forge_suggest_fix to propose description additions.
 
-# Interactive: AI proposes, human reviews
-forge ai suggest --watch
+# 3. Human reviews and confirms
+forge check --inferred    # shows all AI-inferred elements
 ```
 
-The AI layer operates on the intermediate JSON representation, so any LLM with structured output can participate. The `forge-ai` module provides:
+### 7.2 MCP-Powered AI Augmentation
 
-- Prompt templates tuned for architecture extraction
-- A diff/merge algorithm for `.forge` files
-- Confidence scores on inferred elements (rendered as dashed lines in views until confirmed)
+With the MCP server running, an AI agent can:
+
+- Query the model to understand current architecture
+- Analyze new codebases and propose model additions
+- Run checks and suggest fixes for violations
+- Generate diffs to explain what changed between releases
+- Render views to include in documentation or conversations
+
+The MCP interface makes Forge accessible to any AI agent that speaks MCP — Claude Code, Cursor, Windsurf, or custom agents built on the Agent SDK. See §8.6 for the full tool list.
+
+### 7.3 Confidence Scoring
+
+Elements inferred by `forge analyze` carry a confidence score (0.0–1.0). The score reflects how certain the scanner is about the element's existence and properties:
+
+| Confidence | Meaning                          | Visual Treatment               |
+|------------|----------------------------------|--------------------------------|
+| 1.0        | Explicit in source               | Normal rendering               |
+| 0.7–0.99   | High confidence inference        | Normal + `inferred` tag        |
+| 0.5–0.69   | Medium confidence                | Dashed border + `inferred` tag |
+| < 0.5      | Low confidence (filtered by default) | Not included unless `--confidence 0` |
+
+Run `forge check --inferred` to list all unconfirmed elements. Manually editing an inferred element in a `.forge` file removes the `inferred` tag and sets confidence to 1.0.
 
 ---
 
 ## 8. CLI Interface
+
+All commands are subcommands of the single `forge` binary.
 
 ```
 forge — A unified software modeling tool
@@ -969,32 +1011,325 @@ USAGE:
     forge <COMMAND> [OPTIONS]
 
 COMMANDS:
+    analyze     Scan codebases and generate a .forge model automatically
     build       Parse .forge files and render views to SVG
+    generate    Produce a static documentation website from a model
+    check       Lint and validate a model against architectural rules
     watch       Watch for changes and rebuild incrementally
-    validate    Check model consistency and completeness
     export      Export model as JSON, YAML, or Structurizr DSL
     import      Import from Structurizr DSL, PlantUML, or Mermaid
-    scan        Auto-detect architecture from source artifacts
-    ai          AI-assisted model generation and refinement
     serve       Start a local preview server with live reload
+    mcp         Start the MCP (Model Context Protocol) server
     lsp         Start the Language Server Protocol server
+```
 
-BUILD OPTIONS:
+### 8.1 `forge analyze`
+
+Scans one or more codebases and produces a `.forge` model describing everything found: source components, dependencies, git branching patterns, CI/CD pipelines, deployment topology, and API surfaces.
+
+```
+forge analyze [OPTIONS] [PATH...]
+
+ARGUMENTS:
+    [PATH...]              One or more directories to scan (default: .)
+
+OPTIONS:
+    --out <FILE>           Output .forge file (default: ./forge.forge)
+    --merge <FILE>         Merge results into an existing .forge model
+    --scanners <LIST>      Comma-separated scanner list (default: all)
+                           Available: code, git, ci, k8s, docker, openapi
+    --lang <LIST>          Limit code scanner to these languages
+                           Available: rust, go, typescript, java, python, csharp
+    --depth <N>            Max directory depth to scan (default: unlimited)
+    --exclude <GLOB>       Exclude paths matching glob (repeatable)
+    --confidence <FLOAT>   Min confidence threshold for inferred elements
+                           (default: 0.5, range 0.0–1.0)
+    --dry-run              Show what would be generated without writing
+
+SCANNERS:
+    code       Parses source files to discover components, modules, and
+               dependency relationships. Uses tree-sitter for language-
+               agnostic AST analysis. Detects import graphs, service
+               boundaries, and public API surfaces.
+
+    git        Reads git log and branch refs to infer branching strategy
+               (trunk-based, git-flow, github-flow), release patterns,
+               contributor activity, and code ownership.
+
+    ci         Parses CI/CD configuration files:
+               - GitHub Actions (.github/workflows/*.yml)
+               - GitLab CI (.gitlab-ci.yml)
+               - Jenkins (Jenkinsfile)
+               - CircleCI (.circleci/config.yml)
+               Produces pipeline, stage, and gate elements.
+
+    k8s        Parses Kubernetes manifests (Deployments, Services,
+               Ingresses, ConfigMaps) → deployment nodes, networking
+               relationships, and environment definitions.
+
+    docker     Parses Dockerfiles and docker-compose.yml →
+               container elements with technology tags, networking,
+               and volume relationships.
+
+    openapi    Parses OpenAPI/Swagger specs → API container elements
+               with endpoint descriptions and inter-service relationships.
+
+EXAMPLES:
+    forge analyze                                   # scan current dir, all scanners
+    forge analyze ./payments ./catalog              # scan multiple repos
+    forge analyze --scanners code,ci --lang rust    # only code + CI, Rust only
+    forge analyze --merge architecture.forge        # add to existing model
+    forge analyze --out payments.forge ./payments   # write to specific file
+```
+
+When scanning multiple directories, Forge treats each top-level path as a candidate software system and infers inter-system relationships from shared dependencies, API calls, and queue/topic references.
+
+Elements inferred with confidence below 1.0 are tagged `inferred` and render with a dashed border by default. Run `forge check --inferred` to list all unconfirmed elements.
+
+### 8.2 `forge build`
+
+```
+forge build [OPTIONS]
+
+OPTIONS:
     --source <FILE>        Input .forge file (default: ./forge.forge)
     --view <NAME>          Render a specific view (default: all)
     --format <FORMAT>      Output format: svg, svg-inline, png, pdf
-    --theme <FILE>         CSS theme file
+    --style <MODE>         Rendering style: filled (default) or outline
+    --theme <FILE>         CSS theme file to apply
     --out <DIR>            Output directory (default: ./forge-output/)
     --jobs <N>             Parallel rendering jobs (default: CPU count)
+    --animate <MODE>       Animation mode: css, smil, none, gif, webm
 
 EXAMPLES:
     forge build
     forge build --view SystemContext --format svg
-    forge watch --serve
-    forge scan code --source ./src --output arch-fragments/
-    forge ai describe --source ./src
-    forge export --format structurizr
-    forge import --from structurizr --input workspace.dsl
+    forge build --style outline --theme dark.css
+```
+
+### 8.3 `forge generate`
+
+Produces a complete static documentation website from a Forge model. The generated site includes navigable architecture diagrams, element detail pages, relationship maps, and an embedded search index. Ready to deploy to GitHub Pages, Netlify, S3, or any static host.
+
+```
+forge generate [OPTIONS]
+
+OPTIONS:
+    --source <FILE>        Input .forge file (default: ./forge.forge)
+    --out <DIR>            Output directory (default: ./_site/)
+    --title <STRING>       Site title (default: model name)
+    --base-url <URL>       Base URL for deployment (default: /)
+    --theme <FILE>         CSS theme file
+    --style <MODE>         Diagram rendering style: filled or outline
+    --template <DIR>       Custom HTML templates directory
+    --diff <REF>           Git ref or .forge file to diff against (see §8.4)
+    --no-search            Disable search index generation
+    --no-source            Don't embed .forge source in the site
+    --watch                Rebuild on file changes
+
+GENERATED SITE STRUCTURE:
+    _site/
+    ├── index.html              # Landing page with model overview
+    ├── views/
+    │   ├── SystemContext.html   # One page per view, with embedded SVG
+    │   ├── Containers.html
+    │   └── Pipeline.html
+    ├── elements/
+    │   ├── payments-api.html   # Detail page per element
+    │   ├── ledger-db.html      # Shows relationships, properties, tags
+    │   └── ...
+    ├── checks/
+    │   └── report.html         # Architectural check results (if issues found)
+    ├── diff/
+    │   └── index.html          # Architectural diff (if --diff was used)
+    ├── search-index.json       # Client-side search index
+    ├── assets/
+    │   ├── forge.css            # Default site styles
+    │   ├── forge.js             # Minimal JS (search, animation playback)
+    │   └── diagrams/            # Rendered SVGs
+    └── forge.json              # Machine-readable model export
+
+EXAMPLES:
+    forge generate                                        # default site
+    forge generate --out docs/_site --base-url /arch/     # for GitHub Pages
+    forge generate --diff HEAD~5                          # highlight recent changes
+    forge generate --diff v1.2.0                          # diff against tagged release
+    forge generate --template ./my-templates              # custom look & feel
+```
+
+### 8.4 Architectural Diff (`--diff`)
+
+The `--diff` flag computes the difference between the current model and a previous version, then overlays change indicators on every diagram and generates a dedicated diff report page.
+
+```
+forge generate --diff <REF>
+
+REF can be:
+    HEAD~N          Git ref — Forge checks out the .forge files at that
+                    revision, parses them, and diffs against the current model
+    <tag>           Git tag (e.g. v1.2.0)
+    <commit-sha>    Specific commit
+    <path.forge>    Path to a previous .forge snapshot file
+```
+
+The diff engine produces a typed changeset:
+
+| Change Type     | Visual Indicator                     | CSS Class                   |
+|-----------------|--------------------------------------|-----------------------------|
+| Added element   | Green dashed border + "NEW" badge    | `.forge-diff--added`        |
+| Removed element | Red dashed border + strikethrough    | `.forge-diff--removed`      |
+| Modified element| Amber border + delta icon            | `.forge-diff--modified`     |
+| Added relationship | Green dashed line               | `.forge-diff-rel--added`    |
+| Removed relationship | Red dashed line + strikethrough | `.forge-diff-rel--removed` |
+| Modified relationship | Amber dashed line             | `.forge-diff-rel--modified` |
+
+The diff report page (`_site/diff/index.html`) provides a summary table of all changes, filterable by element kind, and side-by-side "before/after" diagram views.
+
+Diff also works standalone without site generation:
+
+```bash
+forge diff <old.forge> <new.forge>              # compare two files
+forge diff --ref HEAD~5                          # compare against git history
+forge diff --ref v1.0.0 --format json            # machine-readable changeset
+forge diff --ref v1.0.0 --format svg             # SVGs with diff overlay only
+```
+
+### 8.5 `forge check`
+
+Analyzes a Forge model against a configurable set of architectural rules and reports violations. Think of it as a linter for software architecture.
+
+```
+forge check [OPTIONS]
+
+OPTIONS:
+    --source <FILE>        Input .forge file (default: ./forge.forge)
+    --rules <FILE>         Custom rules file (default: built-in rules)
+    --severity <LEVEL>     Minimum severity to report: error, warning, info
+    --format <FORMAT>      Output format: text (default), json, sarif, markdown
+    --fix                  Auto-fix issues where possible
+    --inferred             List all elements tagged 'inferred' (from analyze)
+
+EXIT CODES:
+    0    No issues found
+    1    Warnings found (with --severity warning or lower)
+    2    Errors found
+
+BUILT-IN RULES:
+    dependency-cycles      Detect circular dependencies between containers/
+                           components (configurable max depth)
+    orphaned-elements      Elements with no relationships (may indicate
+                           incomplete modeling)
+    missing-descriptions   Elements or relationships lacking descriptions
+    missing-technology     Containers without a technology tag
+    database-direct-access Persons or external systems accessing databases
+                           directly (bypassing service layer)
+    single-point-failure   Containers with fan-in > threshold and no redundancy
+    chatty-coupling        Pair of elements with > N relationships between them
+                           (suggests they should be merged or have an API)
+    naming-conventions     Element IDs and names checked against configurable
+                           patterns (e.g. kebab-case, PascalCase)
+    gate-coverage          Pipeline stages deploying to production without
+                           a quality gate
+    stale-inferred         Inferred elements older than N days without
+                           human confirmation
+    boundary-violation     Components in one container directly depending on
+                           components in another (should go through container
+                           interface)
+    empty-views            Views that include no elements
+
+CUSTOM RULES:
+    Custom rules are defined in a .forge-rules file using a declarative syntax:
+
+    ```forge-rules
+    rule "max-container-coupling" {
+      description "No container should depend on more than 5 others"
+      severity error
+      scope container
+      condition count(outgoing_relationships) > 5
+      message "{element.name} has {count} outgoing dependencies (max 5)"
+    }
+
+    rule "require-https" {
+      description "All external-facing relationships must use HTTPS"
+      severity error
+      scope relationship
+      condition source.kind == "person" && technology != "HTTPS"
+      message "Relationship from {source.name} uses {technology}, expected HTTPS"
+    }
+    ```
+
+EXAMPLES:
+    forge check                                  # run all rules
+    forge check --severity error                 # errors only
+    forge check --format sarif > results.sarif   # for CI integration
+    forge check --rules ./team-rules.forge-rules # custom rules
+    forge check --inferred                       # list unconfirmed elements
+    forge check --fix                            # auto-fix what's possible
+```
+
+The `--format sarif` output integrates with GitHub Code Scanning, VS Code SARIF Viewer, and other SARIF-compatible tools, so architectural violations can appear alongside code issues in your CI pipeline.
+
+### 8.6 `forge mcp` — MCP Server
+
+Forge exposes its full capability set as an MCP (Model Context Protocol) server, enabling AI agents and IDE extensions to interact with architectural models programmatically.
+
+```
+forge mcp [OPTIONS]
+
+OPTIONS:
+    --source <FILE>        Input .forge file (default: ./forge.forge)
+    --transport <MODE>     Transport: stdio (default), http
+    --port <PORT>          HTTP port (default: 3100, only with --transport http)
+    --allow-write          Allow tools that modify .forge files (default: read-only)
+
+EXAMPLES:
+    forge mcp                                  # stdio transport for Claude Code
+    forge mcp --transport http --port 3100     # HTTP for remote agents
+    forge mcp --allow-write                    # enable analyze/fix tools
+```
+
+The MCP server exposes the following tools:
+
+| Tool                  | Description                                           | Read/Write |
+|-----------------------|-------------------------------------------------------|------------|
+| `forge_query`         | Query the model graph: list elements, filter by kind/tag, find relationships, resolve paths | Read |
+| `forge_render`        | Render a specific view to SVG (returns SVG string)    | Read       |
+| `forge_check`         | Run architectural rules and return violations         | Read       |
+| `forge_diff`          | Compare current model against a git ref or snapshot   | Read       |
+| `forge_analyze`       | Scan a codebase and return discovered elements        | Write      |
+| `forge_element_detail`| Get full details for a specific element (properties, relationships, views it appears in) | Read |
+| `forge_search`        | Full-text search across element names, descriptions, and technologies | Read |
+| `forge_validate`      | Parse and validate a .forge snippet without persisting | Read       |
+| `forge_suggest_fix`   | Given a check violation, suggest a model fix          | Read       |
+
+MCP server configuration for Claude Code (`.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "forge": {
+      "command": "forge",
+      "args": ["mcp", "--source", "./architecture.forge", "--allow-write"]
+    }
+  }
+}
+```
+
+This enables interactions like:
+- "What containers does the Payment API depend on?"
+- "Show me the system context diagram"
+- "Are there any architectural violations in the current model?"
+- "Analyze the ./services directory and add any new services to the model"
+- "What changed architecturally since the v2.0 release?"
+
+### 8.7 Other Commands
+
+```
+forge watch [OPTIONS]       Watch for changes and rebuild incrementally
+forge export [OPTIONS]      Export model as JSON, YAML, or Structurizr DSL
+forge import [OPTIONS]      Import from Structurizr DSL, PlantUML, or Mermaid
+forge serve [OPTIONS]       Start a local preview server with live reload
+forge lsp                   Start the Language Server Protocol server
 ```
 
 ---
@@ -1020,92 +1355,119 @@ EXAMPLES:
 
 ### Phase 1 — Foundation (Months 1–3)
 
+- Cargo workspace with single binary target, feature-flag architecture
 - `forge-parser`: PEG grammar for the full DSL using `pest`
 - **File composition**: `!include` (path + glob), `!fragment` / `!use`, circular-include detection
 - `forge-model`: In-memory graph with validation
-- `forge-render`: SVG output for structure views (systemContext, container, component)
-- `forge-cli`: `build`, `validate`, `export` commands
+- `forge-render`: SVG output for structure views (systemContext, container, component); filled and outline modes
+- `forge-cli`: `build` command with `--style`, `--format`, `--theme` flags
 - Basic auto-layout (layered / Sugiyama)
 
-### Phase 2 — Process & Flow (Months 3–5)
+### Phase 2 — Analyze & Check (Months 3–5)
 
+- `forge-analyze`: code scanner (tree-sitter for Rust, Go, TS, Java, Python, C#), git scanner (gix), CI scanner (GitHub Actions, GitLab CI)
+- Confidence scoring and `inferred` tagging for analyzed elements
+- `forge-check`: rule engine with built-in rules (dependency cycles, orphaned elements, missing descriptions, gate coverage, boundary violations)
+- Custom rule syntax (`.forge-rules` files)
+- SARIF output for CI integration
 - Process domain: pipeline, stage, gate, environment
+- `pipelineView` view type
+
+### Phase 3 — Generate & Diff (Months 5–7)
+
+- `forge-sitegen`: static documentation site generator with Tera templates
+- Element detail pages, view pages, navigation, client-side search (tantivy-generated index)
+- `forge-diff`: model differencing engine — compare two model snapshots or git revisions
+- Diff overlay rendering (added/removed/modified CSS classes on SVG elements)
+- `forge generate --diff` integration — diff report page and annotated diagrams
 - Flow domain: gitgraph rendering (branch, commit, merge, tag)
-- `pipelineView` and `gitGraph` view types
 - **Animation engine**: frame-based animation with CSS keyframes output
 - CSS theming system
 - `forge watch` with incremental rebuild
+
+### Phase 4 — MCP & AI (Months 7–9)
+
+- `forge-mcp`: MCP server with stdio and HTTP transports
+- Full tool suite: query, render, check, diff, analyze, search, validate, suggest-fix
+- Docker/K8s/OpenAPI scanners for `forge analyze`
 - `!extends` / `!override` for workspace inheritance
 - `!include <url>` for remote includes with content-addressable caching
+- `!if` conditional includes
 
-### Phase 3 — Integration (Months 5–7)
+### Phase 5 — Integration & Polish (Months 9–12)
 
-- Hugo and MkDocs plugins (with animation playback script injection)
+- Hugo and MkDocs integration guides (both call `forge build` as subprocess)
 - `forge serve` with live reload and `--present` mode for animated walkthroughs
 - Import/export: Structurizr DSL, PlantUML C4, Mermaid
 - Deployment views
 - `forge-lsp` for VS Code / Neovim
 - SMIL animation output mode
-- `!if` conditional includes
-
-### Phase 4 — AI & Scanning (Months 7–10)
-
-- Source scanners: code, git, CI, Kubernetes, Docker, OpenAPI
-- AI model generation with confidence scoring
-- Interactive `forge ai suggest` mode
-- Composite and dynamic views
-
-### Phase 5 — Polish (Months 10–12)
-
 - PNG/PDF export via `resvg`
 - Animated GIF and WebM export (via `resvg` + `gifski`)
 - Force-directed layout for landscape views
 - Performance optimization (target: 10k-element models in < 1s)
-- Plugin API for custom element kinds and renderers
 - Documentation and example gallery
+- Cross-compilation and release automation (Linux musl, macOS universal, Windows MSVC)
 
 ---
 
 ## 11. Technology Choices
 
+All technology lives inside a single Rust binary. No Go, Python, or JVM runtimes.
+
 | Concern              | Choice              | Rationale                                              |
 |----------------------|---------------------|--------------------------------------------------------|
-| Core language        | Rust                | Performance, safety, single binary, no runtime         |
+| Core language        | Rust                | Performance, safety, single static binary, no runtime  |
 | Parser               | pest (PEG)          | Fast, readable grammar files, good error messages      |
+| Source analysis      | tree-sitter         | Language-agnostic AST parsing for code scanner (Rust, Go, TS, Java, Python, C#) |
+| Git analysis         | gix (gitoxide)      | Pure Rust git implementation — no dependency on `git` binary |
 | SVG generation       | Hand-written        | Full control over CSS classes, no DOM dependency        |
+| Site generation      | Hand-written HTML templates | Minimal dependency; Tera for templating          |
 | Layout — layered     | Custom Sugiyama     | Needed for pipelines and architecture diagrams         |
 | Layout — force       | Custom Barnes-Hut   | Landscape views with many nodes                        |
 | Layout — gitgraph    | Custom lane-based   | Git-specific: branches as swim lanes, time axis        |
-| PNG/PDF export       | resvg               | Pure Rust SVG rasterizer, no browser needed            |
-| Hugo plugin          | Go                  | Native Hugo module, compiled into Hugo's binary        |
-| MkDocs plugin        | Python (thin shim)  | Calls `forge` CLI subprocess                           |
+| PNG/PDF export       | resvg (optional)    | Pure Rust SVG rasterizer, no browser needed            |
+| MCP server           | tower + rmcp        | JSON-RPC over stdio or HTTP; thin integration layer    |
+| Hugo integration     | CLI subprocess      | Hugo calls `forge build` via shortcode exec; no Go code needed |
+| MkDocs integration   | CLI subprocess      | MkDocs plugin calls `forge build`; plugin is <50 lines of Python |
 | JSON schema          | JSON Schema Draft 2020-12 | For model interchange and AI integration         |
 | LSP                  | tower-lsp           | Rust LSP framework, async, well-maintained             |
+| Search index         | tantivy (optional)  | Pure Rust full-text search for generated doc sites     |
 
-### Dependencies (Rust crate count target: < 30)
+### Dependencies (Rust crate count target: < 40)
 
-Core: `pest`, `serde`, `serde_json`, `clap`, `notify` (file watching), `resvg` (optional), `tower-lsp` (optional), `tokio` (async for LSP/serve only).
+Core: `pest`, `serde`, `serde_json`, `clap`, `notify` (file watching), `tree-sitter` + language grammars, `gix`, `tera` (templating), `tokio` (async for LSP/serve/MCP).
+
+Optional (behind feature flags): `resvg` (PNG/PDF export), `tower-lsp` (LSP), `rmcp` (MCP server), `tantivy` (search index), `gifski` (GIF export).
+
+### Binary Size Target
+
+The default build (without optional features) should produce a binary under 15 MB. With all features enabled, under 30 MB. Static linking via `musl` for portable Linux deployment; universal binary for macOS (arm64 + x86_64).
 
 ---
 
 ## 12. Comparison with Existing Tools
 
-| Capability                | Structurizr | Mermaid  | Forge        |
-|---------------------------|-------------|----------|--------------|
-| C4 architecture model     | Yes         | Partial  | Yes          |
-| Single semantic model     | Yes         | No       | Yes          |
-| Git branching diagrams    | No          | Yes      | Yes          |
-| CI/CD pipeline diagrams   | No          | No       | Yes          |
-| Process modeling           | No          | No       | Yes          |
-| Multi-file composition    | `!include`  | No       | `!include`, `!extends`, `!fragment`, `!if` |
-| Animated diagrams         | No          | No       | CSS/SMIL/GIF/WebM |
-| SVG with CSS classes      | No          | No       | Yes          |
-| Static-site integration   | Limited     | Yes      | Yes          |
-| AI model generation       | No          | No       | Yes          |
-| Source code scanning      | Partial     | No       | Yes          |
-| Rust/Go performance       | Java        | JS       | Rust + Go    |
-| Minimal dependencies      | JVM         | Node     | Single binary|
-| Custom themes via CSS     | Partial     | Partial  | First-class  |
+| Capability                    | Structurizr | Mermaid  | Forge              |
+|-------------------------------|-------------|----------|--------------------|
+| C4 architecture model         | Yes         | Partial  | Yes                |
+| Single semantic model         | Yes         | No       | Yes                |
+| Git branching diagrams        | No          | Yes      | Yes                |
+| CI/CD pipeline diagrams       | No          | No       | Yes                |
+| Process modeling              | No          | No       | Yes                |
+| Multi-file composition        | `!include`  | No       | `!include`, `!extends`, `!fragment`, `!if` |
+| Animated diagrams             | No          | No       | CSS/SMIL/GIF/WebM  |
+| SVG with CSS classes          | No          | No       | Yes                |
+| Codebase scanning             | Partial     | No       | `forge analyze` — code, git, CI, k8s, docker, openapi |
+| Static doc site generation    | Web app     | No       | `forge generate` — full static site with search |
+| Architectural diff            | No          | No       | `forge generate --diff` / `forge diff` |
+| Architectural linting         | No          | No       | `forge check` — built-in + custom rules, SARIF output |
+| MCP server for AI agents      | No          | No       | `forge mcp` — full tool suite for AI integration |
+| AI model generation           | No          | No       | Via MCP + analyze  |
+| Static-site integration       | Limited     | Yes      | Hugo, MkDocs, Docusaurus |
+| Deployment                    | JVM + web   | Node/CDN | Single Rust binary |
+| Custom themes via CSS         | Partial     | Partial  | First-class        |
+| Outline/wireframe mode        | No          | No       | `--style outline`  |
 
 ---
 
@@ -1244,11 +1606,19 @@ forge "Acme E-Commerce" {
 
 1. **Workspace composition** — Resolved: Forge uses `!include` directives with relative path resolution, glob patterns, remote URLs, and circular-include detection. Named `!fragment` / `!use` blocks provide reusable patterns, and `!extends` / `!override` support workspace inheritance. See §3.6.
 2. **Animation** — Resolved: Animation is a first-class view property using ordered frames. Output uses CSS keyframes by default (self-contained SVG, no JS), with SMIL, GIF, and WebM as alternative render modes. A minimal optional script (< 1KB) enables interactive playback in browsers. See §3.7.
+3. **Single binary** — Resolved: Everything ships as one Rust binary. No Go helper, no Python runtime. Hugo/MkDocs integration is via CLI subprocess calls (`forge build`), not native plugins. This eliminates deployment complexity and version-skew issues.
+4. **Codebase analysis** — Resolved: `forge analyze` uses tree-sitter for language-agnostic AST parsing and gix for pure-Rust git access. Scanners are modular but compile into the single binary. AI augmentation happens via MCP, not a built-in LLM client.
+5. **Architectural linting** — Resolved: `forge check` uses a declarative rule engine. Built-in rules cover common architectural anti-patterns. Custom rules use a `.forge-rules` DSL. Output supports SARIF for CI integration.
+6. **Doc site generation** — Resolved: `forge generate` produces a complete static site using built-in Tera templates. No external static site generator dependency. The site includes per-element detail pages, search, and optional diff overlays.
+7. **Model diffing** — Resolved: `forge diff` compares two model snapshots (files or git revisions) and produces a typed changeset. The diff can be rendered as SVG overlays (CSS classes for added/removed/modified) or as a standalone report page in the generated site.
+8. **MCP server** — Resolved: `forge mcp` exposes the full toolchain over MCP (stdio or HTTP). AI agents can query models, render views, run checks, analyze code, and compute diffs. Write operations (analyze, fix) are opt-in via `--allow-write`.
 
 ## 15. Open Questions
 
-1. **Bidirectional sync** — When AI generates model fragments, how much should be auto-merged vs. human-reviewed? What's the conflict resolution strategy?
-2. **WASM target** — Should the Rust core compile to WASM for browser-based rendering (e.g., live preview in VS Code webview)?
-3. **Custom element kinds** — Plugin API for domain-specific elements (e.g., `dataFlow`, `threatModel`)? What's the extension mechanism?
-4. **Fragment parameterisation** — Should `!fragment` support formal parameters (like function arguments), or rely on convention-based `$variable` substitution from the enclosing scope?
-5. **Animation interactivity** — Should the optional playback script support richer interaction (e.g., click-to-zoom on a frame, tooltip overlays), or stay minimal to preserve the "no JS required" principle?
+1. **WASM target** — Should the Rust core compile to WASM for browser-based rendering (e.g., live preview in VS Code webview, playground site)?
+2. **Custom element kinds** — Plugin API for domain-specific elements (e.g., `dataFlow`, `threatModel`)? What's the extension mechanism given the single-binary constraint? (Possible approach: WASM-based plugins loaded at runtime.)
+3. **Fragment parameterisation** — Should `!fragment` support formal parameters (like function arguments), or rely on convention-based `$variable` substitution from the enclosing scope?
+4. **Animation interactivity** — Should the optional playback script support richer interaction (e.g., click-to-zoom on a frame, tooltip overlays), or stay minimal to preserve the "no JS required" principle?
+5. **Incremental analysis** — Should `forge analyze` cache previous scan results and only re-analyze changed files? What's the invalidation strategy for cross-file dependency inference?
+6. **Rule severity escalation** — Should `forge check` support ratcheting (once a rule passes for all elements, new violations become errors even if the rule is normally a warning)?
+7. **MCP authentication** — For the HTTP transport, what authentication mechanism? API keys, mTLS, or rely on the host environment (e.g., SSH tunnel)?

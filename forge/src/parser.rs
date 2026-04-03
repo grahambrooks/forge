@@ -1,89 +1,98 @@
-/// Forge DSL parser — hand-written recursive descent.
-///
-/// Parses a subset of the Forge DSL sufficient for the prototype:
-/// - forge "Name" { model { ... } process { ... } views { ... } }
-/// - person, system, container (with technology, description, tags)
-/// - relationships: a -> b "label" "tech"
-/// - pipeline, stage (with needs, step, gate, produces)
-/// - views: systemContext, container, pipelineView
+//! Forge DSL parser — hand-written recursive descent.
+
+use std::collections::HashMap;
+use std::fmt;
 
 use crate::model::*;
-use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct ParseError {
-    pub message: String,
+    pub msg: String,
     pub line: usize,
     pub col: usize,
 }
 
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Parse error at {}:{}: {}", self.line, self.col, self.message)
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Parse error at {}:{}: {}", self.line, self.col, self.msg)
     }
 }
 
-struct Parser {
-    chars: Vec<char>,
+impl std::error::Error for ParseError {}
+
+pub struct Parser {
+    text: Vec<char>,
     pos: usize,
     model: Model,
-    /// Stack of identifier scopes for building dotted ids: ["payments", "api"]
     scope: Vec<String>,
-    /// Map from short identifiers to full dotted ids (e.g. "api" -> "payments.api")
     id_map: HashMap<String, String>,
 }
 
 impl Parser {
-    fn new(input: &str) -> Self {
+    pub fn new(text: &str) -> Self {
         Self {
-            chars: input.chars().collect(),
+            text: text.chars().collect(),
             pos: 0,
-            model: Model::new(),
+            model: Model::default(),
             scope: Vec::new(),
             id_map: HashMap::new(),
         }
     }
 
-    fn current_line_col(&self) -> (usize, usize) {
-        let consumed = &self.chars[..self.pos.min(self.chars.len())];
-        let line = consumed.iter().filter(|&&c| c == '\n').count() + 1;
-        let col = consumed.iter().rev().take_while(|&&c| c != '\n').count() + 1;
+    // ── Helpers ──
+
+    fn line_col(&self) -> (usize, usize) {
+        let mut line = 1;
+        let mut col = 1;
+        for (i, &ch) in self.text.iter().enumerate() {
+            if i >= self.pos {
+                break;
+            }
+            if ch == '\n' {
+                line += 1;
+                col = 1;
+            } else {
+                col += 1;
+            }
+        }
         (line, col)
     }
 
-    fn error(&self, msg: &str) -> ParseError {
-        let (line, col) = self.current_line_col();
-        ParseError { message: msg.to_string(), line, col }
+    fn error(&self, msg: impl Into<String>) -> ParseError {
+        let (line, col) = self.line_col();
+        ParseError { msg: msg.into(), line, col }
     }
 
     fn at_end(&self) -> bool {
-        self.pos >= self.chars.len()
+        self.pos >= self.text.len()
     }
 
     fn peek(&self) -> Option<char> {
-        self.chars.get(self.pos).copied()
+        self.text.get(self.pos).copied()
     }
 
     fn advance(&mut self) -> Option<char> {
-        let c = self.chars.get(self.pos).copied();
-        if c.is_some() {
+        if self.pos < self.text.len() {
+            let c = self.text[self.pos];
             self.pos += 1;
+            Some(c)
+        } else {
+            None
         }
-        c
     }
 
-    fn skip_ws_and_comments(&mut self) {
+    fn skip_ws(&mut self) {
         loop {
-            // Skip whitespace
-            while self.pos < self.chars.len() && self.chars[self.pos].is_whitespace() {
+            while self.pos < self.text.len()
+                && matches!(self.text[self.pos], ' ' | '\t' | '\r' | '\n')
+            {
                 self.pos += 1;
             }
-            // Skip // line comments
-            if self.pos + 1 < self.chars.len()
-                && self.chars[self.pos] == '/'
-                && self.chars[self.pos + 1] == '/'
+            if self.pos + 1 < self.text.len()
+                && self.text[self.pos] == '/'
+                && self.text[self.pos + 1] == '/'
             {
-                while self.pos < self.chars.len() && self.chars[self.pos] != '\n' {
+                while self.pos < self.text.len() && self.text[self.pos] != '\n' {
                     self.pos += 1;
                 }
                 continue;
@@ -92,81 +101,100 @@ impl Parser {
         }
     }
 
-    fn expect_char(&mut self, expected: char) -> Result<(), ParseError> {
-        self.skip_ws_and_comments();
+    fn expect(&mut self, ch: char) -> Result<(), ParseError> {
+        self.skip_ws();
         match self.advance() {
-            Some(c) if c == expected => Ok(()),
-            Some(c) => Err(self.error(&format!("expected '{}', got '{}'", expected, c))),
-            None => Err(self.error(&format!("expected '{}', got EOF", expected))),
+            Some(c) if c == ch => Ok(()),
+            Some(c) => Err(self.error(format!("expected '{}', got '{}'", ch, c))),
+            None => Err(self.error(format!("expected '{}', got EOF", ch))),
         }
     }
 
     fn parse_string(&mut self) -> Result<String, ParseError> {
-        self.skip_ws_and_comments();
+        self.skip_ws();
         if self.peek() != Some('"') {
             return Err(self.error("expected quoted string"));
         }
-        self.advance(); // consume opening "
+        self.advance();
         let mut s = String::new();
         loop {
             match self.advance() {
+                None => return Err(self.error("unterminated string")),
                 Some('"') => return Ok(s),
                 Some('\\') => {
-                    if let Some(c) = self.advance() {
-                        s.push(c);
+                    if let Some(c2) = self.advance() {
+                        s.push(c2);
                     }
                 }
                 Some(c) => s.push(c),
-                None => return Err(self.error("unterminated string")),
             }
         }
     }
 
-    fn parse_identifier(&mut self) -> Result<String, ParseError> {
-        self.skip_ws_and_comments();
+    fn parse_ident(&mut self) -> Result<String, ParseError> {
+        self.skip_ws();
         let start = self.pos;
-        while self.pos < self.chars.len()
-            && (self.chars[self.pos].is_alphanumeric()
-                || self.chars[self.pos] == '_'
-                || self.chars[self.pos] == '-'
-                || self.chars[self.pos] == '.'
-                || self.chars[self.pos] == '*'
-                || self.chars[self.pos] == '/')
-        {
-            self.pos += 1;
+        while self.pos < self.text.len() {
+            let c = self.text[self.pos];
+            if c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | '*' | '/') {
+                self.pos += 1;
+            } else {
+                break;
+            }
         }
         if self.pos == start {
             return Err(self.error("expected identifier"));
         }
-        Ok(self.chars[start..self.pos].iter().collect())
+        Ok(self.text[start..self.pos].iter().collect())
+    }
+
+    fn peek_after_ws(&mut self) -> Option<char> {
+        let saved = self.pos;
+        self.skip_ws();
+        let c = self.peek();
+        self.pos = saved;
+        c
     }
 
     fn peek_keyword(&mut self) -> Option<String> {
         let saved = self.pos;
-        self.skip_ws_and_comments();
+        self.skip_ws();
         let start = self.pos;
-        while self.pos < self.chars.len()
-            && (self.chars[self.pos].is_alphanumeric()
-                || self.chars[self.pos] == '_'
-                || self.chars[self.pos] == '.')
-        {
-            self.pos += 1;
+        while self.pos < self.text.len() {
+            let c = self.text[self.pos];
+            if c.is_alphanumeric() || matches!(c, '_' | '.') {
+                self.pos += 1;
+            } else {
+                break;
+            }
         }
-        let word: String = self.chars[start..self.pos].iter().collect();
+        let word: String = self.text[start..self.pos].iter().collect();
         self.pos = saved;
-        if word.is_empty() {
-            None
-        } else {
-            Some(word)
-        }
+        if word.is_empty() { None } else { Some(word) }
     }
 
-    fn peek_char_skip_ws(&mut self) -> Option<char> {
-        let saved = self.pos;
-        self.skip_ws_and_comments();
-        let c = self.peek();
-        self.pos = saved;
-        c
+    fn skip_block(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        let mut depth = 1;
+        while depth > 0 {
+            match self.advance() {
+                None => return Err(self.error("unexpected EOF in block")),
+                Some('{') => depth += 1,
+                Some('}') => depth -= 1,
+                Some('"') => {
+                    loop {
+                        match self.advance() {
+                            None => return Err(self.error("unterminated string")),
+                            Some('"') => break,
+                            Some('\\') => { self.advance(); }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 
     fn scoped_id(&self, local: &str) -> String {
@@ -177,27 +205,39 @@ impl Parser {
         }
     }
 
-    // ───── Top-level ─────
+    fn resolve_ref(&self, name: &str) -> String {
+        if let Some(full) = self.id_map.get(name) {
+            return full.clone();
+        }
+        if !self.scope.is_empty() {
+            let scoped = format!("{}.{}", self.scope.join("."), name);
+            if self.model.elements.contains_key(&scoped) {
+                return scoped;
+            }
+        }
+        name.to_string()
+    }
 
-    fn parse_forge(&mut self) -> Result<(), ParseError> {
-        self.skip_ws_and_comments();
-        let kw = self.parse_identifier()?;
+    // ── Top level ──
+
+    pub fn parse(mut self) -> Result<Model, ParseError> {
+        self.skip_ws();
+        let kw = self.parse_ident()?;
         if kw != "forge" {
             return Err(self.error("expected 'forge'"));
         }
         self.model.name = self.parse_string()?;
-        self.expect_char('{')?;
-
+        self.expect('{')?;
         loop {
-            self.skip_ws_and_comments();
+            self.skip_ws();
             if self.peek() == Some('}') {
                 self.advance();
                 break;
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in forge block"));
+                return Err(self.error("unexpected EOF"));
             }
-            let kw = self.parse_identifier()?;
+            let kw = self.parse_ident()?;
             match kw.as_str() {
                 "description" => {
                     self.model.description = self.parse_string()?;
@@ -205,126 +245,116 @@ impl Parser {
                 "model" => self.parse_model()?,
                 "process" => self.parse_process()?,
                 "views" => self.parse_views()?,
-                "styles" => self.skip_block()?,  // styles: skip for now
+                "styles" => { self.skip_block()?; }
                 _ => {
-                    // Try to skip unknown blocks or properties
-                    if self.peek_char_skip_ws() == Some('{') {
+                    if self.peek_after_ws() == Some('{') {
                         self.skip_block()?;
-                    } else if self.peek_char_skip_ws() == Some('"') {
-                        let _ = self.parse_string()?;
+                    } else if self.peek_after_ws() == Some('"') {
+                        self.parse_string()?;
                     }
                 }
             }
         }
-        Ok(())
+        Ok(self.model)
     }
 
-    // ───── Model block ─────
+    // ── Model ──
 
     fn parse_model(&mut self) -> Result<(), ParseError> {
-        self.expect_char('{')?;
+        self.expect('{')?;
         loop {
-            self.skip_ws_and_comments();
+            self.skip_ws();
             if self.peek() == Some('}') {
                 self.advance();
-                break;
+                return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in model block"));
+                return Err(self.error("unexpected EOF in model"));
             }
-            self.parse_model_statement()?;
+            self.parse_model_stmt()?;
         }
-        Ok(())
     }
 
-    fn parse_model_statement(&mut self) -> Result<(), ParseError> {
+    fn parse_model_stmt(&mut self) -> Result<(), ParseError> {
         let saved = self.pos;
-        let first = self.parse_identifier()?;
+        let first = self.parse_ident()?;
+        self.skip_ws();
 
-        self.skip_ws_and_comments();
-
-        // Check for assignment: id = kind "Name" { ... }
         if self.peek() == Some('=') {
-            self.advance(); // consume '='
-            let kind_str = self.parse_identifier()?;
+            self.advance();
+            let kind_str = self.parse_ident()?;
             let kind = match kind_str.as_str() {
                 "person" => ElementKind::Person,
                 "system" => ElementKind::System,
                 "container" => ElementKind::Container,
                 "component" => ElementKind::Component,
-                _ => return Err(self.error(&format!("unknown element kind '{}'", kind_str))),
+                _ => return Err(self.error(format!("unknown element kind '{}'", kind_str))),
             };
             let name = self.parse_string()?;
             let full_id = self.scoped_id(&first);
-            let mut el = Element {
-                id: full_id.clone(),
-                kind,
-                name,
-                description: None,
-                technology: None,
-                tags: Vec::new(),
-                parent: self.scope.last().map(|s| {
-                    if self.scope.len() == 1 {
-                        s.clone()
-                    } else {
-                        self.scope.join(".")
-                    }
-                }),
-                properties: HashMap::new(),
-                children: Vec::new(),
+            let parent = if self.scope.is_empty() {
+                None
+            } else {
+                Some(self.scope.join("."))
             };
+
+            let mut el = Element::new(&full_id, kind, &name);
+            el.parent = parent;
             self.id_map.insert(first.clone(), full_id.clone());
 
-            if self.peek_char_skip_ws() == Some('{') {
-                self.expect_char('{')?;
-                self.scope.push(if self.scope.is_empty() {
+            if self.peek_after_ws() == Some('{') {
+                self.expect('{')?;
+                let scope_entry = if self.scope.is_empty() {
                     first.clone()
                 } else {
                     full_id.clone()
-                });
+                };
+                self.scope.push(scope_entry);
                 loop {
-                    self.skip_ws_and_comments();
+                    self.skip_ws();
                     if self.peek() == Some('}') {
                         self.advance();
                         break;
                     }
                     if self.at_end() {
-                        return Err(self.error("unexpected EOF in element block"));
+                        return Err(self.error("unexpected EOF in element"));
                     }
-                    // Could be a property, child element, or relationship
-                    let saved2 = self.pos;
-                    let inner = self.parse_identifier()?;
-                    self.skip_ws_and_comments();
 
-                    if inner == "description" {
-                        el.description = Some(self.parse_string()?);
-                    } else if inner == "technology" {
-                        el.technology = Some(self.parse_string()?);
-                    } else if inner == "tags" {
-                        while self.peek_char_skip_ws() == Some('"') {
-                            el.tags.push(self.parse_string()?);
+                    let saved2 = self.pos;
+                    let inner = self.parse_ident()?;
+                    self.skip_ws();
+
+                    match inner.as_str() {
+                        "description" => {
+                            el.description = Some(self.parse_string()?);
                         }
-                    } else if self.peek() == Some('=') {
-                        // Child element assignment — put element first, then parse child
-                        self.model.add_element(el.clone());
-                        self.pos = saved2;
-                        self.parse_model_statement()?;
-                        // Re-read updated element to pick up children
-                        if let Some(updated) = self.model.elements.get(&full_id) {
-                            el = updated.clone();
+                        "technology" => {
+                            el.technology = Some(self.parse_string()?);
                         }
-                        continue;
-                    } else if self.peek() == Some('-') {
-                        // Relationship: inner -> target "label" "tech"
-                        self.pos = saved2;
-                        self.parse_relationship()?;
-                        continue;
-                    } else {
-                        // Unknown property — try to skip value
-                        if self.peek_char_skip_ws() == Some('"') {
-                            let _ = self.parse_string()?;
-                        } else if self.peek_char_skip_ws() == Some('{') {
-                            self.skip_block()?;
+                        "tags" => {
+                            while self.peek_after_ws() == Some('"') {
+                                el.tags.push(self.parse_string()?);
+                            }
+                        }
+                        _ => {
+                            if self.peek() == Some('=') {
+                                // Child element
+                                self.model.add_element(el.clone());
+                                self.pos = saved2;
+                                self.parse_model_stmt()?;
+                                if let Some(updated) = self.model.elements.get(&full_id) {
+                                    el = updated.clone();
+                                }
+                                continue;
+                            } else if self.peek() == Some('-') {
+                                self.pos = saved2;
+                                self.parse_relationship()?;
+                                continue;
+                            } else if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            } else if self.peek_after_ws() == Some('{') {
+                                self.skip_block()?;
+                            }
                         }
                     }
                 }
@@ -334,155 +364,135 @@ impl Parser {
             return Ok(());
         }
 
-        // Check for relationship: first -> target ...
         if self.peek() == Some('-') {
             self.pos = saved;
             self.parse_relationship()?;
             return Ok(());
         }
 
-        // Keyword like "description"
         if first == "description" {
             self.model.description = self.parse_string()?;
             return Ok(());
         }
 
-        // Unknown — skip
-        if self.peek_char_skip_ws() == Some('"') {
-            let _ = self.parse_string()?;
-        } else if self.peek_char_skip_ws() == Some('{') {
+        if self.peek_after_ws() == Some('"') {
+            self.parse_string()?;
+        } else if self.peek_after_ws() == Some('{') {
             self.skip_block()?;
         }
         Ok(())
     }
 
-    fn resolve_ref(&self, name: &str) -> String {
-        // Try the id_map first (short name -> full dotted id)
-        if let Some(full) = self.id_map.get(name) {
-            return full.clone();
-        }
-        // Try scoped
-        if !self.scope.is_empty() {
-            let scoped = format!("{}.{}", self.scope.join("."), name);
-            if self.model.elements.contains_key(&scoped) {
-                return scoped;
-            }
-        }
-        // As-is
-        name.to_string()
-    }
-
     fn parse_relationship(&mut self) -> Result<(), ParseError> {
-        let from_raw = self.parse_identifier()?;
-        self.skip_ws_and_comments();
-        self.expect_char('-')?;
-        self.expect_char('>')?;
-        let to_raw = self.parse_identifier()?;
-        let label = if self.peek_char_skip_ws() == Some('"') {
+        let frm_raw = self.parse_ident()?;
+        self.skip_ws();
+        self.expect('-')?;
+        self.expect('>')?;
+        let to_raw = self.parse_ident()?;
+        let label = if self.peek_after_ws() == Some('"') {
             self.parse_string()?
         } else {
             String::new()
         };
-        let tech = if self.peek_char_skip_ws() == Some('"') {
+        let technology = if self.peek_after_ws() == Some('"') {
             Some(self.parse_string()?)
         } else {
             None
         };
 
-        let from = self.resolve_ref(&from_raw);
+        let frm = self.resolve_ref(&frm_raw);
         let to = self.resolve_ref(&to_raw);
-
         self.model.add_relationship(Relationship {
-            from,
+            frm,
             to,
             label,
-            technology: tech,
+            technology,
         });
         Ok(())
     }
 
-    // ───── Process block ─────
+    // ── Process ──
 
     fn parse_process(&mut self) -> Result<(), ParseError> {
-        self.expect_char('{')?;
+        self.expect('{')?;
         loop {
-            self.skip_ws_and_comments();
+            self.skip_ws();
             if self.peek() == Some('}') {
                 self.advance();
-                break;
+                return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in process block"));
+                return Err(self.error("unexpected EOF in process"));
             }
-            self.parse_process_statement()?;
+            self.parse_process_stmt()?;
         }
-        Ok(())
     }
 
-    fn parse_process_statement(&mut self) -> Result<(), ParseError> {
-        let saved = self.pos;
-        let first = self.parse_identifier()?;
-        self.skip_ws_and_comments();
+    fn parse_process_stmt(&mut self) -> Result<(), ParseError> {
+        let first = self.parse_ident()?;
+        self.skip_ws();
 
-        // Assignment: id = kind "Name" { ... }
         if self.peek() == Some('=') {
             self.advance();
-            let kind_str = self.parse_identifier()?;
-            match kind_str.as_str() {
-                "repository" => {
-                    let name = self.parse_string()?;
-                    let full_id = first.clone();
-                    let mut el = Element {
-                        id: full_id.clone(),
-                        kind: ElementKind::Repository,
-                        name,
-                        description: None,
-                        technology: None,
-                        tags: Vec::new(),
-                        parent: None,
-                        properties: HashMap::new(),
-                        children: Vec::new(),
-                    };
-                    self.id_map.insert(first.clone(), full_id.clone());
-                    if self.peek_char_skip_ws() == Some('{') {
-                        self.expect_char('{')?;
-                        loop {
-                            self.skip_ws_and_comments();
-                            if self.peek() == Some('}') { self.advance(); break; }
-                            let prop = self.parse_identifier()?;
-                            match prop.as_str() {
-                                "url" => { el.properties.insert("url".into(), self.parse_string()?); }
-                                "system" => { let sys = self.parse_identifier()?; el.properties.insert("system".into(), self.resolve_ref(&sys)); }
-                                _ => { if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; } else if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; } }
+            let kind_str = self.parse_ident()?;
+            if kind_str == "repository" {
+                let name = self.parse_string()?;
+                let mut el = Element::new(&first, ElementKind::Repository, &name);
+                self.id_map.insert(first.clone(), first.clone());
+                if self.peek_after_ws() == Some('{') {
+                    self.expect('{')?;
+                    loop {
+                        self.skip_ws();
+                        if self.peek() == Some('}') {
+                            self.advance();
+                            break;
+                        }
+                        let prop = self.parse_ident()?;
+                        match prop.as_str() {
+                            "url" => {
+                                el.properties.insert("url".into(), self.parse_string()?);
+                            }
+                            "system" => {
+                                let sys = self.parse_ident()?;
+                                el.properties.insert("system".into(), self.resolve_ref(&sys));
+                            }
+                            _ => {
+                                if self.peek_after_ws() == Some('"') {
+                                    self.parse_string()?;
+                                } else if self.peek_after_ws() == Some('{') {
+                                    self.skip_block()?;
+                                }
                             }
                         }
                     }
-                    self.model.add_element(el);
                 }
-                _ => {
-                    // Unknown process element
-                    if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-                    if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
+                self.model.add_element(el);
+            } else {
+                if self.peek_after_ws() == Some('"') {
+                    self.parse_string()?;
+                }
+                if self.peek_after_ws() == Some('{') {
+                    self.skip_block()?;
                 }
             }
             return Ok(());
         }
 
-        // Keywords
         match first.as_str() {
             "strategy" => {
-                let _ = self.parse_string()?; // strategy name
-                self.skip_block()?; // skip for prototype
+                self.parse_string()?;
+                self.skip_block()?;
             }
             "pipeline" => {
                 self.parse_pipeline()?;
             }
             _ => {
-                self.pos = saved;
-                // Try to skip
-                let _ = self.parse_identifier()?;
-                if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-                if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
+                if self.peek_after_ws() == Some('"') {
+                    self.parse_string()?;
+                }
+                if self.peek_after_ws() == Some('{') {
+                    self.skip_block()?;
+                }
             }
         }
         Ok(())
@@ -491,304 +501,258 @@ impl Parser {
     fn parse_pipeline(&mut self) -> Result<(), ParseError> {
         let pipeline_name = self.parse_string()?;
         let pipeline_id = pipeline_name.replace(' ', "-").to_lowercase();
-        let pipeline_el = Element {
-            id: pipeline_id.clone(),
-            kind: ElementKind::Pipeline,
-            name: pipeline_name,
-            description: None,
-            technology: None,
-            tags: Vec::new(),
-            parent: None,
-            properties: HashMap::new(),
-            children: Vec::new(),
-        };
-        self.model.add_element(pipeline_el);
+        self.model.add_element(Element::new(&pipeline_id, ElementKind::Pipeline, &pipeline_name));
         self.id_map.insert(pipeline_id.clone(), pipeline_id.clone());
 
-        self.expect_char('{')?;
+        self.expect('{')?;
         loop {
-            self.skip_ws_and_comments();
-            if self.peek() == Some('}') { self.advance(); break; }
-            if self.at_end() { return Err(self.error("unexpected EOF in pipeline block")); }
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in pipeline"));
+            }
 
-            let saved = self.pos;
-            let first = self.parse_identifier()?;
-            self.skip_ws_and_comments();
+            let _saved = self.pos;
+            let first = self.parse_ident()?;
+            self.skip_ws();
 
             if first == "triggers" {
-                // triggers repo.main on "push" — skip for now
-                while self.peek_char_skip_ws() != Some('}') && self.peek_char_skip_ws() != None {
-                    let saved2 = self.pos;
-                    self.skip_ws_and_comments();
-                    // Check if next is a new statement (identifier followed by = or known keyword)
-                    if let Some(c) = self.peek() {
-                        if c == '\n' || c == '\r' {
-                            self.advance();
-                            // Check if next line starts a new statement
-                            let saved3 = self.pos;
-                            self.skip_ws_and_comments();
-                            if let Some(next_kw) = self.peek_keyword() {
-                                if next_kw == "triggers" || self.is_stage_assignment() {
-                                    self.pos = saved3;
-                                    break;
-                                }
-                            }
-                            self.pos = saved3;
-                            break;
-                        }
-                    }
-                    self.advance();
+                // Skip to end of line
+                while self.pos < self.text.len() && self.text[self.pos] != '\n' {
+                    self.pos += 1;
                 }
                 continue;
             }
 
-            // Stage assignment: id = stage "Name" { ... }
             if self.peek() == Some('=') {
                 self.advance();
-                let kind_str = self.parse_identifier()?;
+                let kind_str = self.parse_ident()?;
                 if kind_str == "stage" {
                     let stage_name = self.parse_string()?;
                     let stage_id = format!("{}.{}", pipeline_id, first);
-                    let mut stage_el = Element {
-                        id: stage_id.clone(),
-                        kind: ElementKind::Stage,
-                        name: stage_name,
-                        description: None,
-                        technology: None,
-                        tags: Vec::new(),
-                        parent: Some(pipeline_id.clone()),
-                        properties: HashMap::new(),
-                        children: Vec::new(),
-                    };
+                    let mut el = Element::new(&stage_id, ElementKind::Stage, &stage_name);
+                    el.parent = Some(pipeline_id.clone());
                     self.id_map.insert(first.clone(), stage_id.clone());
 
-                    if self.peek_char_skip_ws() == Some('{') {
-                        self.expect_char('{')?;
+                    if self.peek_after_ws() == Some('{') {
+                        self.expect('{')?;
                         loop {
-                            self.skip_ws_and_comments();
-                            if self.peek() == Some('}') { self.advance(); break; }
-                            if self.at_end() { return Err(self.error("unexpected EOF in stage block")); }
-                            let prop = self.parse_identifier()?;
+                            self.skip_ws();
+                            if self.peek() == Some('}') {
+                                self.advance();
+                                break;
+                            }
+                            if self.at_end() {
+                                return Err(self.error("unexpected EOF in stage"));
+                            }
+                            let prop = self.parse_ident()?;
                             match prop.as_str() {
                                 "needs" => {
-                                    let dep = self.parse_identifier()?;
+                                    let dep = self.parse_ident()?;
                                     let dep_full = self.resolve_ref(&dep);
                                     self.model.stage_links.push(StageLink {
-                                        from: dep_full,
+                                        frm: dep_full,
                                         to: stage_id.clone(),
                                     });
                                 }
-                                "step" => { let _ = self.parse_string()?; }
+                                "step" => {
+                                    self.parse_string()?;
+                                }
                                 "environment" => {
-                                    let env_name = self.parse_identifier()?;
-                                    stage_el.properties.insert("environment".into(), env_name);
+                                    let env = self.parse_ident()?;
+                                    el.properties.insert("environment".into(), env);
                                 }
                                 "gate" => {
                                     let gate_name = self.parse_string()?;
                                     let gate_id = format!("{}.gate", stage_id);
-                                    let mut gate_el = Element {
-                                        id: gate_id.clone(),
-                                        kind: ElementKind::Gate,
-                                        name: gate_name,
-                                        description: None,
-                                        technology: None,
-                                        tags: Vec::new(),
-                                        parent: Some(stage_id.clone()),
-                                        properties: HashMap::new(),
-                                        children: Vec::new(),
-                                    };
-                                    if self.peek_char_skip_ws() == Some('{') {
-                                        self.expect_char('{')?;
+                                    let mut gate = Element::new(&gate_id, ElementKind::Gate, &gate_name);
+                                    gate.parent = Some(stage_id.clone());
+                                    if self.peek_after_ws() == Some('{') {
+                                        self.expect('{')?;
                                         loop {
-                                            self.skip_ws_and_comments();
-                                            if self.peek() == Some('}') { self.advance(); break; }
-                                            let gprop = self.parse_identifier()?;
-                                            if self.peek_char_skip_ws() == Some('"') {
-                                                gate_el.properties.insert(gprop, self.parse_string()?);
+                                            self.skip_ws();
+                                            if self.peek() == Some('}') {
+                                                self.advance();
+                                                break;
+                                            }
+                                            let gp = self.parse_ident()?;
+                                            if self.peek_after_ws() == Some('"') {
+                                                gate.properties.insert(gp, self.parse_string()?);
                                             }
                                         }
                                     }
-                                    self.model.add_element(gate_el);
+                                    self.model.add_element(gate);
                                 }
                                 "produces" => {
-                                    // produces artifact "name" { ... }
-                                    let _ = self.parse_identifier()?; // "artifact"
-                                    let _ = self.parse_string()?;
-                                    if self.peek_char_skip_ws() == Some('{') {
+                                    self.parse_ident()?;
+                                    self.parse_string()?;
+                                    if self.peek_after_ws() == Some('{') {
                                         self.skip_block()?;
                                     }
                                 }
                                 _ => {
-                                    if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-                                    else if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
+                                    if self.peek_after_ws() == Some('"') {
+                                        self.parse_string()?;
+                                    } else if self.peek_after_ws() == Some('{') {
+                                        self.skip_block()?;
+                                    }
                                 }
                             }
                         }
                     }
-                    self.model.add_element(stage_el);
+                    self.model.add_element(el);
                 } else {
-                    // Unknown kind
-                    if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-                    if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
+                    if self.peek_after_ws() == Some('"') {
+                        self.parse_string()?;
+                    }
+                    if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
+                    }
                 }
                 continue;
             }
 
             // Unknown
-            self.pos = saved;
-            let _ = self.parse_identifier()?;
-            if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-            if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
+            if self.peek_after_ws() == Some('"') {
+                self.parse_string()?;
+            }
+            if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
         }
-        Ok(())
     }
 
-    fn is_stage_assignment(&mut self) -> bool {
-        let saved = self.pos;
-        self.skip_ws_and_comments();
-        let _ = self.parse_identifier(); // id
-        self.skip_ws_and_comments();
-        let result = self.peek() == Some('=');
-        self.pos = saved;
-        result
-    }
-
-    // ───── Views block ─────
+    // ── Views ──
 
     fn parse_views(&mut self) -> Result<(), ParseError> {
-        self.expect_char('{')?;
+        self.expect('{')?;
         loop {
-            self.skip_ws_and_comments();
-            if self.peek() == Some('}') { self.advance(); break; }
-            if self.at_end() { return Err(self.error("unexpected EOF in views block")); }
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in views"));
+            }
 
-            let kind_str = self.parse_identifier()?;
+            let kind_str = self.parse_ident()?;
             match kind_str.as_str() {
                 "systemContext" => {
-                    let scope_raw = self.parse_identifier()?;
+                    let scope_raw = self.parse_ident()?;
                     let scope = self.resolve_ref(&scope_raw);
                     let key = self.parse_string()?;
                     let mut view = View {
                         kind: ViewKind::SystemContext,
-                        scope: Some(scope),
                         key,
+                        scope: Some(scope),
                         title: None,
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
                     };
                     self.parse_view_body(&mut view)?;
-                    self.model.add_view(view);
+                    self.model.views.push(view);
                 }
                 "container" => {
-                    let scope_raw = self.parse_identifier()?;
+                    let scope_raw = self.parse_ident()?;
                     let scope = self.resolve_ref(&scope_raw);
                     let key = self.parse_string()?;
                     let mut view = View {
                         kind: ViewKind::Container,
-                        scope: Some(scope),
                         key,
+                        scope: Some(scope),
                         title: None,
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                     };
                     self.parse_view_body(&mut view)?;
-                    self.model.add_view(view);
+                    self.model.views.push(view);
                 }
                 "pipelineView" => {
                     let scope_raw = self.parse_string()?;
-                    let scope = self.resolve_ref(&scope_raw.replace(' ', "-").to_lowercase());
+                    let scope_id = scope_raw.replace(' ', "-").to_lowercase();
+                    let scope = self.resolve_ref(&scope_id);
                     let key = self.parse_string()?;
                     let mut view = View {
                         kind: ViewKind::PipelineView,
-                        scope: Some(scope),
                         key,
+                        scope: Some(scope),
                         title: None,
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
                     };
                     self.parse_view_body(&mut view)?;
-                    self.model.add_view(view);
+                    self.model.views.push(view);
                 }
                 _ => {
-                    // Unknown view type — skip
-                    while self.peek_char_skip_ws() == Some('"') || self.peek_char_skip_ws().map_or(false, |c| c.is_alphanumeric()) {
-                        if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-                        else { let _ = self.parse_identifier()?; }
+                    // Skip unknown view types
+                    loop {
+                        let p = self.peek_after_ws();
+                        if p == Some('"') {
+                            self.parse_string()?;
+                        } else if p.map_or(false, |c| c.is_alphanumeric()) {
+                            self.parse_ident()?;
+                        } else {
+                            break;
+                        }
                     }
-                    if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
+                    if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
+                    }
                 }
             }
         }
-        Ok(())
     }
 
     fn parse_view_body(&mut self, view: &mut View) -> Result<(), ParseError> {
-        self.expect_char('{')?;
+        self.expect('{')?;
         loop {
-            self.skip_ws_and_comments();
-            if self.peek() == Some('}') { self.advance(); break; }
-            if self.at_end() { return Err(self.error("unexpected EOF in view block")); }
-            let prop = self.parse_identifier()?;
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in view"));
+            }
+            let prop = self.parse_ident()?;
             match prop.as_str() {
                 "include" => {
-                    self.skip_ws_and_comments();
+                    self.skip_ws();
                     if self.peek() == Some('*') {
                         self.advance();
                         view.include_all = true;
                     } else {
-                        let _ = self.parse_identifier()?;
+                        self.parse_ident()?;
                     }
                 }
                 "autoLayout" => {
-                    let dir = self.parse_identifier()?;
-                    view.auto_layout = match dir.as_str() {
-                        "lr" => AutoLayout::LeftRight,
-                        "tb" => AutoLayout::TopBottom,
-                        _ => AutoLayout::TopBottom,
+                    let d = self.parse_ident()?;
+                    view.auto_layout = if d == "lr" {
+                        AutoLayout::LeftRight
+                    } else {
+                        AutoLayout::TopBottom
                     };
                 }
                 "title" => {
                     view.title = Some(self.parse_string()?);
                 }
                 _ => {
-                    if self.peek_char_skip_ws() == Some('"') { let _ = self.parse_string()?; }
-                    else if self.peek_char_skip_ws() == Some('{') { self.skip_block()?; }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    // ───── Utilities ─────
-
-    fn skip_block(&mut self) -> Result<(), ParseError> {
-        self.expect_char('{')?;
-        let mut depth = 1;
-        while depth > 0 {
-            match self.advance() {
-                Some('{') => depth += 1,
-                Some('}') => depth -= 1,
-                Some('"') => {
-                    // Skip string contents
-                    loop {
-                        match self.advance() {
-                            Some('"') => break,
-                            Some('\\') => { self.advance(); }
-                            None => return Err(self.error("unterminated string in skipped block")),
-                            _ => {}
-                        }
+                    if self.peek_after_ws() == Some('"') {
+                        self.parse_string()?;
+                    } else if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
                     }
                 }
-                None => return Err(self.error("unexpected EOF while skipping block")),
-                _ => {}
             }
         }
-        Ok(())
     }
 }
 
-pub fn parse(input: &str) -> Result<Model, ParseError> {
-    let mut parser = Parser::new(input);
-    parser.parse_forge()?;
-    Ok(parser.model)
+pub fn parse(text: &str) -> Result<Model, ParseError> {
+    let p = Parser::new(text);
+    p.parse()
 }

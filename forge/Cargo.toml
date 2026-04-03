@@ -5,3 +5,4 @@ edition = "2021"
 description = "A unified software modeling DSL — structure + process diagrams from code"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
