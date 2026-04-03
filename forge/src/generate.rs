@@ -756,6 +756,7 @@ fn kind_display(kind: ElementKind) -> &'static str {
         ElementKind::Pipeline => "Pipeline",
         ElementKind::Stage => "Stage",
         ElementKind::Gate => "Gate",
+        ElementKind::DeploymentNode => "Deployment Node",
         _ => "Element",
     }
 }
@@ -769,6 +770,7 @@ fn kind_css(kind: ElementKind) -> &'static str {
         ElementKind::Pipeline => "pipeline",
         ElementKind::Stage => "stage",
         ElementKind::Repository => "repository",
+        ElementKind::DeploymentNode => "container",
         _ => "container",
     }
 }
@@ -809,7 +811,7 @@ mod tests {
 
         let report = generate(&model, &config).expect("generate should succeed");
         assert!(report.pages > 0);
-        assert_eq!(report.diagrams, 3);
+        assert_eq!(report.diagrams, 4);
 
         // Check files exist
         assert!(tmp.join("index.html").exists());
@@ -818,7 +820,9 @@ mod tests {
         assert!(tmp.join("views/SystemContext.html").exists());
         assert!(tmp.join("views/Containers.html").exists());
         assert!(tmp.join("views/Pipeline.html").exists());
+        assert!(tmp.join("views/Deployment.html").exists());
         assert!(tmp.join("assets/diagrams/SystemContext.svg").exists());
+        assert!(tmp.join("assets/diagrams/Deployment.svg").exists());
 
         let _ = fs::remove_dir_all(&tmp);
     }

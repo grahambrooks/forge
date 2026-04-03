@@ -19,29 +19,7 @@ Changes flow through four stages:
 
 ## Infrastructure
 
-```
-                    ┌─────────────────────────────┐
-                    │        Load Balancer         │
-                    │     (AWS ALB, TLS termination)│
-                    └──────────────┬──────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                     │
-    ┌─────────┴──────┐  ┌─────────┴──────┐  ┌──────────┴─────┐
-    │  Payment API   │  │  Payment API   │  │  Payment API   │
-    │  (3 replicas)  │  │  (3 replicas)  │  │  (3 replicas)  │
-    └─────────┬──────┘  └─────────┬──────┘  └──────────┬─────┘
-              │                    │                     │
-              └────────────────────┼────────────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                     │
-    ┌─────────┴──────┐  ┌─────────┴──────┐  ┌──────────┴─────┐
-    │   PostgreSQL   │  │     Redis      │  │  Notification  │
-    │  (primary +    │  │   (3-node     │  │    Service     │
-    │   2 replicas)  │  │    cluster)    │  │  (2 replicas)  │
-    └────────────────┘  └────────────────┘  └────────────────┘
-```
+See the **[Production Deployment](../views/Deployment.html)** diagram for the full deployment topology. The key infrastructure components are:
 
 ## Scaling Strategy
 

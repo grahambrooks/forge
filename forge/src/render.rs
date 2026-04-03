@@ -87,6 +87,11 @@ fn default_css() -> String {
     .forge-element--gate polygon {{ fill: {gate_bg}; stroke: {gate_stroke}; stroke-width: 2; }}
     .forge-element--gate .forge-label--name {{ fill: #BF360C; font-size: 9px; }}
 
+    /* ── Deployment Node ── */
+    .forge-element--deploymentnode rect {{ fill: #f8f9fa; stroke: #888; stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }}
+    .forge-element--deploymentnode .forge-label--name {{ fill: #333; font-size: 13px; }}
+    .forge-element--deploymentnode .forge-label--tech {{ fill: #888; font-size: 11px; }}
+
     .forge-relationship line {{ stroke: {rel_line}; stroke-width: 1.5; }}
     .forge-relationship path {{ stroke: {rel_line}; stroke-width: 1.5; fill: none; }}
     .forge-relationship--arrow {{ fill: {rel_line}; }}
@@ -167,6 +172,11 @@ const OUTLINE_CSS: &str = r#"
 
     .forge-element--gate polygon { fill: none; stroke: #E65100; stroke-width: 2; }
     .forge-element--gate .forge-label--name { fill: #BF360C; font-size: 9px; }
+
+    /* ── Deployment Node (outline) ── */
+    .forge-element--deploymentnode rect { fill: none; stroke: #888; stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }
+    .forge-element--deploymentnode .forge-label--name { fill: #333; font-size: 13px; }
+    .forge-element--deploymentnode .forge-label--tech { fill: #888; font-size: 11px; }
 
     .forge-relationship line { stroke: #707070; stroke-width: 1.5; }
     .forge-relationship path { stroke: #707070; stroke-width: 1.5; fill: none; }
@@ -269,7 +279,9 @@ fn render_node(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         esc(&n.id)
     ));
 
-    if n.kind == ElementKind::Gate {
+    if n.kind == ElementKind::DeploymentNode {
+        render_deployment_node(o, n);
+    } else if n.kind == ElementKind::Gate {
         render_gate(o, n);
     } else if n.kind == ElementKind::Person {
         render_person(o, n, style);
@@ -418,6 +430,28 @@ fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
             esc(text)
         ));
         ty += 16.0;
+    }
+}
+
+fn render_deployment_node(o: &mut Vec<String>, n: &LayoutNode) {
+    let r = &n.rect;
+    // Dashed border rect for the deployment node boundary
+    o.push(format!(
+        r#"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" />"#,
+        r.x, r.y, r.w, r.h
+    ));
+    // Header label (top-left)
+    let lx = r.x + 10.0;
+    let ly = r.y + 18.0;
+    o.push(format!(
+        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start">{}</text>"#,
+        lx, ly, esc(&n.label)
+    ));
+    if let Some(ref sub) = n.sublabel {
+        o.push(format!(
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="start">{}</text>"#,
+            lx, ly + 14.0, esc(sub)
+        ));
     }
 }
 
@@ -646,6 +680,7 @@ fn render_legend(o: &mut Vec<String>, layout: &Layout, style: &str) {
                 ElementKind::Component => Colors::COMPONENT_BG,
                 ElementKind::Stage => Colors::STAGE_BG,
                 ElementKind::Gate => Colors::GATE_BG,
+                ElementKind::DeploymentNode => "#f8f9fa",
                 _ => "#ccc",
             };
             (label, color)
@@ -761,6 +796,7 @@ fn kind_label(kind: ElementKind) -> Option<String> {
         ElementKind::Component => Some("Component".into()),
         ElementKind::Pipeline => Some("Pipeline".into()),
         ElementKind::Repository => Some("Repository".into()),
+        ElementKind::DeploymentNode => Some("Deployment Node".into()),
         ElementKind::Stage | ElementKind::Gate => None,
         _ => None,
     }
@@ -776,6 +812,7 @@ fn css_kind(kind: ElementKind) -> &'static str {
         ElementKind::Gate => "gate",
         ElementKind::Pipeline => "pipeline",
         ElementKind::Repository => "repository",
+        ElementKind::DeploymentNode => "deploymentnode",
         _ => "element",
     }
 }
@@ -944,13 +981,28 @@ mod tests {
     }
 
     #[test]
-    fn all_three_views_render_both_styles() {
-        for key in &["SystemContext", "Containers", "Pipeline"] {
+    fn all_views_render_both_styles() {
+        for key in &["SystemContext", "Containers", "Pipeline", "Deployment"] {
             for style in &["filled", "outline"] {
                 let svg = render_view(key, style);
                 assert!(svg.contains("<svg "), "{key}/{style} missing svg tag");
                 assert!(svg.contains("</svg>"), "{key}/{style} missing closing svg");
             }
         }
+    }
+
+    #[test]
+    fn svg_deployment_has_nested_nodes() {
+        let svg = render_view("Deployment", "filled");
+        assert!(svg.contains("forge-element--deploymentnode"));
+        assert!(svg.contains("EKS Cluster"));
+        assert!(svg.contains("stroke-dasharray")); // dashed borders in CSS
+    }
+
+    #[test]
+    fn svg_deployment_has_container_instances() {
+        let svg = render_view("Deployment", "filled");
+        // Container instances should appear inside deployment nodes
+        assert!(svg.contains("Payment API") || svg.contains("Ledger DB"));
     }
 }

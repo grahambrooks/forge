@@ -90,6 +90,47 @@ forge "Payment Platform" {
     }
   }
 
+  deployment "production" {
+    node "AWS" {
+      technology "Amazon Web Services"
+
+      node "us-east-1" {
+        technology "AWS Region"
+
+        node "EKS Cluster" {
+          technology "Kubernetes 1.29"
+
+          node "API Pods" {
+            technology "3 replicas"
+            instance api
+          }
+
+          node "Processor Pods" {
+            technology "3 replicas"
+            instance processor
+          }
+
+          node "Notification Pods" {
+            technology "2 replicas"
+            instance notifier
+          }
+        }
+
+        node "RDS" {
+          technology "Managed PostgreSQL"
+          description "Primary + 2 read replicas, synchronous replication"
+          instance db
+        }
+
+        node "ElastiCache" {
+          technology "Managed Redis"
+          description "3-node cluster with consistent hashing"
+          instance cache
+        }
+      }
+    }
+  }
+
   views {
     systemContext payments "SystemContext" {
       include *
@@ -107,6 +148,12 @@ forge "Payment Platform" {
       include *
       autoLayout lr
       title "Payment API — CI/CD Pipeline"
+    }
+
+    deploymentView "production" "Deployment" {
+      include *
+      autoLayout tb
+      title "Payment Platform — Production Deployment"
     }
   }
 

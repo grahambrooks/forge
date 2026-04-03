@@ -288,12 +288,13 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::SystemContext => "systemContext",
         ViewKind::Container => "container",
         ViewKind::PipelineView => "pipelineView",
+        ViewKind::Deployment => "deploymentView",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");
     let scope_ref = scope.split('.').next_back().unwrap_or(scope);
 
-    if view.kind == ViewKind::PipelineView {
+    if view.kind == ViewKind::PipelineView || view.kind == ViewKind::Deployment {
         o.push_str(&format!(
             "{}{} \"{}\" \"{}\" {{\n",
             pad,

@@ -17,6 +17,7 @@ pub enum ElementKind {
     Gate,
     Step,
     Artifact,
+    DeploymentNode,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,6 +25,7 @@ pub enum ViewKind {
     SystemContext,
     Container,
     PipelineView,
+    Deployment,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

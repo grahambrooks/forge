@@ -365,6 +365,10 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
                 .elements
                 .values()
                 .any(|e| e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Stage),
+            ViewKind::Deployment => model.elements.values().any(|e| {
+                e.kind == ElementKind::DeploymentNode
+                    && e.properties.get("environment").map(|s| s.as_str()) == Some(scope_id)
+            }),
         };
         if !has_content {
             violations.push(Violation {
@@ -389,6 +393,7 @@ fn kind_name(kind: ElementKind) -> &'static str {
         ElementKind::Pipeline => "Pipeline",
         ElementKind::Stage => "Stage",
         ElementKind::Gate => "Gate",
+        ElementKind::DeploymentNode => "Deployment Node",
         _ => "Element",
     }
 }

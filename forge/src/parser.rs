@@ -231,6 +231,7 @@ impl Parser {
                 }
                 "model" => self.parse_model()?,
                 "process" => self.parse_process()?,
+                "deployment" => self.parse_deployment()?,
                 "views" => self.parse_views()?,
                 "docs" => self.parse_docs()?,
                 "styles" => {
@@ -621,6 +622,104 @@ impl Parser {
         }
     }
 
+    // ── Deployment ──
+
+    fn parse_deployment(&mut self) -> Result<(), ParseError> {
+        let env_name = self.parse_string()?;
+        let env_id = env_name.replace(' ', "-").to_lowercase();
+        self.expect('{')?;
+        while self.peek_after_ws() != Some('}') {
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in deployment"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "node" {
+                self.parse_deployment_node(&env_id, &env_id)?;
+            } else if self.peek_after_ws() == Some('"') {
+                self.parse_string()?;
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+        self.expect('}')?;
+        Ok(())
+    }
+
+    fn parse_deployment_node(&mut self, env_id: &str, parent_id: &str) -> Result<(), ParseError> {
+        let node_name = self.parse_string()?;
+        let local = node_name
+            .to_lowercase()
+            .replace(|c: char| !c.is_alphanumeric() && c != '-', "-")
+            .replace("--", "-")
+            .trim_matches('-')
+            .to_string();
+        let node_id = format!("{}.{}", parent_id, local);
+
+        let mut el = Element::new(&node_id, ElementKind::DeploymentNode, &node_name);
+        el.parent = Some(parent_id.into());
+        el.properties.insert("environment".into(), env_id.into());
+
+        self.expect('{')?;
+        // First pass: gather properties, then recurse for children
+        while self.peek_after_ws() != Some('}') {
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in deployment node"));
+            }
+            let _saved = self.pos;
+            let kw = self.parse_ident()?;
+            match kw.as_str() {
+                "technology" => {
+                    el.technology = Some(self.parse_string()?);
+                }
+                "description" => {
+                    el.description = Some(self.parse_string()?);
+                }
+                "tags" => {
+                    while self.peek_after_ws() == Some('"') {
+                        el.tags.push(self.parse_string()?);
+                    }
+                }
+                "instances" | "replicas" => {
+                    let count = self.parse_ident()?;
+                    el.properties.insert("instances".into(), count);
+                }
+                "node" => {
+                    // Save element before recursing so parent exists
+                    self.model.add_element(el.clone());
+                    self.parse_deployment_node(env_id, &node_id)?;
+                    // Refresh el from model (children may have been added)
+                    if let Some(updated) = self.model.elements.get(&node_id) {
+                        el = updated.clone();
+                    }
+                    continue;
+                }
+                "instance" => {
+                    let container_ref = self.parse_ident()?;
+                    let resolved = self.resolve_ref(&container_ref);
+                    // Store instance refs as comma-separated in property
+                    let existing = el
+                        .properties
+                        .entry("container_instances".into())
+                        .or_default();
+                    if !existing.is_empty() {
+                        existing.push(',');
+                    }
+                    existing.push_str(&resolved);
+                }
+                _ => {
+                    if self.peek_after_ws() == Some('"') {
+                        self.parse_string()?;
+                    } else if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
+                    }
+                }
+            }
+        }
+        self.expect('}')?;
+        self.model.add_element(el);
+        Ok(())
+    }
+
     // ── Views ──
 
     fn parse_views(&mut self) -> Result<(), ParseError> {
@@ -678,6 +777,21 @@ impl Parser {
                         scope: Some(scope),
                         title: None,
                         auto_layout: AutoLayout::LeftRight,
+                        include_all: false,
+                    };
+                    self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
+                "deploymentView" => {
+                    let scope_raw = self.parse_string()?;
+                    let scope = scope_raw.replace(' ', "-").to_lowercase();
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: ViewKind::Deployment,
+                        key,
+                        scope: Some(scope),
+                        title: None,
+                        auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                     };
                     self.parse_view_body(&mut view)?;
@@ -799,9 +913,9 @@ mod tests {
     #[test]
     fn parse_element_counts() {
         let m = payments_model();
-        assert_eq!(m.elements.len(), 16);
+        assert_eq!(m.elements.len(), 24); // 16 structural/process + 8 deployment nodes
         assert_eq!(m.relationships.len(), 5);
-        assert_eq!(m.views.len(), 3);
+        assert_eq!(m.views.len(), 4); // SystemContext, Containers, Pipeline, Deployment
     }
 
     #[test]
@@ -1019,5 +1133,43 @@ mod tests {
     fn parse_docs_empty() {
         let m = parse(r#"forge "X" { docs {} model {} views {} }"#).unwrap();
         assert!(m.docs.is_empty());
+    }
+
+    #[test]
+    fn parse_deployment_nodes() {
+        let m = payments_model();
+        let deploy_nodes: Vec<_> = m
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::DeploymentNode)
+            .collect();
+        assert_eq!(deploy_nodes.len(), 8); // AWS, us-east-1, EKS, API Pods, Processor Pods, Notification Pods, RDS, ElastiCache
+
+        // Check nesting
+        let eks = deploy_nodes
+            .iter()
+            .find(|e| e.name == "EKS Cluster")
+            .unwrap();
+        assert!(eks.technology.as_deref() == Some("Kubernetes 1.29"));
+
+        // Check container instances
+        let rds = deploy_nodes.iter().find(|e| e.name == "RDS").unwrap();
+        assert!(rds
+            .properties
+            .get("container_instances")
+            .unwrap()
+            .contains("payments.db"));
+    }
+
+    #[test]
+    fn parse_deployment_view() {
+        let m = payments_model();
+        let dv = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Deployment)
+            .unwrap();
+        assert_eq!(dv.key, "Deployment");
+        assert_eq!(dv.scope.as_deref(), Some("production"));
     }
 }
