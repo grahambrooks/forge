@@ -1,0 +1,38 @@
+forge/src/analyze/emit.rs
+  67bf62b4b404fba2 318,332-335
+forge/src/check.rs
+  67bf62b4b404fba2 373-376
+forge/src/render.rs
+  67bf62b4b404fba2 95-101,188-194,296-298,452-498,863,880
+forge/src/layout.rs
+  67bf62b4b404fba2 77,727-851
+forge/src/generate.rs
+  67bf62b4b404fba2 922,977
+forge/src/parser.rs
+  67bf62b4b404fba2 476,493-591,912-926,1115-1117,1403-1436
+forge/examples/payments.forge
+  67bf62b4b404fba2 200-205
+forge/src/model.rs
+  67bf62b4b404fba2 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "b6b6a2a4f625717ca8e162ae6d0bfc98ee434bad",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 369,
+      "total_deletions": 10,
+      "accepted_lines": 362,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/8e8409c90d96d1470e15de8be3200a7c51d83647387233b96e6068da635f8a15"
+    }
+  }
+}
