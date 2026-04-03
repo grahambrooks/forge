@@ -1,0 +1,26 @@
+DESIGN.md
+  67bf62b4b404fba2 1356-1392,1394,1396,1398-1400,1402-1406
+CLAUDE.md
+  67bf62b4b404fba2 5,13,17-24,26-40,43,45-89,96-97,100-101,103-105,109-111,113-115,117-118,123-126,128,130-133,135-139,141-145,147-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "07d05e70c32df1d365476cfdcfaa4d4fef7c7fe1",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 162,
+      "total_deletions": 169,
+      "accepted_lines": 161,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/d3530fbf4fbae62f508c50205fef6f0cdbc39373c380223e1583fb1bf402dded"
+    }
+  }
+}
