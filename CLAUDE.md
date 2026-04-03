@@ -2,7 +2,7 @@
 
 ## What is Forge?
 
-Forge is a unified software modeling DSL and toolchain that describes both the *structure* (C4 architecture) and *processes* (CI/CD pipelines, branching strategies) of software systems from a single coherent model. It renders multiple views as clean SVG with CSS classes, generates static documentation sites, lints architecture, and exposes capabilities via MCP.
+Forge is a unified software modeling DSL and toolchain that describes both the *structure* (C4 architecture) and *processes* (CI/CD pipelines, branching strategies) of software systems from a single coherent model. It renders multiple views as clean SVG with CSS classes, generates static documentation sites, lints architecture, and provides IDE integration via LSP.
 
 Read `DESIGN.md` for the full specification. It is the source of truth for all design decisions.
 
@@ -10,142 +10,139 @@ Read `DESIGN.md` for the full specification. It is the source of truth for all d
 
 ```
 model-diagram/
-├── DESIGN.md                    # Complete design specification (read this first)
+├── DESIGN.md                    # Complete design specification
 ├── CLAUDE.md                    # This file
 └── forge/
     ├── examples/
-    │   └── payments.forge       # Reference DSL example (payments platform)
-    ├── src/                     # Rust implementation
-    │   ├── main.rs              # CLI entry point (clap): build, check, analyze subcommands
-    │   ├── model.rs             # Semantic model (ElementKind, Element, Relationship, View, Model)
+    │   ├── payments.forge       # Full reference example (30 elements, 11 views)
+    │   ├── payments-baseline.forge  # Baseline for diff demo
+    │   ├── team-rules.forge-rules   # Custom lint rules example
+    │   ├── docs/                # Markdown documentation (5 pages + ADR)
+    │   └── multi-file/          # Multi-file !include example
+    ├── src/
+    │   ├── main.rs              # CLI (12 subcommands via clap)
+    │   ├── model.rs             # Semantic model (elements, relationships, views, animation, data model, teams, trust boundaries, tech stack)
     │   ├── parser.rs            # Hand-written recursive descent parser
-    │   ├── check.rs             # Architectural linter (8 built-in rules)
-    │   ├── analyze/             # Codebase scanners
-    │   │   ├── mod.rs           # Scanner orchestration and config
-    │   │   ├── code.rs          # Project manifest scanner (Cargo.toml, package.json, go.mod, etc.)
-    │   │   ├── ci.rs            # CI/CD scanner (GitHub Actions YAML)
-    │   │   ├── docker.rs        # Docker scanner (Dockerfile, docker-compose.yml)
-    │   │   └── emit.rs          # Model → .forge DSL emitter
-    │   ├── generate.rs          # Static documentation site generator
-    │   ├── layout.rs            # Layout algorithms (system context, container, pipeline)
-    │   └── render.rs            # SVG renderer (filled + outline modes, C4 palette)
-    ├── output/                  # Generated SVGs and PNGs (both filled + outline)
-    │   └── preview.html         # HTML comparison page with style toggle
-    └── Cargo.toml               # Rust project config (clap dependency)
+    │   ├── preprocess.rs        # !include, !fragment/!use, !if directives
+    │   ├── check.rs             # 8 built-in architectural lint rules
+    │   ├── custom_rules.rs      # Declarative .forge-rules engine
+    │   ├── diff.rs              # Model differencing engine
+    │   ├── animate.rs           # Frame-based SVG animation with CSS keyframes
+    │   ├── analyze/             # Codebase scanners (code, ci, docker) + .forge emitter
+    │   ├── generate.rs          # Static site generator (HTML, CSS, JSON)
+    │   ├── layout.rs            # Content-aware layout algorithms (9 view types)
+    │   ├── render.rs            # SVG renderer (filled + outline, entity tables, branches)
+    │   ├── lsp.rs               # Language Server Protocol (tower-lsp)
+    │   └── serve.rs             # File watcher + live-reload HTTP server
+    ├── EDITORS.md               # LSP setup for 7 editors
+    ├── PUBLISHING.md            # GitHub Pages + Backstage TechDocs deployment
+    ├── Cargo.toml               # Dependencies: clap, serde, tokio, tower-lsp, notify, pulldown-cmark
+    └── Makefile                 # build, test, lint, fmt, pre-commit, run
 ```
 
-## Current State
+## Current State (139 tests, all passing)
 
-### What works (Rust implementation)
-- Full hand-written recursive descent parser for the Forge DSL
-- Semantic model with typed elements, relationships, and views
-- Three layout algorithms: system context, container (layered), pipeline (topological sort)
-- SVG renderer with two modes: **filled** (canonical C4 colors) and **outline** (wireframe)
-- Structurizr-style rendering: person silhouette, database cylinder, gate diamond, drop shadows, legend, edge label pills
-- Complex shapes render cleanly in outline mode (single unified paths, no internal construction lines)
-- CLI with `build`, `check`, `analyze`, and `generate` subcommands (via `clap`)
-- Working example: `payments.forge` producing SystemContext, Containers, and Pipeline views
-- Output matches the Python prototype (16 elements, 5 relationships, 3 views)
-- Architectural linter with 8 built-in rules: dependency-cycles, orphaned-elements, missing-descriptions, missing-technology, database-direct-access, chatty-coupling, gate-coverage, empty-views
-- Lint output in text or JSON format, configurable severity filter, exit codes for CI integration
-- Custom lint rules via `.forge-rules` files (declarative scope/condition/message syntax, `--rules` flag)
-- Codebase analyzer with 3 scanners: code (Cargo.toml, package.json, go.mod, pyproject.toml, pom.xml, build.gradle), CI (GitHub Actions), Docker (Dockerfile, docker-compose.yml)
-- .forge DSL emitter with round-trip support (parse → emit → re-parse)
-- Static documentation site generator: index page with model overview and check results, per-view pages with embedded SVGs, per-element detail pages with relationships, JSON export, responsive CSS theme with sidebar navigation
-- Preprocessor: `!include` (path + glob), `!fragment`/`!use` (reusable blocks), `!if env()` (conditional inclusion)
-- 10 view types: systemContext, container, component, pipelineView, deploymentView, techStackView, branchingView, dataModelView, trustBoundaryView, teamView
-- LSP server for IDE integration (see EDITORS.md)
-
-### What needs to be built
-The remaining commands from DESIGN.md (`mcp`, `watch`, `serve`, `export`, `import`), additional analyze scanners (git, k8s, openapi, tree-sitter code analysis), animation engine, and the Cargo workspace restructuring.
-
-## Key Commands
-
-### Build and run
-```bash
-cd forge
-cargo build
-cargo run -- build --source examples/payments.forge --out output
-cargo run -- build --source examples/payments.forge --out output --style outline
-cargo run -- check --source examples/payments.forge
-cargo run -- check --source examples/payments.forge --severity info --format json
-cargo run -- analyze ./path/to/project --out project.forge
-cargo run -- analyze --dry-run --scanners code,ci .
-cargo run -- generate --source examples/payments.forge --out _site
-```
-
-### View results
-Open `forge/output/preview.html` in a browser for side-by-side filled/outline comparison.
-
-## Architecture Decisions
-
-1. **Single Rust binary** — Everything compiles into one statically-linked binary: parser, renderer, analyzer, checker, site generator, MCP server. Feature flags for optional deps (resvg, tower-lsp, MCP, tantivy).
-
-2. **Cargo workspace layout** — Use a Cargo workspace with internal crates (`forge-parser`, `forge-model`, `forge-analyze`, `forge-check`, `forge-layout`, `forge-render`, `forge-sitegen`, `forge-diff`, `forge-mcp`, `forge-cli`, `forge-lsp`) that all compile into a single `[[bin]]` target.
-
-3. **Key Rust dependencies** — `pest` (parser), `tree-sitter` (code analysis), `gix` (git), `clap` (CLI), `serde`/`serde_json`, `tera` (HTML templates), `tokio` (async for MCP/LSP/serve). Optional: `resvg`, `tower-lsp`, `rmcp`, `tantivy`, `gifski`.
-
-4. **SVG rendering** — Hand-written SVG with semantic CSS classes (`.forge-element--container`, `.forge-diff--added`, etc.). No DOM library. Two rendering modes: filled and outline.
-
-5. **MCP server** — Exposes tools: `forge_query`, `forge_render`, `forge_check`, `forge_diff`, `forge_analyze`, `forge_element_detail`, `forge_search`, `forge_validate`, `forge_suggest_fix`. Stdio and HTTP transports.
-
-## CLI Commands (target)
+### CLI Commands
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `forge build` | Working | Parse .forge → render SVGs |
-| `forge analyze` | Working (code, ci, docker scanners) | Scan codebases → generate .forge model |
+| `forge build` | Working | Parse .forge → render SVGs (11 view types) |
+| `forge check` | Working | 8 built-in rules + custom `.forge-rules` |
+| `forge analyze` | Working | Scan codebases (code, CI, Docker) → .forge |
 | `forge generate` | Working | Model → static documentation website |
-| `forge generate --baseline` | Working | Highlight architectural changes vs baseline |
-| `forge check` | Working | Lint model against architectural rules |
-| `forge mcp` | Design complete | MCP server for AI agent access |
-| `forge watch` | Working | Rebuild on .forge/.md file changes |
-| `forge serve` | Working | Local preview server with live reload |
-| `forge export` | Design complete | Export as JSON/YAML |
-| `forge import` | Design complete | Import from PlantUML/Mermaid |
-| `forge lsp` | Working | Language Server Protocol (see EDITORS.md) |
+| `forge generate --baseline` | Working | Diff highlighting (green/amber) vs baseline |
+| `forge watch` | Working | Auto-rebuild on .forge/.md changes |
+| `forge serve` | Working | Live-reload preview server (SSE) |
+| `forge lsp` | Working | IDE integration (diagnostics, hover, completion, go-to-def) |
+| `forge mcp` | Not started | MCP server for AI agent access |
+| `forge export` | Not started | JSON/YAML export (JSON exists inside generate) |
+| `forge import` | Not started | Import from PlantUML/Mermaid |
 
-## DSL Quick Reference
+### View Types (11)
 
-```forge
-forge "System Name" {
-  model {
-    actor = person "Name" { description "..." }
-    sys = system "Name" {
-      svc = container "Name" { technology "Rust / Axum" }
-      db  = container "DB" { technology "PostgreSQL"; tags "database" }
-      svc -> db "reads/writes" "SQL"
-    }
-    actor -> sys.svc "uses" "HTTPS"
-  }
+| View | DSL keyword | Description |
+|------|------------|-------------|
+| System Context | `systemContext` | Actors and systems |
+| Container | `container` | Containers within a system |
+| Component | `component` | Components within a container |
+| Pipeline | `pipelineView` | CI/CD stages and gates |
+| Deployment | `deploymentView` | Infrastructure topology with nested nodes |
+| Tech Stack | `techStackView` | Technology inventory by category |
+| Branching | `branchingView` | Git branching strategy |
+| Data Model | `dataModelView` | Entity-relationship diagram with field tables |
+| Trust Boundaries | `trustBoundaryView` | Security zones with members |
+| Team Ownership | `teamView` | Team → container ownership map |
+| Animated | Any view + `animation {}` | Frame-based step-by-step walkthrough |
 
-  process {
-    pipeline "ci" {
-      build = stage "Build" { step "cargo build" }
-      deploy = stage "Deploy" { needs build; gate "tests-pass" }
-    }
-  }
+### DSL Features
 
-  views {
-    systemContext sys "Context" { include *; autoLayout lr }
-    container sys "Containers" { include *; autoLayout tb }
-    pipelineView "ci" "Pipeline" { include *; autoLayout lr }
-  }
-}
+- **Structural**: person, system, container, component, relationships
+- **Process**: repository, strategy/branch, pipeline/stage/gate
+- **Deployment**: nested deployment nodes with container instances
+- **Data**: entity/field/relationship with types and constraints
+- **Security**: trust boundary zones (public, dmz, internal, pci)
+- **Teams**: team definitions with ownership and contact info
+- **Tech Stack**: categorized technology inventory with versions
+- **Documentation**: markdown docs and ADRs
+- **Animation**: frame-based reveal with highlights, pulse, state changes
+- **Preprocessor**: `!include` (path + glob), `!fragment`/`!use`, `!if env()`
+- **Custom rules**: `.forge-rules` declarative lint syntax
+
+## Key Commands
+
+```bash
+cd forge
+cargo build
+
+# Build SVGs
+cargo run -- build --source examples/payments.forge --out output
+cargo run -- build --source examples/payments.forge --out output --style outline
+
+# Check architecture
+cargo run -- check --source examples/payments.forge
+cargo run -- check --source examples/payments.forge --rules examples/team-rules.forge-rules
+
+# Analyze a codebase
+cargo run -- analyze ./path/to/project --out project.forge
+cargo run -- analyze --dry-run --scanners code,ci .
+
+# Generate documentation site
+cargo run -- generate --source examples/payments.forge --out _site
+cargo run -- generate --source examples/payments.forge --baseline examples/payments-baseline.forge --out _site
+
+# Live development
+cargo run -- serve --source examples/payments.forge --port 4000
+cargo run -- watch --source examples/payments.forge
+
+# LSP server (for editors)
+cargo run -- lsp
 ```
 
 ## Coding Conventions
 
-- **Rust style**: Use `rustfmt` defaults. Error handling via `thiserror` for library crates, `anyhow` for CLI.
-- **SVG output**: All elements get semantic CSS classes. Use `forge-` prefix for all class names. Keep SVG self-contained (inline styles, no external dependencies).
-- **Testing**: Each crate should have unit tests. Integration tests parse `.forge` files from `examples/` and verify SVG output structure.
-- **File naming**: Crate names use hyphens (`forge-parser`), module files use underscores per Rust convention.
+- **Rust style**: `rustfmt` defaults. Run `make pre-commit` before committing (fmt + clippy + test).
+- **SVG output**: All elements get semantic CSS classes with `forge-` prefix. SVGs are self-contained.
+- **Testing**: Unit tests in each module. Integration tests parse `examples/payments.forge`.
+- **Raw strings**: Use `r##"..."##` for strings containing `"#` (common in SVG color values).
 
-## Next Steps (Priority Order)
+## What Needs to Be Built
 
-1. **Restructure into Cargo workspace** with internal crates matching DESIGN.md §4.2 (`forge-parser`, `forge-model`, `forge-layout`, `forge-render`, `forge-check`, `forge-cli`)
-2. **Add custom rule support** — `.forge-rules` declarative syntax from DESIGN.md §8.5
-4. **Implement `forge analyze`** starting with the code scanner (tree-sitter) and git scanner (gix)
-5. **Implement `forge generate`** for static site output
-6. **Implement `forge diff`** for model comparison
-7. **Implement `forge mcp`** server
+### High Priority
+1. **`forge mcp`** — MCP server exposing all capabilities to AI agents (Claude Code, Cursor, Windsurf)
+2. **`forge export`** — Standalone JSON/YAML export command (JSON already exists inside generate)
+3. **More analyze scanners** — git (branching/ownership via gix), k8s manifests, OpenAPI specs
+
+### Medium Priority
+4. **`forge import`** — Import from PlantUML/Mermaid formats
+5. **SARIF output** — `forge check --format sarif` for GitHub Code Scanning
+6. **PNG/PDF export** — Via `resvg`
+7. **Client-side search** — Search index for generated sites
+
+### Lower Priority
+8. **Cargo workspace restructure** — Split into forge-parser, forge-model, etc. crates
+9. **Tree-sitter code analysis** — Full AST parsing for import graphs
+10. **Force-directed layout** — For landscape/overview diagrams
+11. **Cross-compilation** — Release binaries for Linux, macOS, Windows
+
+### Phase 6 (Future — documented in DESIGN.md)
+- API catalog, event/message flows, environment config, SLA/SLO definitions, data classification, on-call/runbook links

@@ -1353,61 +1353,57 @@ forge lsp                   Start the Language Server Protocol server
 
 ## 10. Implementation Roadmap
 
-### Phase 1 — Foundation (Months 1–3)
+### Completed
 
-- Cargo workspace with single binary target, feature-flag architecture
-- `forge-parser`: PEG grammar for the full DSL using `pest`
-- **File composition**: `!include` (path + glob), `!fragment` / `!use`, circular-include detection
-- `forge-model`: In-memory graph with validation
-- `forge-render`: SVG output for structure views (systemContext, container, component); filled and outline modes
-- `forge-cli`: `build` command with `--style`, `--format`, `--theme` flags
-- Basic auto-layout (layered / Sugiyama)
+**Parser & Model**
+- Hand-written recursive descent parser for the full DSL
+- Preprocessor: `!include` (path + glob), `!fragment`/`!use`, `!if env()` conditionals, circular include detection
+- Semantic model: elements, relationships, views, animation, data model, trust boundaries, teams, tech stack, docs
 
-### Phase 2 — Analyze & Check (Months 3–5)
+**Rendering & Layout (11 view types)**
+- Content-aware layout: boxes auto-size to fit text, stages and gates auto-size
+- SVG renderer: filled + outline modes, person silhouette, database cylinder, gate diamond, entity tables, branch lanes, deployment nesting
+- Animation engine: frame-based CSS keyframes, cumulative visibility, highlights, pulse, playback controls
 
-- `forge-analyze`: code scanner (tree-sitter for Rust, Go, TS, Java, Python, C#), git scanner (gix), CI scanner (GitHub Actions, GitLab CI)
-- Confidence scoring and `inferred` tagging for analyzed elements
-- `forge-check`: rule engine with built-in rules (dependency cycles, orphaned elements, missing descriptions, gate coverage, boundary violations)
-- Custom rule syntax (`.forge-rules` files)
-- SARIF output for CI integration
-- Process domain: pipeline, stage, gate, environment
-- `pipelineView` view type
+**Commands (8 working)**
+- `forge build` — parse → layout → render SVGs (all 11 view types)
+- `forge check` — 8 built-in rules + custom `.forge-rules` declarative syntax
+- `forge analyze` — code (6 languages), CI (GitHub Actions), Docker scanners
+- `forge generate` — static site with index, views, elements, docs, checks, JSON export
+- `forge generate --baseline` — diff highlighting with auto-generated change description
+- `forge watch` — file watching with auto-rebuild (notify crate)
+- `forge serve` — live-reload HTTP server with SSE
+- `forge lsp` — diagnostics, hover, completion, go-to-definition, document symbols
 
-### Phase 3 — Generate & Diff (Months 5–7)
+**Documentation**
+- EDITORS.md: LSP setup for VS Code, Neovim, Helix, Zed, Sublime Text, JetBrains, Emacs
+- PUBLISHING.md: GitHub Pages, Backstage TechDocs, Netlify, Vercel, AWS S3, Docker
+- Comprehensive payments example: 30 elements, 11 views, 5 markdown docs, baseline for diff
 
-- `forge-sitegen`: static documentation site generator with Tera templates
-- Element detail pages, view pages, navigation, client-side search (tantivy-generated index)
-- `forge-diff`: model differencing engine — compare two model snapshots or git revisions
-- Diff overlay rendering (added/removed/modified CSS classes on SVG elements)
-- `forge generate --diff` integration — diff report page and annotated diagrams
-- Flow domain: gitgraph rendering (branch, commit, merge, tag)
-- **Animation engine**: frame-based animation with CSS keyframes output
-- CSS theming system
-- `forge watch` with incremental rebuild
+### Remaining
 
-### Phase 4 — MCP & AI (Months 7–9)
+**High Priority**
+- `forge mcp` — MCP server exposing all capabilities to AI agents (stdio + HTTP)
+- `forge export` — standalone JSON/YAML export command
+- Additional analyze scanners: git (gix), k8s manifests, OpenAPI specs
 
-- `forge-mcp`: MCP server with stdio and HTTP transports
-- Full tool suite: query, render, check, diff, analyze, search, validate, suggest-fix
-- Docker/K8s/OpenAPI scanners for `forge analyze`
-- `!extends` / `!override` for workspace inheritance
-- `!include <url>` for remote includes with content-addressable caching
-- `!if` conditional includes
-
-### Phase 5 — Integration & Polish (Months 9–12)
-
-- Hugo and MkDocs integration guides (both call `forge build` as subprocess)
-- `forge serve` with live reload and `--present` mode for animated walkthroughs
-- Import/export: Structurizr DSL, PlantUML C4, Mermaid
-- Deployment views
-- `forge-lsp` for VS Code / Neovim
-- SMIL animation output mode
+**Medium Priority**
+- `forge import` — import from PlantUML/Mermaid
+- SARIF output for `forge check` (GitHub Code Scanning)
 - PNG/PDF export via `resvg`
-- Animated GIF and WebM export (via `resvg` + `gifski`)
+- Client-side search index for generated sites
+- `!extends` / `!override` for workspace inheritance
+- `!include <url>` for remote includes
+
+**Lower Priority**
+- Cargo workspace restructure (forge-parser, forge-model, etc.)
+- Tree-sitter AST analysis for code scanner
 - Force-directed layout for landscape views
-- Performance optimization (target: 10k-element models in < 1s)
-- Documentation and example gallery
-- Cross-compilation and release automation (Linux musl, macOS universal, Windows MSVC)
+- SMIL animation output mode
+- GIF/WebM animation export
+- `forge serve --present` for presentation mode with speaker notes
+- Cross-compilation and release automation
+- Performance optimization (target: 10k-element models)
 
 ### Phase 6 — Complete Modeling (Future)
 
