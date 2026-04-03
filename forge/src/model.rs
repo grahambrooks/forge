@@ -27,6 +27,7 @@ pub enum ViewKind {
     PipelineView,
     Deployment,
     TechStack,
+    Branching,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

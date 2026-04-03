@@ -315,6 +315,7 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::PipelineView => "pipelineView",
         ViewKind::Deployment => "deploymentView",
         ViewKind::TechStack => "techStackView",
+        ViewKind::Branching => "branchingView",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");
@@ -328,7 +329,10 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
             kind_str,
             escape(&view.key)
         ));
-    } else if view.kind == ViewKind::PipelineView || view.kind == ViewKind::Deployment {
+    } else if view.kind == ViewKind::PipelineView
+        || view.kind == ViewKind::Deployment
+        || view.kind == ViewKind::Branching
+    {
         o.push_str(&format!(
             "{}{} \"{}\" \"{}\" {{\n",
             pad,

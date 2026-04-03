@@ -74,6 +74,7 @@ pub fn compute_layout(model: &Model, view: &View) -> Layout {
         ViewKind::PipelineView => layout_pipeline(model, view),
         ViewKind::Deployment => layout_deployment(model, view),
         ViewKind::TechStack => layout_tech_stack(model, view),
+        ViewKind::Branching => layout_branching(model, view),
     }
 }
 
@@ -720,6 +721,131 @@ fn layout_tech_stack(model: &Model, view: &View) -> Layout {
         title: Some(title),
         nodes,
         edges: Vec::new(),
+    }
+}
+
+// ─── Branching Strategy View ─────────────────────────────────────
+
+const BRANCH_W: f64 = 500.0;
+const BRANCH_H: f64 = 60.0;
+const BRANCH_GAP: f64 = 30.0;
+
+fn layout_branching(model: &Model, view: &View) -> Layout {
+    let strategy_id = view.scope.as_deref().unwrap_or("");
+
+    let branches: Vec<&Element> = model
+        .elements
+        .values()
+        .filter(|e| {
+            e.kind == ElementKind::Branch
+                && e.properties.get("strategy").map(|s| s.as_str()) == Some(strategy_id)
+        })
+        .collect();
+
+    // Sort: trunk first, then others
+    let mut sorted = branches.clone();
+    sorted.sort_by_key(|b| {
+        if b.properties.contains_key("protection") {
+            0 // trunk branches have protection rules
+        } else {
+            1
+        }
+    });
+
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+    let mut y = TITLE_H + 10.0;
+
+    for branch in &sorted {
+        let protection = branch.properties.get("protection");
+        let is_trunk = protection.is_some();
+
+        // Branch lane: a wide rounded rect
+        let sublabel = if is_trunk {
+            protection.map(|p| format!("Protected: {}", p))
+        } else {
+            let mut parts = Vec::new();
+            if let Some(from) = branch.properties.get("branchesFrom") {
+                let from_name = model
+                    .elements
+                    .get(from)
+                    .map(|e| e.name.as_str())
+                    .unwrap_or(from);
+                parts.push(format!("branches from {}", from_name));
+            }
+            if let Some(into) = branch.properties.get("mergesInto") {
+                let into_name = model
+                    .elements
+                    .get(into)
+                    .map(|e| e.name.as_str())
+                    .unwrap_or(into);
+                parts.push(format!("merges into {}", into_name));
+            }
+            if parts.is_empty() {
+                None
+            } else {
+                Some(parts.join(" → "))
+            }
+        };
+
+        let mut tags = branch.tags.clone();
+        if is_trunk {
+            tags.push("trunk".into());
+        }
+
+        nodes.push(LayoutNode {
+            id: branch.id.clone(),
+            label: branch.name.clone(),
+            sublabel,
+            kind: ElementKind::Branch,
+            tags,
+            rect: Rect {
+                x: PAD,
+                y,
+                w: BRANCH_W,
+                h: BRANCH_H,
+            },
+            description: branch.description.clone(),
+            depth: 0,
+            children_ids: Vec::new(),
+        });
+
+        y += BRANCH_H + BRANCH_GAP;
+    }
+
+    // Add edges for branchesFrom / mergesInto
+    for branch in &sorted {
+        if let Some(from) = branch.properties.get("branchesFrom") {
+            edges.push(LayoutEdge {
+                frm: from.clone(),
+                to: branch.id.clone(),
+                label: "branches from".into(),
+                technology: None,
+            });
+        }
+        if let Some(into) = branch.properties.get("mergesInto") {
+            edges.push(LayoutEdge {
+                frm: branch.id.clone(),
+                to: into.clone(),
+                label: "merges into".into(),
+                technology: None,
+            });
+        }
+    }
+
+    let canvas_w = BRANCH_W + PAD * 2.0;
+    let canvas_h = y + PAD;
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — Branching Strategy", model.name));
+
+    Layout {
+        width: canvas_w,
+        height: canvas_h,
+        title: Some(title),
+        nodes,
+        edges,
     }
 }
 

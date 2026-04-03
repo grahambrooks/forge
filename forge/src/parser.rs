@@ -473,8 +473,7 @@ impl Parser {
 
         match first.as_str() {
             "strategy" => {
-                self.parse_string()?;
-                self.skip_block()?;
+                self.parse_strategy()?;
             }
             "pipeline" => {
                 self.parse_pipeline()?;
@@ -488,6 +487,105 @@ impl Parser {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn parse_strategy(&mut self) -> Result<(), ParseError> {
+        let strategy_name = self.parse_string()?;
+        let strategy_id = strategy_name.replace(' ', "-").to_lowercase();
+
+        self.expect('{')?;
+        while self.peek_after_ws() != Some('}') {
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in strategy"));
+            }
+            let first = self.parse_ident()?;
+            self.skip_ws();
+
+            if self.peek() == Some('=') {
+                self.advance();
+                let kind_str = self.parse_ident()?;
+                if kind_str == "branch" {
+                    let branch_name = self.parse_string()?;
+                    let branch_id = format!("{}.{}", strategy_id, first);
+                    let mut el = Element::new(&branch_id, ElementKind::Branch, &branch_name);
+                    el.parent = Some(strategy_id.clone());
+                    el.properties.insert("strategy".into(), strategy_id.clone());
+                    self.id_map.insert(first.clone(), branch_id.clone());
+
+                    if self.peek_after_ws() == Some('{') {
+                        self.expect('{')?;
+                        loop {
+                            self.skip_ws();
+                            if self.peek() == Some('}') {
+                                self.advance();
+                                break;
+                            }
+                            if self.at_end() {
+                                return Err(self.error("unexpected EOF in branch"));
+                            }
+                            let prop = self.parse_ident()?;
+                            match prop.as_str() {
+                                "protection" => {
+                                    let mut protections = Vec::new();
+                                    while self.peek_after_ws() == Some('"') {
+                                        protections.push(self.parse_string()?);
+                                    }
+                                    el.properties
+                                        .insert("protection".into(), protections.join(", "));
+                                }
+                                "branchesFrom" => {
+                                    let target = self.parse_ident()?;
+                                    let resolved = self.resolve_ref(&target);
+                                    el.properties
+                                        .insert("branchesFrom".into(), resolved.clone());
+                                    self.model.add_relationship(Relationship {
+                                        frm: resolved,
+                                        to: branch_id.clone(),
+                                        label: "branches from".into(),
+                                        technology: None,
+                                    });
+                                }
+                                "mergesInto" => {
+                                    let target = self.parse_ident()?;
+                                    let resolved = self.resolve_ref(&target);
+                                    el.properties.insert("mergesInto".into(), resolved.clone());
+                                    self.model.add_relationship(Relationship {
+                                        frm: branch_id.clone(),
+                                        to: resolved,
+                                        label: "merges into".into(),
+                                        technology: None,
+                                    });
+                                }
+                                _ => {
+                                    if self.peek_after_ws() == Some('"') {
+                                        self.parse_string()?;
+                                    } else if self.peek_after_ws() == Some('{') {
+                                        self.skip_block()?;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    self.model.add_element(el);
+                } else {
+                    if self.peek_after_ws() == Some('"') {
+                        self.parse_string()?;
+                    }
+                    if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
+                    }
+                }
+            } else {
+                if self.peek_after_ws() == Some('"') {
+                    self.parse_string()?;
+                }
+                if self.peek_after_ws() == Some('{') {
+                    self.skip_block()?;
+                }
+            }
+        }
+        self.expect('}')?;
         Ok(())
     }
 
@@ -811,6 +909,21 @@ impl Parser {
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
                 }
+                "branchingView" => {
+                    let scope_raw = self.parse_string()?;
+                    let scope = scope_raw.replace(' ', "-").to_lowercase();
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: ViewKind::Branching,
+                        key,
+                        scope: Some(scope),
+                        title: None,
+                        auto_layout: AutoLayout::LeftRight,
+                        include_all: false,
+                    };
+                    self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
                 _ => {
                     // Skip unknown view types
                     loop {
@@ -999,9 +1112,9 @@ mod tests {
     #[test]
     fn parse_element_counts() {
         let m = payments_model();
-        assert_eq!(m.elements.len(), 24); // 16 structural/process + 8 deployment nodes
-        assert_eq!(m.relationships.len(), 5);
-        assert_eq!(m.views.len(), 5); // SystemContext, Containers, Pipeline, Deployment, TechStack
+        assert_eq!(m.elements.len(), 26); // 16 structural/process + 8 deployment + 2 branches
+        assert_eq!(m.relationships.len(), 7); // 5 model + 2 branch flows
+        assert_eq!(m.views.len(), 6); // SystemContext, Containers, Pipeline, Deployment, TechStack, Branching
     }
 
     #[test]
@@ -1286,5 +1399,39 @@ mod tests {
             .unwrap();
         assert_eq!(tsv.key, "TechStack");
         assert!(tsv.title.as_ref().unwrap().contains("Technology Stack"));
+    }
+
+    #[test]
+    fn parse_branching_strategy() {
+        let m = payments_model();
+        let branches: Vec<_> = m
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Branch)
+            .collect();
+        assert_eq!(branches.len(), 2);
+
+        let trunk = branches.iter().find(|b| b.name == "main").unwrap();
+        assert!(trunk.properties.contains_key("protection"));
+        assert_eq!(
+            trunk.properties.get("strategy").map(|s| s.as_str()),
+            Some("trunk-based")
+        );
+
+        let feature = branches.iter().find(|b| b.name == "feature/*").unwrap();
+        assert!(feature.properties.contains_key("branchesFrom"));
+        assert!(feature.properties.contains_key("mergesInto"));
+    }
+
+    #[test]
+    fn parse_branching_view() {
+        let m = payments_model();
+        let bv = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Branching)
+            .unwrap();
+        assert_eq!(bv.key, "Branching");
+        assert_eq!(bv.scope.as_deref(), Some("trunk-based"));
     }
 }

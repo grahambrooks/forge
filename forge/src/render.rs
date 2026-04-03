@@ -92,6 +92,13 @@ fn default_css() -> String {
     .forge-element--deploymentnode .forge-label--name {{ fill: #333; font-size: 13px; }}
     .forge-element--deploymentnode .forge-label--tech {{ fill: #888; font-size: 11px; }}
 
+    /* ── Branch ── */
+    .forge-element--branch rect {{ fill: #f0f4ff; stroke: #5b8def; stroke-width: 1.5; rx: 8; ry: 8; }}
+    .forge-element--branch .forge-label--name {{ fill: #1a3a6b; font-size: 14px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }}
+    .forge-element--branch .forge-label--tech {{ fill: #6b7c93; font-size: 10px; }}
+    .forge-branch-line {{ stroke: #5b8def; }}
+    .forge-branch-dot {{ fill: #5b8def; }}
+
     .forge-relationship line {{ stroke: {rel_line}; stroke-width: 1.5; }}
     .forge-relationship path {{ stroke: {rel_line}; stroke-width: 1.5; fill: none; }}
     .forge-relationship--arrow {{ fill: {rel_line}; }}
@@ -177,6 +184,13 @@ const OUTLINE_CSS: &str = r#"
     .forge-element--deploymentnode rect { fill: none; stroke: #888; stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }
     .forge-element--deploymentnode .forge-label--name { fill: #333; font-size: 13px; }
     .forge-element--deploymentnode .forge-label--tech { fill: #888; font-size: 11px; }
+
+    /* ── Branch (outline) ── */
+    .forge-element--branch rect { fill: none; stroke: #5b8def; stroke-width: 1.5; rx: 8; ry: 8; }
+    .forge-element--branch .forge-label--name { fill: #1a3a6b; font-size: 14px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .forge-element--branch .forge-label--tech { fill: #6b7c93; font-size: 10px; }
+    .forge-branch-line { stroke: #5b8def; }
+    .forge-branch-dot { fill: #5b8def; }
 
     .forge-relationship line { stroke: #707070; stroke-width: 1.5; }
     .forge-relationship path { stroke: #707070; stroke-width: 1.5; fill: none; }
@@ -279,7 +293,9 @@ fn render_node(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         esc(&n.id)
     ));
 
-    if n.kind == ElementKind::DeploymentNode {
+    if n.kind == ElementKind::Branch {
+        render_branch(o, n);
+    } else if n.kind == ElementKind::DeploymentNode {
         render_deployment_node(o, n);
     } else if n.kind == ElementKind::Gate {
         render_gate(o, n);
@@ -430,6 +446,53 @@ fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
             esc(text)
         ));
         ty += 16.0;
+    }
+}
+
+fn render_branch(o: &mut Vec<String>, n: &LayoutNode) {
+    let r = &n.rect;
+    let is_trunk = n.tags.contains(&"trunk".to_string());
+
+    // Branch lane rectangle
+    o.push(format!(
+        r#"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" />"#,
+        r.x, r.y, r.w, r.h
+    ));
+
+    // Branch line (horizontal through the middle)
+    let line_y = r.y + r.h / 2.0;
+    let line_x1 = r.x + 120.0;
+    let line_x2 = r.x + r.w - 20.0;
+    let sw = if is_trunk { "3" } else { "2" };
+    let dash = if is_trunk {
+        ""
+    } else {
+        r#" stroke-dasharray="8,4""#
+    };
+    o.push(format!(
+        r#"      <line x1="{:.0}" y1="{:.0}" x2="{:.0}" y2="{:.0}" class="forge-branch-line" stroke-width="{}"{} />"#,
+        line_x1, line_y, line_x2, line_y, sw, dash
+    ));
+
+    // Dot at branch start
+    o.push(format!(
+        r#"      <circle cx="{:.0}" cy="{:.0}" r="5" class="forge-branch-dot" />"#,
+        line_x1, line_y
+    ));
+
+    // Branch name (left side)
+    let label_y = r.y + r.h / 2.0 + 5.0;
+    o.push(format!(
+        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start">{}</text>"#,
+        r.x + 14.0, label_y, esc(&n.label)
+    ));
+
+    // Sublabel (protection or flow description, right side)
+    if let Some(ref sub) = n.sublabel {
+        o.push(format!(
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="end">{}</text>"#,
+            r.x + r.w - 14.0, label_y, esc(sub)
+        ));
     }
 }
 
@@ -797,6 +860,7 @@ fn kind_label(kind: ElementKind) -> Option<String> {
         ElementKind::Pipeline => Some("Pipeline".into()),
         ElementKind::Repository => Some("Repository".into()),
         ElementKind::DeploymentNode => Some("Deployment Node".into()),
+        ElementKind::Branch => Some("Branch".into()),
         ElementKind::Stage | ElementKind::Gate => None,
         _ => None,
     }
@@ -813,6 +877,7 @@ fn css_kind(kind: ElementKind) -> &'static str {
         ElementKind::Pipeline => "pipeline",
         ElementKind::Repository => "repository",
         ElementKind::DeploymentNode => "deploymentnode",
+        ElementKind::Branch => "branch",
         _ => "element",
     }
 }

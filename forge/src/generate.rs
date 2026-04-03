@@ -919,6 +919,7 @@ fn kind_display(kind: ElementKind) -> &'static str {
         ElementKind::Stage => "Stage",
         ElementKind::Gate => "Gate",
         ElementKind::DeploymentNode => "Deployment Node",
+        ElementKind::Branch => "Branch",
         _ => "Element",
     }
 }
@@ -973,7 +974,7 @@ mod tests {
 
         let report = generate(&model, &config, None).expect("generate should succeed");
         assert!(report.pages > 0);
-        assert_eq!(report.diagrams, 5);
+        assert_eq!(report.diagrams, 6);
 
         // Check files exist
         assert!(tmp.join("index.html").exists());

@@ -197,6 +197,12 @@ forge "Payment Platform" {
       include *
       title "Payment Platform — Technology Stack"
     }
+
+    branchingView "trunk-based" "Branching" {
+      include *
+      autoLayout tb
+      title "Payment API — Branching Strategy"
+    }
   }
 
   docs {

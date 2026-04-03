@@ -370,6 +370,10 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
                     && e.properties.get("environment").map(|s| s.as_str()) == Some(scope_id)
             }),
             ViewKind::TechStack => !model.tech_stack.is_empty(),
+            ViewKind::Branching => model.elements.values().any(|e| {
+                e.kind == ElementKind::Branch
+                    && e.properties.get("strategy").map(|s| s.as_str()) == Some(scope_id)
+            }),
         };
         if !has_content {
             violations.push(Violation {
