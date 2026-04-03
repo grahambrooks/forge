@@ -10,6 +10,7 @@ mod model;
 mod parser;
 mod preprocess;
 mod render;
+mod serve;
 
 use clap::{Parser, Subcommand};
 use std::fs;
@@ -108,6 +109,46 @@ enum Commands {
         /// Custom rules file (.forge-rules)
         #[arg(long)]
         rules: Option<PathBuf>,
+    },
+    /// Watch for changes and rebuild automatically
+    Watch {
+        /// Input .forge file
+        #[arg(long, default_value = "forge.forge")]
+        source: PathBuf,
+
+        /// Output directory
+        #[arg(long, default_value = "_site")]
+        out: PathBuf,
+
+        /// Diagram rendering style
+        #[arg(long, default_value = "filled")]
+        style: String,
+
+        /// Baseline .forge file for diff highlighting
+        #[arg(long)]
+        baseline: Option<PathBuf>,
+    },
+    /// Start a local preview server with live reload
+    Serve {
+        /// Input .forge file
+        #[arg(long, default_value = "forge.forge")]
+        source: PathBuf,
+
+        /// Output directory
+        #[arg(long, default_value = "_site")]
+        out: PathBuf,
+
+        /// Diagram rendering style
+        #[arg(long, default_value = "filled")]
+        style: String,
+
+        /// HTTP port
+        #[arg(long, default_value = "4000")]
+        port: u16,
+
+        /// Baseline .forge file for diff highlighting
+        #[arg(long)]
+        baseline: Option<PathBuf>,
     },
     /// Start the Language Server Protocol server (stdio)
     Lsp,
@@ -318,6 +359,31 @@ fn main() {
             } else if has_warnings {
                 process::exit(1);
             }
+        }
+        Commands::Watch {
+            source,
+            out,
+            style,
+            baseline,
+        } => {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("failed to create tokio runtime");
+            rt.block_on(serve::run_watch(source, out, style, baseline));
+        }
+        Commands::Serve {
+            source,
+            out,
+            style,
+            port,
+            baseline,
+        } => {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("failed to create tokio runtime");
+            rt.block_on(serve::run_serve(source, out, style, baseline, port));
         }
         Commands::Lsp => {
             tokio::runtime::Builder::new_current_thread()

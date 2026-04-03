@@ -99,8 +99,8 @@ Open `forge/output/preview.html` in a browser for side-by-side filled/outline co
 | `forge generate --baseline` | Working | Highlight architectural changes vs baseline |
 | `forge check` | Working | Lint model against architectural rules |
 | `forge mcp` | Design complete | MCP server for AI agent access |
-| `forge watch` | Design complete | Incremental rebuild on file changes |
-| `forge serve` | Design complete | Local preview server with live reload |
+| `forge watch` | Working | Rebuild on .forge/.md file changes |
+| `forge serve` | Working | Local preview server with live reload |
 | `forge export` | Design complete | Export as JSON/YAML |
 | `forge import` | Design complete | Import from PlantUML/Mermaid |
 | `forge lsp` | Working | Language Server Protocol (see EDITORS.md) |
