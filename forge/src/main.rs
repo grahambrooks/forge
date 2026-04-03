@@ -1,3 +1,4 @@
+mod analyze;
 mod check;
 mod layout;
 mod model;
@@ -35,6 +36,28 @@ enum Commands {
         /// Rendering style: 'filled' or 'outline'
         #[arg(long, default_value = "filled")]
         style: String,
+    },
+    /// Scan codebases and produce a .forge model
+    Analyze {
+        /// Directories to scan (default: current directory)
+        #[arg(default_value = ".")]
+        paths: Vec<PathBuf>,
+
+        /// Output .forge file
+        #[arg(long, default_value = "forge.forge")]
+        out: PathBuf,
+
+        /// Comma-separated scanner list: code, ci, docker
+        #[arg(long, default_value = "code,ci,docker")]
+        scanners: String,
+
+        /// Exclude paths matching these names (repeatable)
+        #[arg(long)]
+        exclude: Vec<String>,
+
+        /// Show what would be generated without writing
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Lint and validate a model against architectural rules
     Check {
@@ -111,6 +134,46 @@ fn main() {
                 eprintln!("  Wrote: {}", path.display());
             }
 
+            eprintln!("Done.");
+        }
+        Commands::Analyze {
+            paths,
+            out,
+            scanners,
+            exclude,
+            dry_run,
+        } => {
+            let scanner_list: Vec<String> =
+                scanners.split(',').map(|s| s.trim().to_string()).collect();
+
+            let mut config = analyze::AnalyzeConfig {
+                paths,
+                scanners: scanner_list,
+                out: out.clone(),
+                dry_run,
+                ..Default::default()
+            };
+            for e in exclude {
+                config.exclude.push(e);
+            }
+
+            eprintln!("Scanning...");
+            let model = analyze::analyze(&config);
+
+            eprintln!("  Elements: {}", model.elements.len());
+            eprintln!("  Relationships: {}", model.relationships.len());
+
+            let forge_text = analyze::emit::emit(&model);
+
+            if dry_run {
+                println!("{}", forge_text);
+            } else {
+                fs::write(&out, &forge_text).unwrap_or_else(|e| {
+                    eprintln!("Error writing {}: {}", out.display(), e);
+                    process::exit(1);
+                });
+                eprintln!("  Wrote: {}", out.display());
+            }
             eprintln!("Done.");
         }
         Commands::Check {

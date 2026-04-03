@@ -16,10 +16,16 @@ model-diagram/
     ├── examples/
     │   └── payments.forge       # Reference DSL example (payments platform)
     ├── src/                     # Rust implementation
-    │   ├── main.rs              # CLI entry point (clap): build + check subcommands
+    │   ├── main.rs              # CLI entry point (clap): build, check, analyze subcommands
     │   ├── model.rs             # Semantic model (ElementKind, Element, Relationship, View, Model)
     │   ├── parser.rs            # Hand-written recursive descent parser
     │   ├── check.rs             # Architectural linter (8 built-in rules)
+    │   ├── analyze/             # Codebase scanners
+    │   │   ├── mod.rs           # Scanner orchestration and config
+    │   │   ├── code.rs          # Project manifest scanner (Cargo.toml, package.json, go.mod, etc.)
+    │   │   ├── ci.rs            # CI/CD scanner (GitHub Actions YAML)
+    │   │   ├── docker.rs        # Docker scanner (Dockerfile, docker-compose.yml)
+    │   │   └── emit.rs          # Model → .forge DSL emitter
     │   ├── layout.rs            # Layout algorithms (system context, container, pipeline)
     │   └── render.rs            # SVG renderer (filled + outline modes, C4 palette)
     ├── output/                  # Generated SVGs and PNGs (both filled + outline)
@@ -36,14 +42,16 @@ model-diagram/
 - SVG renderer with two modes: **filled** (canonical C4 colors) and **outline** (wireframe)
 - Structurizr-style rendering: person silhouette, database cylinder, gate diamond, drop shadows, legend, edge label pills
 - Complex shapes render cleanly in outline mode (single unified paths, no internal construction lines)
-- CLI with `build` and `check` subcommands (via `clap`)
+- CLI with `build`, `check`, and `analyze` subcommands (via `clap`)
 - Working example: `payments.forge` producing SystemContext, Containers, and Pipeline views
 - Output matches the Python prototype (16 elements, 5 relationships, 3 views)
 - Architectural linter with 8 built-in rules: dependency-cycles, orphaned-elements, missing-descriptions, missing-technology, database-direct-access, chatty-coupling, gate-coverage, empty-views
 - Lint output in text or JSON format, configurable severity filter, exit codes for CI integration
+- Codebase analyzer with 3 scanners: code (Cargo.toml, package.json, go.mod, pyproject.toml, pom.xml, build.gradle), CI (GitHub Actions), Docker (Dockerfile, docker-compose.yml)
+- .forge DSL emitter with round-trip support (parse → emit → re-parse)
 
 ### What needs to be built
-The remaining commands from DESIGN.md (`analyze`, `generate`, `check`, `mcp`, `watch`, `serve`, `export`, `import`, `lsp`) and the Cargo workspace restructuring.
+The remaining commands from DESIGN.md (`generate`, `mcp`, `watch`, `serve`, `export`, `import`, `lsp`), additional analyze scanners (git, k8s, openapi, tree-sitter code analysis), custom lint rules, and the Cargo workspace restructuring.
 
 ## Key Commands
 
@@ -55,6 +63,8 @@ cargo run -- build --source examples/payments.forge --out output
 cargo run -- build --source examples/payments.forge --out output --style outline
 cargo run -- check --source examples/payments.forge
 cargo run -- check --source examples/payments.forge --severity info --format json
+cargo run -- analyze ./path/to/project --out project.forge
+cargo run -- analyze --dry-run --scanners code,ci .
 ```
 
 ### View results
@@ -77,7 +87,7 @@ Open `forge/output/preview.html` in a browser for side-by-side filled/outline co
 | Command | Status | Description |
 |---------|--------|-------------|
 | `forge build` | Working | Parse .forge → render SVGs |
-| `forge analyze` | Design complete | Scan codebases → generate .forge model |
+| `forge analyze` | Working (code, ci, docker scanners) | Scan codebases → generate .forge model |
 | `forge generate` | Design complete | Model → static documentation website |
 | `forge generate --diff` | Design complete | Highlight architectural changes |
 | `forge check` | Working | Lint model against architectural rules |
