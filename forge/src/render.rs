@@ -36,14 +36,34 @@ impl Colors {
 }
 
 fn default_css() -> String {
+    // CSS custom properties enable dark mode in both standalone SVGs and embedded in HTML
     format!(
         r#"
     .forge-diagram {{
       font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      --svg-bg: #ffffff; --svg-fg: #333; --svg-fg-muted: #555; --svg-fg-faint: #888;
+      --svg-surface: #fff; --svg-surface-alt: #f8f9fa; --svg-border: #ccc;
+      --svg-rel-line: {rel_line}; --svg-pipe-line: {pipe_line};
+      --svg-pill-bg: #fff; --svg-pill-opacity: 0.85;
+      --svg-stage-bg: {stage_bg}; --svg-stage-stroke: {stage_stroke}; --svg-stage-fg: #333;
+      --svg-gate-bg: {gate_bg}; --svg-gate-stroke: {gate_stroke}; --svg-gate-fg: #BF360C;
+      --svg-deploy-bg: #f8f9fa; --svg-deploy-stroke: #888;
+      --svg-branch-bg: #f0f4ff; --svg-branch-stroke: #5b8def; --svg-branch-fg: #1a3a6b;
     }}
-    .forge-title {{
-      font-size: 20px; font-weight: 600; fill: #333; text-anchor: middle;
+    @media(prefers-color-scheme:dark) {{
+      .forge-diagram {{
+        --svg-bg: #0d1117; --svg-fg: #e0e4ea; --svg-fg-muted: #a0a8b4; --svg-fg-faint: #707880;
+        --svg-surface: #161b22; --svg-surface-alt: #1c2128; --svg-border: #30363d;
+        --svg-rel-line: #8b949e; --svg-pipe-line: #8b949e;
+        --svg-pill-bg: #161b22; --svg-pill-opacity: 0.95;
+        --svg-stage-bg: #1c2128; --svg-stage-stroke: #484f58; --svg-stage-fg: #e0e4ea;
+        --svg-gate-bg: #2a1a00; --svg-gate-stroke: #d29922; --svg-gate-fg: #d29922;
+        --svg-deploy-bg: #161b22; --svg-deploy-stroke: #484f58;
+        --svg-branch-bg: #111d2e; --svg-branch-stroke: #58a6ff; --svg-branch-fg: #79b8ff;
+      }}
     }}
+    .forge-bg {{ fill: var(--svg-bg); }}
+    .forge-title {{ font-size: 20px; font-weight: 600; fill: var(--svg-fg); text-anchor: middle; }}
     .forge-shadow {{ filter: url(#dropShadow); }}
     .forge-element text {{ text-anchor: middle; }}
     .forge-label--name {{ font-size: 14px; font-weight: 600; }}
@@ -79,39 +99,48 @@ fn default_css() -> String {
     .forge-element--database .forge-label--tech {{ fill: #c0d8ec; }}
     .forge-element--database .forge-label--kind {{ fill: #a0c4e0; }}
 
-    .forge-element--stage rect {{ fill: {stage_bg}; stroke: {stage_stroke}; stroke-width: 2; rx: 6; ry: 6; }}
-    .forge-element--stage .forge-label--name {{ fill: #333; }}
-    .forge-element--stage .forge-label--desc {{ fill: #757575; }}
-    .forge-element--stage .forge-label--tech {{ fill: #757575; }}
+    .forge-element--stage rect {{ fill: var(--svg-stage-bg); stroke: var(--svg-stage-stroke); stroke-width: 2; rx: 6; ry: 6; }}
+    .forge-element--stage .forge-label--name {{ fill: var(--svg-stage-fg); }}
+    .forge-element--stage .forge-label--desc {{ fill: var(--svg-fg-muted); }}
+    .forge-element--stage .forge-label--tech {{ fill: var(--svg-fg-muted); }}
 
-    .forge-element--gate polygon {{ fill: {gate_bg}; stroke: {gate_stroke}; stroke-width: 2; }}
-    .forge-element--gate .forge-label--name {{ fill: #BF360C; font-size: 9px; }}
+    .forge-element--gate polygon {{ fill: var(--svg-gate-bg); stroke: var(--svg-gate-stroke); stroke-width: 2; }}
+    .forge-element--gate .forge-label--name {{ fill: var(--svg-gate-fg); font-size: 9px; }}
 
-    /* ── Deployment Node ── */
-    .forge-element--deploymentnode rect {{ fill: #f8f9fa; stroke: #888; stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }}
-    .forge-element--deploymentnode .forge-label--name {{ fill: #333; font-size: 13px; }}
-    .forge-element--deploymentnode .forge-label--tech {{ fill: #888; font-size: 11px; }}
+    .forge-element--deploymentnode rect {{ fill: var(--svg-deploy-bg); stroke: var(--svg-deploy-stroke); stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }}
+    .forge-element--deploymentnode .forge-label--name {{ fill: var(--svg-fg); font-size: 13px; }}
+    .forge-element--deploymentnode .forge-label--tech {{ fill: var(--svg-fg-faint); font-size: 11px; }}
 
-    /* ── Branch ── */
-    .forge-element--branch rect {{ fill: #f0f4ff; stroke: #5b8def; stroke-width: 1.5; rx: 8; ry: 8; }}
-    .forge-element--branch .forge-label--name {{ fill: #1a3a6b; font-size: 14px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }}
-    .forge-element--branch .forge-label--tech {{ fill: #6b7c93; font-size: 10px; }}
-    .forge-branch-line {{ stroke: #5b8def; }}
-    .forge-branch-dot {{ fill: #5b8def; }}
+    .forge-element--branch rect {{ fill: var(--svg-branch-bg); stroke: var(--svg-branch-stroke); stroke-width: 1.5; rx: 8; ry: 8; }}
+    .forge-element--branch .forge-label--name {{ fill: var(--svg-branch-fg); font-size: 14px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }}
+    .forge-element--branch .forge-label--tech {{ fill: var(--svg-fg-faint); font-size: 10px; }}
+    .forge-branch-line {{ stroke: var(--svg-branch-stroke); }}
+    .forge-branch-dot {{ fill: var(--svg-branch-stroke); }}
 
-    .forge-relationship line {{ stroke: {rel_line}; stroke-width: 1.5; }}
-    .forge-relationship path {{ stroke: {rel_line}; stroke-width: 1.5; fill: none; }}
-    .forge-relationship--arrow {{ fill: {rel_line}; }}
-    .forge-label--rel {{ font-size: 11px; fill: #555; text-anchor: middle; }}
-    .forge-label--rel-tech {{ font-size: 10px; fill: #888; font-style: italic; text-anchor: middle; }}
+    .forge-relationship line {{ stroke: var(--svg-rel-line); stroke-width: 1.5; }}
+    .forge-relationship path {{ stroke: var(--svg-rel-line); stroke-width: 1.5; fill: none; }}
+    .forge-relationship--arrow {{ fill: var(--svg-rel-line); }}
+    .forge-label--rel {{ font-size: 11px; fill: var(--svg-fg-muted); text-anchor: middle; }}
+    .forge-label--rel-tech {{ font-size: 10px; fill: var(--svg-fg-faint); font-style: italic; text-anchor: middle; }}
 
-    .forge-connector line {{ stroke: {pipe_line}; stroke-width: 2.5; stroke-dasharray: 8,4; }}
-    .forge-connector--arrow {{ fill: {pipe_line}; }}
+    .forge-connector line {{ stroke: var(--svg-pipe-line); stroke-width: 2.5; stroke-dasharray: 8,4; }}
+    .forge-connector--arrow {{ fill: var(--svg-pipe-line); }}
 
-    .forge-legend rect.forge-legend-bg {{ fill: #fff; stroke: #ccc; stroke-width: 1; rx: 4; ry: 4; }}
-    .forge-legend text {{ font-size: 10px; fill: #555; }}
-    .forge-legend .forge-legend-title {{ font-size: 11px; font-weight: 600; fill: #333; }}
+    .forge-legend rect.forge-legend-bg {{ fill: var(--svg-surface); stroke: var(--svg-border); stroke-width: 1; rx: 4; ry: 4; }}
+    .forge-legend text {{ font-size: 10px; fill: var(--svg-fg-muted); }}
+    .forge-legend .forge-legend-title {{ font-size: 11px; font-weight: 600; fill: var(--svg-fg); }}
     .forge-legend rect.forge-legend-swatch {{ stroke-width: 1; rx: 2; ry: 2; }}
+
+    .forge-pill {{ fill: var(--svg-pill-bg); fill-opacity: var(--svg-pill-opacity); }}
+
+    /* ── Entity table ── */
+    .forge-entity-box {{ fill: var(--svg-surface, #fff); stroke: {container_bg}; stroke-width: 1.5; rx: 4; ry: 4; }}
+    .forge-entity-header {{ fill: {container_bg}; }}
+    .forge-entity-header-text {{ fill: #fff; }}
+    .forge-entity-sub {{ fill: #c0d8ec; }}
+    .forge-entity-sep {{ stroke: var(--svg-border, #e2e6ea); stroke-width: 0.5; }}
+    .forge-entity-field {{ fill: var(--svg-fg, #333); font-size: 11px; font-weight: 600; }}
+    .forge-entity-type {{ fill: var(--svg-fg-faint, #888); font-size: 10px; }}
 "#,
         person_bg = Colors::PERSON_BG,
         person_stroke = Colors::PERSON_STROKE,
@@ -133,10 +162,25 @@ fn default_css() -> String {
 const OUTLINE_CSS: &str = r#"
     .forge-diagram {
       font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      --svg-bg: #ffffff; --svg-fg: #333; --svg-fg-muted: #555; --svg-fg-faint: #888;
+      --svg-surface: #fff; --svg-border: #ccc;
+      --svg-rel-line: #707070; --svg-pipe-line: #9E9E9E;
+      --svg-pill-bg: #fff; --svg-pill-opacity: 0.85;
+      --svg-stage-stroke: #9E9E9E; --svg-gate-stroke: #E65100; --svg-gate-fg: #BF360C;
+      --svg-deploy-stroke: #888; --svg-branch-stroke: #5b8def; --svg-branch-fg: #1a3a6b;
     }
-    .forge-title {
-      font-size: 20px; font-weight: 600; fill: #333; text-anchor: middle;
+    @media(prefers-color-scheme:dark) {
+      .forge-diagram {
+        --svg-bg: #0d1117; --svg-fg: #e0e4ea; --svg-fg-muted: #a0a8b4; --svg-fg-faint: #707880;
+        --svg-surface: #161b22; --svg-border: #30363d;
+        --svg-rel-line: #8b949e; --svg-pipe-line: #8b949e;
+        --svg-pill-bg: #161b22; --svg-pill-opacity: 0.95;
+        --svg-stage-stroke: #484f58; --svg-gate-stroke: #d29922; --svg-gate-fg: #d29922;
+        --svg-deploy-stroke: #484f58; --svg-branch-stroke: #58a6ff; --svg-branch-fg: #79b8ff;
+      }
     }
+    .forge-bg { fill: var(--svg-bg); }
+    .forge-title { font-size: 20px; font-weight: 600; fill: var(--svg-fg); text-anchor: middle; }
     .forge-shadow { filter: none; }
     .forge-element text { text-anchor: middle; }
     .forge-label--name { font-size: 14px; font-weight: 600; }
@@ -148,63 +192,72 @@ const OUTLINE_CSS: &str = r#"
     .forge-element--person .forge-person-body { fill: none; stroke: #08427B; stroke-width: 2; }
     .forge-element--person rect { fill: none; stroke: #08427B; stroke-width: 2; rx: 8; ry: 8; }
     .forge-element--person .forge-label--name { fill: #08427B; }
-    .forge-element--person .forge-label--desc { fill: #555; }
-    .forge-element--person .forge-label--kind { fill: #888; }
+    .forge-element--person .forge-label--desc { fill: var(--svg-fg-muted); }
+    .forge-element--person .forge-label--kind { fill: var(--svg-fg-faint); }
 
     .forge-element--system rect { fill: none; stroke: #1168BD; stroke-width: 2; rx: 8; ry: 8; }
     .forge-element--system .forge-label--name { fill: #1168BD; }
-    .forge-element--system .forge-label--desc { fill: #555; }
-    .forge-element--system .forge-label--tech { fill: #777; }
-    .forge-element--system .forge-label--kind { fill: #888; }
+    .forge-element--system .forge-label--desc { fill: var(--svg-fg-muted); }
+    .forge-element--system .forge-label--tech { fill: var(--svg-fg-faint); }
+    .forge-element--system .forge-label--kind { fill: var(--svg-fg-faint); }
 
     .forge-element--container rect { fill: none; stroke: #438DD5; stroke-width: 2; rx: 8; ry: 8; }
     .forge-element--container .forge-label--name { fill: #438DD5; }
-    .forge-element--container .forge-label--desc { fill: #555; }
-    .forge-element--container .forge-label--tech { fill: #777; }
-    .forge-element--container .forge-label--kind { fill: #888; }
+    .forge-element--container .forge-label--desc { fill: var(--svg-fg-muted); }
+    .forge-element--container .forge-label--tech { fill: var(--svg-fg-faint); }
+    .forge-element--container .forge-label--kind { fill: var(--svg-fg-faint); }
 
     .forge-element--component rect { fill: none; stroke: #6BA3D6; stroke-width: 2; rx: 8; ry: 8; }
     .forge-element--component .forge-label--name { fill: #6BA3D6; }
-    .forge-element--component .forge-label--desc { fill: #555; }
-    .forge-element--component .forge-label--tech { fill: #777; }
+    .forge-element--component .forge-label--desc { fill: var(--svg-fg-muted); }
+    .forge-element--component .forge-label--tech { fill: var(--svg-fg-faint); }
 
     .forge-element--database .forge-label--name { fill: #438DD5; }
-    .forge-element--database .forge-label--tech { fill: #777; }
-    .forge-element--database .forge-label--kind { fill: #888; }
+    .forge-element--database .forge-label--tech { fill: var(--svg-fg-faint); }
+    .forge-element--database .forge-label--kind { fill: var(--svg-fg-faint); }
 
-    .forge-element--stage rect { fill: none; stroke: #9E9E9E; stroke-width: 2; rx: 6; ry: 6; }
-    .forge-element--stage .forge-label--name { fill: #333; }
-    .forge-element--stage .forge-label--desc { fill: #757575; }
-    .forge-element--stage .forge-label--tech { fill: #757575; }
+    .forge-element--stage rect { fill: none; stroke: var(--svg-stage-stroke); stroke-width: 2; rx: 6; ry: 6; }
+    .forge-element--stage .forge-label--name { fill: var(--svg-fg); }
+    .forge-element--stage .forge-label--desc { fill: var(--svg-fg-muted); }
+    .forge-element--stage .forge-label--tech { fill: var(--svg-fg-muted); }
 
-    .forge-element--gate polygon { fill: none; stroke: #E65100; stroke-width: 2; }
-    .forge-element--gate .forge-label--name { fill: #BF360C; font-size: 9px; }
+    .forge-element--gate polygon { fill: none; stroke: var(--svg-gate-stroke); stroke-width: 2; }
+    .forge-element--gate .forge-label--name { fill: var(--svg-gate-fg); font-size: 9px; }
 
-    /* ── Deployment Node (outline) ── */
-    .forge-element--deploymentnode rect { fill: none; stroke: #888; stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }
-    .forge-element--deploymentnode .forge-label--name { fill: #333; font-size: 13px; }
-    .forge-element--deploymentnode .forge-label--tech { fill: #888; font-size: 11px; }
+    .forge-element--deploymentnode rect { fill: none; stroke: var(--svg-deploy-stroke); stroke-width: 1.5; stroke-dasharray: 6,3; rx: 6; ry: 6; }
+    .forge-element--deploymentnode .forge-label--name { fill: var(--svg-fg); font-size: 13px; }
+    .forge-element--deploymentnode .forge-label--tech { fill: var(--svg-fg-faint); font-size: 11px; }
 
-    /* ── Branch (outline) ── */
-    .forge-element--branch rect { fill: none; stroke: #5b8def; stroke-width: 1.5; rx: 8; ry: 8; }
-    .forge-element--branch .forge-label--name { fill: #1a3a6b; font-size: 14px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
-    .forge-element--branch .forge-label--tech { fill: #6b7c93; font-size: 10px; }
-    .forge-branch-line { stroke: #5b8def; }
-    .forge-branch-dot { fill: #5b8def; }
+    .forge-element--branch rect { fill: none; stroke: var(--svg-branch-stroke); stroke-width: 1.5; rx: 8; ry: 8; }
+    .forge-element--branch .forge-label--name { fill: var(--svg-branch-fg); font-size: 14px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .forge-element--branch .forge-label--tech { fill: var(--svg-fg-faint); font-size: 10px; }
+    .forge-branch-line { stroke: var(--svg-branch-stroke); }
+    .forge-branch-dot { fill: var(--svg-branch-stroke); }
 
-    .forge-relationship line { stroke: #707070; stroke-width: 1.5; }
-    .forge-relationship path { stroke: #707070; stroke-width: 1.5; fill: none; }
-    .forge-relationship--arrow { fill: #707070; }
-    .forge-label--rel { font-size: 11px; fill: #555; text-anchor: middle; }
-    .forge-label--rel-tech { font-size: 10px; fill: #888; font-style: italic; text-anchor: middle; }
+    .forge-relationship line { stroke: var(--svg-rel-line); stroke-width: 1.5; }
+    .forge-relationship path { stroke: var(--svg-rel-line); stroke-width: 1.5; fill: none; }
+    .forge-relationship--arrow { fill: var(--svg-rel-line); }
+    .forge-label--rel { font-size: 11px; fill: var(--svg-fg-muted); text-anchor: middle; }
+    .forge-label--rel-tech { font-size: 10px; fill: var(--svg-fg-faint); font-style: italic; text-anchor: middle; }
 
-    .forge-connector line { stroke: #9E9E9E; stroke-width: 2.5; stroke-dasharray: 8,4; }
-    .forge-connector--arrow { fill: #9E9E9E; }
+    .forge-connector line { stroke: var(--svg-pipe-line); stroke-width: 2.5; stroke-dasharray: 8,4; }
+    .forge-connector--arrow { fill: var(--svg-pipe-line); }
 
-    .forge-legend rect.forge-legend-bg { fill: #fff; stroke: #ccc; stroke-width: 1; rx: 4; ry: 4; }
-    .forge-legend text { font-size: 10px; fill: #555; }
-    .forge-legend .forge-legend-title { font-size: 11px; font-weight: 600; fill: #333; }
+    .forge-legend rect.forge-legend-bg { fill: var(--svg-surface); stroke: var(--svg-border); stroke-width: 1; rx: 4; ry: 4; }
+    .forge-legend text { font-size: 10px; fill: var(--svg-fg-muted); }
+    .forge-legend .forge-legend-title { font-size: 11px; font-weight: 600; fill: var(--svg-fg); }
     .forge-legend rect.forge-legend-swatch { stroke-width: 2; rx: 2; ry: 2; }
+
+    .forge-pill { fill: var(--svg-pill-bg); fill-opacity: var(--svg-pill-opacity); }
+
+    /* ── Entity table ── */
+    .forge-entity-box { fill: var(--svg-surface, #fff); stroke: #438DD5; stroke-width: 1.5; rx: 4; ry: 4; }
+    .forge-entity-header { fill: #438DD5; }
+    .forge-entity-header-text { fill: #fff; }
+    .forge-entity-sub { fill: #c0d8ec; }
+    .forge-entity-sep { stroke: var(--svg-border, #e2e6ea); stroke-width: 0.5; }
+    .forge-entity-field { fill: var(--svg-fg, #333); font-size: 11px; font-weight: 600; }
+    .forge-entity-type { fill: var(--svg-fg-faint, #888); font-size: 10px; }
 "#;
 
 pub fn render_svg(layout: &Layout, style: &str) -> String {
@@ -215,7 +268,7 @@ pub fn render_svg(layout: &Layout, style: &str) -> String {
         layout.width, layout.height, layout.width, layout.height
     ));
     o.push(format!(
-        r##"  <rect width="{}" height="{}" fill="#ffffff" />"##,
+        r#"  <rect class="forge-bg" width="{}" height="{}" />"#,
         layout.width, layout.height
     ));
     o.push("  <defs>".into());
@@ -504,18 +557,18 @@ fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
 
     // Outer box
     o.push(format!(
-        r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" fill="#fff" stroke="#438DD5" stroke-width="1.5" rx="4" ry="4" />"##,
+        r#"      <rect class="forge-entity-box" x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" />"#,
         r.x, r.y, r.w, r.h
     ));
 
     // Header background
     o.push(format!(
-        r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" fill="#438DD5" rx="4" ry="0" />"##,
+        r#"      <rect class="forge-entity-header" x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" rx="4" ry="0" />"#,
         r.x, r.y, r.w, header_h
     ));
     // Header corners fix (cover bottom radius)
     o.push(format!(
-        r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="4" fill="#438DD5" />"##,
+        r#"      <rect class="forge-entity-header" x="{:.0}" y="{:.0}" width="{:.0}" height="4" />"#,
         r.x,
         r.y + header_h - 4.0,
         r.w
@@ -523,7 +576,7 @@ fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
 
     // Entity name in header
     o.push(format!(
-        r##"      <text x="{:.0}" y="{:.0}" class="forge-label--name" fill="#fff">{}</text>"##,
+        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name forge-entity-header-text">{}</text>"#,
         r.x + r.w / 2.0,
         r.y + 21.0,
         esc(&n.label)
@@ -532,7 +585,7 @@ fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
     // Owner subtitle
     if let Some(ref sub) = n.sublabel {
         o.push(format!(
-            r##"      <text x="{:.0}" y="{:.0}" font-size="9" fill="#c0d8ec" text-anchor="end">{}</text>"##,
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-entity-sub" font-size="9" text-anchor="end">{}</text>"#,
             r.x + r.w - pad,
             r.y + 21.0,
             esc(sub)
@@ -551,7 +604,7 @@ fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
             // Row separator line
             if fy > r.y + header_h + pad + 12.0 {
                 o.push(format!(
-                    r##"      <line x1="{:.0}" y1="{:.0}" x2="{:.0}" y2="{:.0}" stroke="#e2e6ea" stroke-width="0.5" />"##,
+                    r#"      <line class="forge-entity-sep" x1="{:.0}" y1="{:.0}" x2="{:.0}" y2="{:.0}" />"#,
                     r.x + pad,
                     fy - row_h + 4.0,
                     r.x + r.w - pad,
@@ -561,7 +614,7 @@ fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
 
             // Field name (left-aligned, bold)
             o.push(format!(
-                r##"      <text x="{:.0}" y="{:.0}" font-size="11" font-weight="600" fill="#333" text-anchor="start">{}</text>"##,
+                r#"      <text class="forge-entity-field" x="{:.0}" y="{:.0}" text-anchor="start">{}</text>"#,
                 r.x + pad,
                 fy,
                 esc(fname.trim())
@@ -569,7 +622,7 @@ fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
 
             // Field type + constraints (right-aligned)
             o.push(format!(
-                r##"      <text x="{:.0}" y="{:.0}" font-size="10" fill="#888" text-anchor="end">{}</text>"##,
+                r#"      <text class="forge-entity-type" x="{:.0}" y="{:.0}" text-anchor="end">{}</text>"#,
                 r.x + r.w - pad,
                 fy,
                 esc(frest)
@@ -830,7 +883,7 @@ fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
         let pill_x = mx - pill_w / 2.0;
         let pill_y = label_y - 12.0;
         o.push(format!(
-            r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" rx="4" ry="4" fill="#fff" fill-opacity="0.85" />"##,
+            r#"      <rect class="forge-pill" x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" rx="4" ry="4" />"#,
             pill_x, pill_y, pill_w, pill_h
         ));
         o.push(format!(
@@ -1172,7 +1225,7 @@ mod tests {
     #[test]
     fn svg_has_white_background() {
         let svg = render_view("Containers", "filled");
-        assert!(svg.contains(r##"fill="#ffffff""##));
+        assert!(svg.contains("forge-bg"));
     }
 
     #[test]
