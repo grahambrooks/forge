@@ -1,5 +1,6 @@
 mod analyze;
 mod check;
+mod generate;
 mod layout;
 mod model;
 mod parser;
@@ -58,6 +59,28 @@ enum Commands {
         /// Show what would be generated without writing
         #[arg(long)]
         dry_run: bool,
+    },
+    /// Generate a static documentation website from a model
+    Generate {
+        /// Input .forge file
+        #[arg(long, default_value = "forge.forge")]
+        source: PathBuf,
+
+        /// Output directory
+        #[arg(long, default_value = "_site")]
+        out: PathBuf,
+
+        /// Site title (default: model name)
+        #[arg(long)]
+        title: Option<String>,
+
+        /// Base URL for deployment
+        #[arg(long, default_value = "/")]
+        base_url: String,
+
+        /// Diagram rendering style: 'filled' or 'outline'
+        #[arg(long, default_value = "filled")]
+        style: String,
     },
     /// Lint and validate a model against architectural rules
     Check {
@@ -175,6 +198,54 @@ fn main() {
                 eprintln!("  Wrote: {}", out.display());
             }
             eprintln!("Done.");
+        }
+        Commands::Generate {
+            source,
+            out,
+            title,
+            base_url,
+            style,
+        } => {
+            let text = match fs::read_to_string(&source) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {}: {}", source.display(), e);
+                    process::exit(1);
+                }
+            };
+
+            let model = match parser::parse(&text) {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            eprintln!("Generating site from \"{}\"...", model.name);
+
+            let config = generate::GenerateConfig {
+                out_dir: out.clone(),
+                title,
+                base_url,
+                style,
+            };
+
+            match generate::generate(&model, &config) {
+                Ok(report) => {
+                    eprintln!(
+                        "  {} pages, {} diagrams → {}",
+                        report.pages,
+                        report.diagrams,
+                        out.display()
+                    );
+                    eprintln!("Done.");
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            }
         }
         Commands::Check {
             source,
