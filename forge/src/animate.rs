@@ -140,27 +140,62 @@ pub fn animate_svg(svg: &str, view: &View, model: &Model) -> String {
         }
     }
 
-    // Process element groups — find data-id="..." patterns and wrap them
+    // Also build a map for relationship edges: "from -> to" => frame_idx
+    let mut rel_frame_map: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+    for (frame_idx, frame) in anim.frames.iter().enumerate() {
+        for inc in &frame.includes {
+            if inc.contains(" -> ") {
+                rel_frame_map.entry(inc.clone()).or_insert(frame_idx);
+            }
+        }
+        // For include_all frames, map all model relationships
+        if frame.include_all {
+            for rel in &model.relationships {
+                let key = format!("{} -> {}", rel.frm, rel.to);
+                rel_frame_map.entry(key).or_insert(frame_idx);
+            }
+        }
+    }
+
+    // Process the SVG — wrap both data-id elements and data-from/data-to relationships
     let mut output = String::with_capacity(result.len() + 2000);
     let mut pos = 0;
     while pos < result.len() {
-        // Look for data-id=" or data-from="
-        if let Some(idx) = result[pos..].find("data-id=\"") {
-            let abs_idx = pos + idx;
-            // Extract the id value
-            let id_start = abs_idx + 9; // after data-id="
+        // Try to find the next data-id or data-from attribute
+        let next_element = result[pos..].find("data-id=\"").map(|i| (pos + i, true));
+        let next_rel = result[pos..].find("data-from=\"").map(|i| (pos + i, false));
+
+        // Pick whichever comes first
+        let next = match (next_element, next_rel) {
+            (Some((ei, _)), Some((ri, _))) => {
+                if ei <= ri {
+                    Some((ei, true))
+                } else {
+                    Some((ri, false))
+                }
+            }
+            (Some(e), None) => Some(e),
+            (None, Some(r)) => Some(r),
+            (None, None) => None,
+        };
+
+        let Some((abs_idx, is_element)) = next else {
+            output.push_str(&result[pos..]);
+            break;
+        };
+
+        if is_element {
+            // Element: data-id="..."
+            let id_start = abs_idx + 9;
             if let Some(id_end) = result[id_start..].find('"') {
                 let element_id = &result[id_start..id_start + id_end];
 
                 if let Some(&frame_idx) = element_frame_map.get(element_id) {
-                    // Find the opening <g that contains this data-id
                     let g_start = result[..abs_idx].rfind("<g ").unwrap_or(abs_idx);
-                    // Find the matching </g>
                     if let Some(g_end) = find_closing_g(&result, abs_idx) {
-                        // Output everything before the <g>
                         output.push_str(&result[pos..g_start]);
 
-                        // Check for highlights/states in this frame
                         let frame = &anim.frames[frame_idx];
                         let mut extra_cls = String::from("forge-enter");
                         let mut style_attr = String::new();
@@ -179,14 +214,12 @@ pub fn animate_svg(svg: &str, view: &View, model: &Model) -> String {
                             }
                         }
 
-                        // Wrap in frame group
                         output.push_str(&format!(
                             "<g class=\"forge-frame\" data-frame=\"{}\" data-label=\"{}\"{}>",
                             frame_idx,
                             esc(&anim.frames[frame_idx].label),
                             style_attr,
                         ));
-                        // Inject extra class into the element's <g>
                         let element_g = &result[g_start..g_end];
                         let patched =
                             element_g.replacen("class=\"", &format!("class=\"{} ", extra_cls), 1);
@@ -198,11 +231,65 @@ pub fn animate_svg(svg: &str, view: &View, model: &Model) -> String {
                     }
                 }
             }
-        }
+            // Didn't match — skip past this attribute to avoid infinite loop
+            output.push_str(&result[pos..abs_idx + 9]);
+            pos = abs_idx + 9;
+        } else {
+            // Relationship: data-from="X" data-to="Y"
+            let from_start = abs_idx + 11; // after data-from="
+            if let Some(from_end) = result[from_start..].find('"') {
+                let from_id = result[from_start..from_start + from_end].to_string();
+                // Find data-to="..."
+                let search_area = &result[from_start + from_end..];
+                if let Some(to_attr) = search_area.find("data-to=\"") {
+                    let to_start = from_start + from_end + to_attr + 9;
+                    if let Some(to_end) = result[to_start..].find('"') {
+                        let to_id = result[to_start..to_start + to_end].to_string();
+                        let rel_key = format!("{} -> {}", from_id, to_id);
 
-        // No more data-id found, copy the rest
-        output.push_str(&result[pos..]);
-        break;
+                        if let Some(&frame_idx) = rel_frame_map.get(&rel_key) {
+                            let g_start = result[..abs_idx].rfind("<g ").unwrap_or(abs_idx);
+                            if let Some(g_end) = find_closing_g(&result, abs_idx) {
+                                output.push_str(&result[pos..g_start]);
+
+                                // Check for highlight on this relationship
+                                let frame = &anim.frames[frame_idx];
+                                let mut extra_cls = String::from("forge-enter");
+                                let mut style_attr = String::new();
+                                for hl in &frame.highlights {
+                                    if hl.target.contains(&from_id) && hl.target.contains(&to_id) {
+                                        extra_cls.push_str(" forge-highlight");
+                                        if let Some(ref color) = hl.color {
+                                            style_attr =
+                                                format!(" style=\"--forge-hl-color: {}\"", color);
+                                        }
+                                    }
+                                }
+
+                                output.push_str(&format!(
+                                    "<g class=\"forge-frame\" data-frame=\"{}\"{}>",
+                                    frame_idx, style_attr,
+                                ));
+                                let rel_g = &result[g_start..g_end];
+                                let patched = rel_g.replacen(
+                                    "class=\"",
+                                    &format!("class=\"{} ", extra_cls),
+                                    1,
+                                );
+                                output.push_str(&patched);
+                                output.push_str("</g>");
+
+                                pos = g_end;
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            // Didn't match — skip past
+            output.push_str(&result[pos..abs_idx + 11]);
+            pos = abs_idx + 11;
+        }
     }
 
     // 5. Add frame navigation dots before </svg>
