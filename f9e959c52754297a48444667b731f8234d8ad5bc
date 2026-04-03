@@ -1,0 +1,56 @@
+CLAUDE.md
+  67bf62b4b404fba2 51,55-57,60,99
+forge/examples/multi-file/forge.forge
+  67bf62b4b404fba2 1-22
+forge/examples/team-rules.forge-rules
+  67bf62b4b404fba2 1-26
+forge/src/layout.rs
+  67bf62b4b404fba2 78,856-956
+forge/src/check.rs
+  67bf62b4b404fba2 381
+forge/src/custom_rules.rs
+  67bf62b4b404fba2 1-429
+forge/src/analyze/emit.rs
+  67bf62b4b404fba2 322
+forge/src/model.rs
+  67bf62b4b404fba2 34
+forge/examples/multi-file/process/pipeline.forge
+  67bf62b4b404fba2 1-13
+forge/examples/multi-file/model/system.forge
+  67bf62b4b404fba2 1-27
+forge/src/main.rs
+  67bf62b4b404fba2 3,10,15,106-109,130,210,214,262,272,274,276-295,357-374
+forge/src/generate.rs
+  67bf62b4b404fba2 977
+forge/examples/multi-file/views/all.forge
+  67bf62b4b404fba2 1-19
+forge/examples/payments.forge
+  67bf62b4b404fba2 16-35,294-299
+forge/src/preprocess.rs
+  67bf62b4b404fba2 1-418
+forge/examples/multi-file/model/people.forge
+  67bf62b4b404fba2 1-7
+forge/src/parser.rs
+  67bf62b4b404fba2 191-192,201,294,931-945,1333,1335-1342,1361-1363,1726-1753
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "f9e959c52754297a48444667b731f8234d8ad5bc",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 1223,
+      "total_deletions": 79,
+      "accepted_lines": 1210,
+      "overriden_lines": 3,
+      "messages_url": "https://usegitai.com/cas/2674d4c59a18bf88e776d2427683c63ed95eeeb5a710eec85490f041e9d79f1c"
+    }
+  }
+}
