@@ -384,9 +384,13 @@ fn layout_pipeline(model: &Model, view: &View) -> Layout {
     }
 }
 
-// Public for integration tests
+#[cfg(test)]
 pub fn compute_layout_for_view(model: &Model, view_key: &str) -> Option<Layout> {
-    model.views.iter().find(|v| v.key == view_key).map(|v| compute_layout(model, v))
+    model
+        .views
+        .iter()
+        .find(|v| v.key == view_key)
+        .map(|v| compute_layout(model, v))
 }
 
 fn topo_sort<'a>(stages: &mut [&'a Element], links: &[StageLink]) -> Vec<&'a Element> {
@@ -394,7 +398,10 @@ fn topo_sort<'a>(stages: &mut [&'a Element], links: &[StageLink]) -> Vec<&'a Ele
     let mut depth: HashMap<&str, usize> = stages.iter().map(|s| (s.id.as_str(), 0)).collect();
     for _ in 0..stages.len() {
         for link in links {
-            if let (Some(&d_frm), true) = (depth.get(link.frm.as_str()), depth.contains_key(link.to.as_str())) {
+            if let (Some(&d_frm), true) = (
+                depth.get(link.frm.as_str()),
+                depth.contains_key(link.to.as_str()),
+            ) {
                 let new = d_frm + 1;
                 let d_to = depth.get_mut(link.to.as_str()).unwrap();
                 if new > *d_to {
@@ -421,7 +428,10 @@ mod tests {
     #[test]
     fn system_context_layout() {
         let lo = payments_layout("SystemContext");
-        assert_eq!(lo.title.as_deref(), Some("Payment Platform — System Context"));
+        assert_eq!(
+            lo.title.as_deref(),
+            Some("Payment Platform — System Context")
+        );
         // 1 actor (Customer) + 1 system (Payment Service)
         assert_eq!(lo.nodes.len(), 2);
         // collapsed relationships (customer->payments + internal self-edge)
@@ -450,7 +460,10 @@ mod tests {
     #[test]
     fn container_layout_has_database() {
         let lo = payments_layout("Containers");
-        assert!(lo.nodes.iter().any(|n| n.tags.contains(&"database".to_string())));
+        assert!(lo
+            .nodes
+            .iter()
+            .any(|n| n.tags.contains(&"database".to_string())));
     }
 
     #[test]
@@ -458,8 +471,16 @@ mod tests {
         let lo = payments_layout("Pipeline");
         assert_eq!(lo.title.as_deref(), Some("Payment API — CI/CD Pipeline"));
         // 4 stages + 3 gates = 7 nodes
-        let stage_count = lo.nodes.iter().filter(|n| n.kind == ElementKind::Stage).count();
-        let gate_count = lo.nodes.iter().filter(|n| n.kind == ElementKind::Gate).count();
+        let stage_count = lo
+            .nodes
+            .iter()
+            .filter(|n| n.kind == ElementKind::Stage)
+            .count();
+        let gate_count = lo
+            .nodes
+            .iter()
+            .filter(|n| n.kind == ElementKind::Gate)
+            .count();
         assert_eq!(stage_count, 4);
         assert_eq!(gate_count, 3);
         // 3 edges between consecutive stages
@@ -469,7 +490,11 @@ mod tests {
     #[test]
     fn pipeline_topological_order() {
         let lo = payments_layout("Pipeline");
-        let stages: Vec<&LayoutNode> = lo.nodes.iter().filter(|n| n.kind == ElementKind::Stage).collect();
+        let stages: Vec<&LayoutNode> = lo
+            .nodes
+            .iter()
+            .filter(|n| n.kind == ElementKind::Stage)
+            .collect();
         // Build should come before Security, Security before Staging, Staging before Prod
         let pos = |label: &str| stages.iter().position(|n| n.label.contains(label)).unwrap();
         assert!(pos("Build") < pos("Security"));
@@ -489,10 +514,19 @@ mod tests {
     #[test]
     fn nodes_dont_overlap_in_pipeline() {
         let lo = payments_layout("Pipeline");
-        let stages: Vec<&LayoutNode> = lo.nodes.iter().filter(|n| n.kind == ElementKind::Stage).collect();
+        let stages: Vec<&LayoutNode> = lo
+            .nodes
+            .iter()
+            .filter(|n| n.kind == ElementKind::Stage)
+            .collect();
         for i in 1..stages.len() {
             let prev_right = stages[i - 1].rect.x + stages[i - 1].rect.w;
-            assert!(stages[i].rect.x > prev_right, "stages {} and {} overlap", stages[i-1].id, stages[i].id);
+            assert!(
+                stages[i].rect.x > prev_right,
+                "stages {} and {} overlap",
+                stages[i - 1].id,
+                stages[i].id
+            );
         }
     }
 }

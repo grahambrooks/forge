@@ -342,11 +342,14 @@ fn render_person(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
     let ty = box_y + 20.0;
     o.push(format!(
         r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name">{}</text>"#,
-        cx, ty, esc(&n.label)
+        cx,
+        ty,
+        esc(&n.label)
     ));
     o.push(format!(
         r#"      <text x="{:.0}" y="{:.0}" class="forge-label--kind">[Person]</text>"#,
-        cx, ty + 16.0
+        cx,
+        ty + 16.0
     ));
     if let Some(ref desc) = n.description {
         render_wrapped_text(o, cx, ty + 32.0, r.w - 20.0, desc, "forge-label--desc");
@@ -380,7 +383,10 @@ fn render_box(o: &mut Vec<String>, n: &LayoutNode) {
     for (cls, text) in &lines {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
-            cx, ty, cls, esc(text)
+            cx,
+            ty,
+            cls,
+            esc(text)
         ));
         ty += 16.0;
     }
@@ -406,7 +412,10 @@ fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
     for (cls, text) in &lines {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
-            cx, ty, cls, esc(text)
+            cx,
+            ty,
+            cls,
+            esc(text)
         ));
         ty += 16.0;
     }
@@ -501,17 +510,22 @@ fn render_cylinder(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
     let ty = r.y + r.h / 2.0 - 4.0;
     o.push(format!(
         r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name">{}</text>"#,
-        cx, ty, esc(&n.label)
+        cx,
+        ty,
+        esc(&n.label)
     ));
     if let Some(ref sub) = n.sublabel {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech">{}</text>"#,
-            cx, ty + 16.0, esc(sub)
+            cx,
+            ty + 16.0,
+            esc(sub)
         ));
     }
     o.push(format!(
         r#"      <text x="{:.0}" y="{:.0}" class="forge-label--kind">[Database]</text>"#,
-        cx, ty + 32.0
+        cx,
+        ty + 32.0
     ));
 }
 
@@ -582,7 +596,9 @@ fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
         ));
         o.push(format!(
             r#"      <text x="{:.1}" y="{:.1}" class="forge-label--rel">{}</text>"#,
-            mx, label_y, esc(label_text)
+            mx,
+            label_y,
+            esc(label_text)
         ));
         if let Some(ref tt) = tech_text {
             o.push(format!(
@@ -618,12 +634,11 @@ fn render_legend(o: &mut Vec<String>, layout: &Layout, style: &str) {
     }
 
     let mut entries: Vec<(String, &str)> = Vec::new();
-    for ((kind, tag), _) in &kinds_seen {
+    for (kind, tag) in kinds_seen.keys() {
         let (label, color) = if *tag == Some("database") {
             ("Database".to_string(), Colors::DATABASE_BG)
         } else {
-            let label = kind_label(*kind)
-                .unwrap_or_else(|| format!("{:?}", kind));
+            let label = kind_label(*kind).unwrap_or_else(|| format!("{:?}", kind));
             let color = match kind {
                 ElementKind::Person => Colors::PERSON_BG,
                 ElementKind::System => Colors::SYSTEM_BG,
@@ -694,16 +709,8 @@ fn edge_point(r: &Rect, tx: f64, ty: f64) -> (f64, f64) {
     }
     let hw = r.w / 2.0;
     let hh = r.h / 2.0;
-    let sx = if dx.abs() > 0.01 {
-        hw / dx.abs()
-    } else {
-        1e9
-    };
-    let sy = if dy.abs() > 0.01 {
-        hh / dy.abs()
-    } else {
-        1e9
-    };
+    let sx = if dx.abs() > 0.01 { hw / dx.abs() } else { 1e9 };
+    let sy = if dy.abs() > 0.01 { hh / dy.abs() } else { 1e9 };
     let s = f64::min(sx, sy);
     (cx + dx * s, cy + dy * s)
 }
@@ -737,7 +744,10 @@ fn render_wrapped_text(
     for l in lines.iter().take(3) {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="{}">{}</text>"#,
-            cx, y, cls, esc(l)
+            cx,
+            y,
+            cls,
+            esc(l)
         ));
         y += 14.0;
     }

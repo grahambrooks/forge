@@ -43,7 +43,11 @@ pub struct Violation {
 impl std::fmt::Display for Violation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let id = self.element_id.as_deref().unwrap_or("-");
-        write!(f, "[{}] {} ({}): {}", self.severity, self.rule, id, self.message)
+        write!(
+            f,
+            "[{}] {} ({}): {}",
+            self.severity, self.rule, id, self.message
+        )
     }
 }
 
@@ -139,7 +143,10 @@ fn check_orphaned_elements(model: &Model, violations: &mut Vec<Violation>) {
 
     for el in model.elements.values() {
         // Skip process-internal elements (gates, steps, etc.)
-        if matches!(el.kind, ElementKind::Gate | ElementKind::Step | ElementKind::Artifact) {
+        if matches!(
+            el.kind,
+            ElementKind::Gate | ElementKind::Step | ElementKind::Artifact
+        ) {
             continue;
         }
         // Skip elements that are part of a pipeline (stages have parent links)
@@ -253,7 +260,11 @@ fn check_database_direct_access(model: &Model, violations: &mut Vec<Violation>) 
         }
         if let Some(source) = model.elements.get(&r.frm) {
             if matches!(source.kind, ElementKind::Person | ElementKind::System) {
-                let db = model.elements.get(&r.to).map(|e| e.name.as_str()).unwrap_or(&r.to);
+                let db = model
+                    .elements
+                    .get(&r.to)
+                    .map(|e| e.name.as_str())
+                    .unwrap_or(&r.to);
                 violations.push(Violation {
                     rule: "database-direct-access",
                     severity: Severity::Error,
@@ -412,8 +423,12 @@ mod tests {
             .filter(|v| v.rule == "missing-descriptions")
             .collect();
         assert_eq!(missing_desc.len(), 2);
-        assert!(missing_desc.iter().any(|v| v.element_id.as_deref() == Some("payments.db")));
-        assert!(missing_desc.iter().any(|v| v.element_id.as_deref() == Some("payments.cache")));
+        assert!(missing_desc
+            .iter()
+            .any(|v| v.element_id.as_deref() == Some("payments.db")));
+        assert!(missing_desc
+            .iter()
+            .any(|v| v.element_id.as_deref() == Some("payments.cache")));
     }
 
     #[test]
@@ -454,8 +469,9 @@ mod tests {
         let mut model = Model::default();
         model.add_element(Element::new("svc", ElementKind::Container, "My Service"));
         let violations = check(&model, Severity::Warning);
-        assert!(violations.iter().any(|v| v.rule == "missing-descriptions"
-            && v.element_id.as_deref() == Some("svc")));
+        assert!(violations
+            .iter()
+            .any(|v| v.rule == "missing-descriptions" && v.element_id.as_deref() == Some("svc")));
     }
 
     #[test]
@@ -465,8 +481,9 @@ mod tests {
         el.description = Some("A service".into());
         model.add_element(el);
         let violations = check(&model, Severity::Warning);
-        assert!(violations.iter().any(|v| v.rule == "missing-technology"
-            && v.element_id.as_deref() == Some("svc")));
+        assert!(violations
+            .iter()
+            .any(|v| v.rule == "missing-technology" && v.element_id.as_deref() == Some("svc")));
     }
 
     #[test]
@@ -476,8 +493,9 @@ mod tests {
         el.description = Some("No friends".into());
         model.add_element(el);
         let violations = check(&model, Severity::Info);
-        assert!(violations.iter().any(|v| v.rule == "orphaned-elements"
-            && v.element_id.as_deref() == Some("lonely")));
+        assert!(violations
+            .iter()
+            .any(|v| v.rule == "orphaned-elements" && v.element_id.as_deref() == Some("lonely")));
     }
 
     #[test]
@@ -486,14 +504,23 @@ mod tests {
         model.add_element(Element::new("a", ElementKind::Container, "A"));
         model.add_element(Element::new("b", ElementKind::Container, "B"));
         model.add_relationship(Relationship {
-            frm: "a".into(), to: "b".into(), label: String::new(), technology: None,
+            frm: "a".into(),
+            to: "b".into(),
+            label: String::new(),
+            technology: None,
         });
         model.add_relationship(Relationship {
-            frm: "b".into(), to: "a".into(), label: String::new(), technology: None,
+            frm: "b".into(),
+            to: "a".into(),
+            label: String::new(),
+            technology: None,
         });
         let violations = check(&model, Severity::Error);
-        assert!(violations.iter().any(|v| v.rule == "dependency-cycles"),
-            "expected cycle: {:?}", violations);
+        assert!(
+            violations.iter().any(|v| v.rule == "dependency-cycles"),
+            "expected cycle: {:?}",
+            violations
+        );
     }
 
     #[test]
@@ -504,10 +531,15 @@ mod tests {
         db.tags.push("database".into());
         model.add_element(db);
         model.add_relationship(Relationship {
-            frm: "user".into(), to: "db".into(), label: "queries".into(), technology: None,
+            frm: "user".into(),
+            to: "db".into(),
+            label: "queries".into(),
+            technology: None,
         });
         let violations = check(&model, Severity::Error);
-        assert!(violations.iter().any(|v| v.rule == "database-direct-access"));
+        assert!(violations
+            .iter()
+            .any(|v| v.rule == "database-direct-access"));
     }
 
     #[test]
@@ -517,7 +549,10 @@ mod tests {
         model.add_element(Element::new("b", ElementKind::Container, "B"));
         for i in 0..4 {
             model.add_relationship(Relationship {
-                frm: "a".into(), to: "b".into(), label: format!("rel{}", i), technology: None,
+                frm: "a".into(),
+                to: "b".into(),
+                label: format!("rel{}", i),
+                technology: None,
             });
         }
         let violations = check(&model, Severity::Warning);
@@ -530,7 +565,9 @@ mod tests {
         model.add_element(Element::new("pipe", ElementKind::Pipeline, "CI"));
         let mut stage = Element::new("pipe.deploy", ElementKind::Stage, "Deploy");
         stage.parent = Some("pipe".into());
-        stage.properties.insert("environment".into(), "production".into());
+        stage
+            .properties
+            .insert("environment".into(), "production".into());
         model.add_element(stage);
         let violations = check(&model, Severity::Error);
         assert!(violations.iter().any(|v| v.rule == "gate-coverage"));

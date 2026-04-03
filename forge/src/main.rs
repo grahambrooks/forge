@@ -150,8 +150,12 @@ fn main() {
                 print_violations_text(&violations);
             }
 
-            let has_errors = violations.iter().any(|v| v.severity == check::Severity::Error);
-            let has_warnings = violations.iter().any(|v| v.severity == check::Severity::Warning);
+            let has_errors = violations
+                .iter()
+                .any(|v| v.severity == check::Severity::Error);
+            let has_warnings = violations
+                .iter()
+                .any(|v| v.severity == check::Severity::Warning);
 
             if has_errors {
                 process::exit(2);

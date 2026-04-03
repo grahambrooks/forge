@@ -60,7 +60,11 @@ impl Parser {
 
     fn error(&self, msg: impl Into<String>) -> ParseError {
         let (line, col) = self.line_col();
-        ParseError { msg: msg.into(), line, col }
+        ParseError {
+            msg: msg.into(),
+            line,
+            col,
+        }
     }
 
     fn at_end(&self) -> bool {
@@ -156,23 +160,6 @@ impl Parser {
         c
     }
 
-    fn peek_keyword(&mut self) -> Option<String> {
-        let saved = self.pos;
-        self.skip_ws();
-        let start = self.pos;
-        while self.pos < self.text.len() {
-            let c = self.text[self.pos];
-            if c.is_alphanumeric() || matches!(c, '_' | '.') {
-                self.pos += 1;
-            } else {
-                break;
-            }
-        }
-        let word: String = self.text[start..self.pos].iter().collect();
-        self.pos = saved;
-        if word.is_empty() { None } else { Some(word) }
-    }
-
     fn skip_block(&mut self) -> Result<(), ParseError> {
         self.expect('{')?;
         let mut depth = 1;
@@ -181,16 +168,16 @@ impl Parser {
                 None => return Err(self.error("unexpected EOF in block")),
                 Some('{') => depth += 1,
                 Some('}') => depth -= 1,
-                Some('"') => {
-                    loop {
-                        match self.advance() {
-                            None => return Err(self.error("unterminated string")),
-                            Some('"') => break,
-                            Some('\\') => { self.advance(); }
-                            _ => {}
+                Some('"') => loop {
+                    match self.advance() {
+                        None => return Err(self.error("unterminated string")),
+                        Some('"') => break,
+                        Some('\\') => {
+                            self.advance();
                         }
+                        _ => {}
                     }
-                }
+                },
                 _ => {}
             }
         }
@@ -245,7 +232,9 @@ impl Parser {
                 "model" => self.parse_model()?,
                 "process" => self.parse_process()?,
                 "views" => self.parse_views()?,
-                "styles" => { self.skip_block()?; }
+                "styles" => {
+                    self.skip_block()?;
+                }
                 _ => {
                     if self.peek_after_ws() == Some('{') {
                         self.skip_block()?;
@@ -454,7 +443,8 @@ impl Parser {
                             }
                             "system" => {
                                 let sys = self.parse_ident()?;
-                                el.properties.insert("system".into(), self.resolve_ref(&sys));
+                                el.properties
+                                    .insert("system".into(), self.resolve_ref(&sys));
                             }
                             _ => {
                                 if self.peek_after_ws() == Some('"') {
@@ -501,7 +491,11 @@ impl Parser {
     fn parse_pipeline(&mut self) -> Result<(), ParseError> {
         let pipeline_name = self.parse_string()?;
         let pipeline_id = pipeline_name.replace(' ', "-").to_lowercase();
-        self.model.add_element(Element::new(&pipeline_id, ElementKind::Pipeline, &pipeline_name));
+        self.model.add_element(Element::new(
+            &pipeline_id,
+            ElementKind::Pipeline,
+            &pipeline_name,
+        ));
         self.id_map.insert(pipeline_id.clone(), pipeline_id.clone());
 
         self.expect('{')?;
@@ -568,7 +562,8 @@ impl Parser {
                                 "gate" => {
                                     let gate_name = self.parse_string()?;
                                     let gate_id = format!("{}.gate", stage_id);
-                                    let mut gate = Element::new(&gate_id, ElementKind::Gate, &gate_name);
+                                    let mut gate =
+                                        Element::new(&gate_id, ElementKind::Gate, &gate_name);
                                     gate.parent = Some(stage_id.clone());
                                     if self.peek_after_ws() == Some('{') {
                                         self.expect('{')?;
@@ -693,7 +688,7 @@ impl Parser {
                         let p = self.peek_after_ws();
                         if p == Some('"') {
                             self.parse_string()?;
-                        } else if p.map_or(false, |c| c.is_alphanumeric()) {
+                        } else if p.is_some_and(|c| c.is_alphanumeric()) {
                             self.parse_ident()?;
                         } else {
                             break;
@@ -786,7 +781,10 @@ mod tests {
         let cust = m.elements.get("customer").expect("customer element");
         assert_eq!(cust.kind, ElementKind::Person);
         assert_eq!(cust.name, "Customer");
-        assert_eq!(cust.description.as_deref(), Some("End user making payments"));
+        assert_eq!(
+            cust.description.as_deref(),
+            Some("End user making payments")
+        );
         assert!(cust.parent.is_none());
     }
 
@@ -821,7 +819,10 @@ mod tests {
     #[test]
     fn parse_relationships() {
         let m = payments_model();
-        let api_to_proc = m.relationships.iter().find(|r| r.frm == "payments.api" && r.to == "payments.processor");
+        let api_to_proc = m
+            .relationships
+            .iter()
+            .find(|r| r.frm == "payments.api" && r.to == "payments.processor");
         assert!(api_to_proc.is_some());
         let rel = api_to_proc.unwrap();
         assert_eq!(rel.label, "delegates to");
@@ -831,7 +832,10 @@ mod tests {
     #[test]
     fn parse_cross_scope_relationship() {
         let m = payments_model();
-        let cust_to_api = m.relationships.iter().find(|r| r.frm == "customer" && r.to == "payments.api");
+        let cust_to_api = m
+            .relationships
+            .iter()
+            .find(|r| r.frm == "customer" && r.to == "payments.api");
         assert!(cust_to_api.is_some());
         assert_eq!(cust_to_api.unwrap().label, "makes payments");
     }
@@ -846,7 +850,11 @@ mod tests {
     #[test]
     fn parse_stages() {
         let m = payments_model();
-        let stages: Vec<_> = m.elements.values().filter(|e| e.kind == ElementKind::Stage).collect();
+        let stages: Vec<_> = m
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Stage)
+            .collect();
         assert_eq!(stages.len(), 4);
         let build = m.elements.get("payments-ci.build").expect("build stage");
         assert_eq!(build.name, "Build & Test");
@@ -857,32 +865,54 @@ mod tests {
     fn parse_stage_links() {
         let m = payments_model();
         assert_eq!(m.stage_links.len(), 3);
-        assert!(m.stage_links.iter().any(|l| l.frm == "payments-ci.build" && l.to == "payments-ci.security"));
+        assert!(m
+            .stage_links
+            .iter()
+            .any(|l| l.frm == "payments-ci.build" && l.to == "payments-ci.security"));
     }
 
     #[test]
     fn parse_gates() {
         let m = payments_model();
-        let gates: Vec<_> = m.elements.values().filter(|e| e.kind == ElementKind::Gate).collect();
+        let gates: Vec<_> = m
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Gate)
+            .collect();
         assert_eq!(gates.len(), 3);
         let manual = m.elements.get("payments-ci.prod.gate").expect("prod gate");
         assert_eq!(manual.name, "manual-approval");
-        assert_eq!(manual.properties.get("approvers").map(|s| s.as_str()), Some("platform-team"));
+        assert_eq!(
+            manual.properties.get("approvers").map(|s| s.as_str()),
+            Some("platform-team")
+        );
     }
 
     #[test]
     fn parse_views() {
         let m = payments_model();
-        let sc = m.views.iter().find(|v| v.kind == ViewKind::SystemContext).unwrap();
+        let sc = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::SystemContext)
+            .unwrap();
         assert_eq!(sc.key, "SystemContext");
         assert_eq!(sc.auto_layout, AutoLayout::LeftRight);
         assert!(sc.include_all);
 
-        let cont = m.views.iter().find(|v| v.kind == ViewKind::Container).unwrap();
+        let cont = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Container)
+            .unwrap();
         assert_eq!(cont.key, "Containers");
         assert_eq!(cont.auto_layout, AutoLayout::TopBottom);
 
-        let pipe = m.views.iter().find(|v| v.kind == ViewKind::PipelineView).unwrap();
+        let pipe = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::PipelineView)
+            .unwrap();
         assert_eq!(pipe.key, "Pipeline");
         assert_eq!(pipe.scope.as_deref(), Some("payments-ci"));
     }
@@ -891,7 +921,10 @@ mod tests {
     fn parse_view_titles() {
         let m = payments_model();
         let sc = m.views.iter().find(|v| v.key == "SystemContext").unwrap();
-        assert_eq!(sc.title.as_deref(), Some("Payment Platform — System Context"));
+        assert_eq!(
+            sc.title.as_deref(),
+            Some("Payment Platform — System Context")
+        );
     }
 
     #[test]
@@ -917,7 +950,8 @@ mod tests {
 
     #[test]
     fn parse_comments_ignored() {
-        let m = parse(r#"
+        let m = parse(
+            r#"
             forge "Test" {
                 // this is a comment
                 model {
@@ -926,7 +960,9 @@ mod tests {
                 }
                 views {}
             }
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
         assert_eq!(m.elements.len(), 1);
     }
 
