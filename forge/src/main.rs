@@ -3,7 +3,9 @@ mod animate;
 mod check;
 mod custom_rules;
 mod diff;
+mod export;
 mod generate;
+mod import;
 mod layout;
 mod lsp;
 mod mcp;
@@ -150,6 +152,33 @@ enum Commands {
         /// Baseline .forge file for diff highlighting
         #[arg(long)]
         baseline: Option<PathBuf>,
+
+        /// Presentation mode for animated views (fullscreen, keyboard nav)
+        #[arg(long)]
+        present: bool,
+    },
+    /// Export model as JSON or YAML
+    Export {
+        /// Input .forge file
+        #[arg(long, default_value = "forge.forge")]
+        source: PathBuf,
+
+        /// Output format: json, yaml
+        #[arg(long, default_value = "json")]
+        format: String,
+
+        /// Output file (default: stdout)
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Import from PlantUML C4 or Mermaid to .forge
+    Import {
+        /// Input file (PlantUML .puml or Mermaid .mmd)
+        source: PathBuf,
+
+        /// Output .forge file (default: stdout)
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     /// Start the MCP server for AI agent integration (stdio)
     Mcp {
@@ -348,10 +377,10 @@ fn main() {
                 violations.extend(custom_violations);
             }
 
-            if format == "json" {
-                print_violations_json(&violations);
-            } else {
-                print_violations_text(&violations);
+            match format.as_str() {
+                "json" => print_violations_json(&violations),
+                "sarif" => print_violations_sarif(&violations, &source),
+                _ => print_violations_text(&violations),
             }
 
             let has_errors = violations
@@ -385,12 +414,67 @@ fn main() {
             style,
             port,
             baseline,
+            present,
         } => {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .expect("failed to create tokio runtime");
-            rt.block_on(serve::run_serve(source, out, style, baseline, port));
+            if present {
+                eprintln!("Presentation mode: http://localhost:{}/present.html", port);
+            }
+            rt.block_on(serve::run_serve(
+                source, out, style, baseline, port, present,
+            ));
+        }
+        Commands::Export {
+            source,
+            format,
+            out,
+        } => {
+            let model = load_model(&source);
+            let output = match format.as_str() {
+                "json" => export::to_json(&model),
+                "yaml" | "yml" => export::to_yaml(&model),
+                _ => {
+                    eprintln!("Error: --format must be 'json' or 'yaml'");
+                    process::exit(1);
+                }
+            };
+            if let Some(ref path) = out {
+                fs::write(path, &output).unwrap_or_else(|e| {
+                    eprintln!("Error writing {}: {}", path.display(), e);
+                    process::exit(1);
+                });
+                eprintln!("Wrote: {}", path.display());
+            } else {
+                println!("{}", output);
+            }
+        }
+        Commands::Import { source, out } => {
+            let text = match fs::read_to_string(&source) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {}: {}", source.display(), e);
+                    process::exit(1);
+                }
+            };
+            let forge_text = match import::import_to_forge(&text) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            };
+            if let Some(ref path) = out {
+                fs::write(path, &forge_text).unwrap_or_else(|e| {
+                    eprintln!("Error writing {}: {}", path.display(), e);
+                    process::exit(1);
+                });
+                eprintln!("Wrote: {}", path.display());
+            } else {
+                println!("{}", forge_text);
+            }
         }
         Commands::Mcp { source } => {
             mcp::run(source);
@@ -435,6 +519,61 @@ fn print_violations_json(violations: &[check::Violation]) {
         );
     }
     println!("]");
+}
+
+fn print_violations_sarif(violations: &[check::Violation], source: &Path) {
+    use serde_json::json;
+    let results: Vec<serde_json::Value> = violations
+        .iter()
+        .map(|v| {
+            let level = match v.severity {
+                check::Severity::Error => "error",
+                check::Severity::Warning => "warning",
+                check::Severity::Info => "note",
+            };
+            json!({
+                "ruleId": v.rule,
+                "level": level,
+                "message": { "text": v.message },
+                "locations": [{
+                    "physicalLocation": {
+                        "artifactLocation": {
+                            "uri": source.display().to_string(),
+                        },
+                        "region": { "startLine": 1 }
+                    },
+                    "logicalLocations": v.element_id.as_ref().map(|id| vec![json!({
+                        "name": id,
+                        "kind": "element"
+                    })]).unwrap_or_default(),
+                }]
+            })
+        })
+        .collect();
+
+    let sarif = json!({
+        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "forge",
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "informationUri": "https://github.com/anthropics/forge",
+                    "rules": violations.iter().map(|v| json!({
+                        "id": v.rule,
+                        "shortDescription": { "text": v.rule },
+                    })).collect::<Vec<_>>(),
+                }
+            },
+            "results": results,
+        }]
+    });
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&sarif).unwrap_or_default()
+    );
 }
 
 fn load_model(source: &Path) -> model::Model {

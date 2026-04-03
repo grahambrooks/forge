@@ -55,6 +55,7 @@ pub async fn run_serve(
     style: String,
     baseline: Option<PathBuf>,
     port: u16,
+    present: bool,
 ) {
     let version = Arc::new(AtomicU64::new(1));
     let (notify_tx, _) = watch::channel(1u64);
@@ -66,6 +67,9 @@ pub async fn run_serve(
 
     // Initial build with live-reload injection
     do_build(&source, &out_dir, &style, baseline.as_deref(), Some(port));
+    if present {
+        generate_present_page(&source, &out_dir, &style, port);
+    }
 
     // Start file watcher
     let (fs_tx, mut fs_rx) = tokio::sync::mpsc::channel(16);
@@ -79,6 +83,9 @@ pub async fn run_serve(
     let out_clone = out_dir.clone();
     let style_clone = style.clone();
     let baseline_clone = baseline.clone();
+    let source_for_present = source.clone();
+    let out_for_present = out_dir.clone();
+    let style_for_present = style.clone();
     tokio::spawn(async move {
         let mut last_build = Instant::now();
         while let Some(_event) = fs_rx.recv().await {
@@ -94,6 +101,14 @@ pub async fn run_serve(
                 baseline_clone.as_deref(),
                 Some(port),
             );
+            if present {
+                generate_present_page(
+                    &source_for_present,
+                    &out_for_present,
+                    &style_for_present,
+                    port,
+                );
+            }
             let v = version_clone.fetch_add(1, Ordering::Relaxed) + 1;
             let _ = notify_clone.send(v);
         }
@@ -325,6 +340,149 @@ async fn handle_sse(
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────
+
+/// Generate a fullscreen presentation page for animated views.
+fn generate_present_page(source: &Path, out_dir: &Path, style: &str, port: u16) {
+    let text = match std::fs::read_to_string(source) {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+    let base_dir = source.parent().unwrap_or(Path::new("."));
+    let model = match parser::parse_with_preprocess(&text, base_dir) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+
+    // Find animated views
+    let animated_views: Vec<&crate::model::View> = model
+        .views
+        .iter()
+        .filter(|v| !v.animation.is_empty())
+        .collect();
+
+    if animated_views.is_empty() {
+        return;
+    }
+
+    // Build SVG for the first animated view (or all as a list)
+    let mut svgs = String::new();
+    for view in &animated_views {
+        let lo = crate::layout::compute_layout(&model, view);
+        let mut svg = crate::render::render_svg(&lo, style);
+        svg = crate::animate::animate_svg(&svg, view, &model);
+
+        let view_title = view.title.as_deref().unwrap_or(&view.key);
+        svgs.push_str(&format!(
+            "<section class=\"present-slide\" data-title=\"{}\">{}</section>\n",
+            view_title, svg
+        ));
+    }
+
+    // Collect all speaker notes
+    let mut notes_js = String::from("var NOTES={");
+    for (vi, view) in animated_views.iter().enumerate() {
+        for (fi, frame) in view.animation.frames.iter().enumerate() {
+            if let Some(ref notes) = frame.notes {
+                notes_js.push_str(&format!(
+                    "\"{}_{}\": \"{}\",",
+                    vi,
+                    fi,
+                    notes.replace('"', "\\\"").replace('\n', "\\n")
+                ));
+            }
+        }
+    }
+    notes_js.push_str("};");
+
+    let html = format!(
+        r##"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forge Presentation</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#000;color:#fff;font-family:system-ui,sans-serif;overflow:hidden}}
+.present-slide{{display:none;width:100vw;height:100vh;justify-content:center;align-items:center}}
+.present-slide.active{{display:flex}}
+.present-slide svg{{max-width:95vw;max-height:85vh;height:auto}}
+.present-controls{{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;background:rgba(0,0,0,0.7);padding:8px 20px;border-radius:20px;font-size:14px;z-index:100}}
+.present-controls button{{background:none;border:1px solid #555;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:14px}}
+.present-controls button:hover{{background:#333}}
+.present-notes{{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#aaa;padding:12px 24px;border-radius:8px;max-width:60vw;font-size:15px;text-align:center;display:none;z-index:100}}
+.present-notes.visible{{display:block}}
+.present-title{{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:12px;color:#666;z-index:100}}
+</style>
+</head>
+<body>
+{svgs}
+<div class="present-title" id="title"></div>
+<div class="present-notes" id="notes"></div>
+<div class="present-controls">
+  <button onclick="prev()">&#9664; Prev</button>
+  <span id="counter">1 / 1</span>
+  <button onclick="next()">Next &#9654;</button>
+</div>
+<script>
+{notes_js}
+var slides=document.querySelectorAll('.present-slide');
+var cur=0;
+function show(n){{
+  cur=Math.max(0,Math.min(n,slides.length-1));
+  slides.forEach(function(s,i){{s.classList.toggle('active',i===cur)}});
+  document.getElementById('counter').textContent=(cur+1)+' / '+slides.length;
+  document.getElementById('title').textContent=slides[cur].dataset.title||'';
+  // Trigger animation frames within the SVG
+  var svg=slides[cur].querySelector('.forge-animated');
+  if(svg){{
+    var frames=parseInt(svg.dataset.frames||'0'),fc=parseInt(svg.dataset.current||'0');
+    svg.querySelectorAll('.forge-frame').forEach(function(f){{
+      f.classList.toggle('forge-frame--active',parseInt(f.dataset.frame)<=fc);
+    }});
+    var noteKey=cur+'_'+fc;
+    var noteEl=document.getElementById('notes');
+    if(NOTES[noteKey]){{noteEl.textContent=NOTES[noteKey];noteEl.classList.add('visible')}}
+    else{{noteEl.classList.remove('visible')}}
+  }}
+}}
+function next(){{
+  var svg=slides[cur].querySelector('.forge-animated');
+  if(svg){{
+    var frames=parseInt(svg.dataset.frames||'0'),fc=parseInt(svg.dataset.current||'0');
+    if(fc<frames-1){{svg.dataset.current=''+(fc+1);show(cur);return}}
+  }}
+  show(cur+1);
+}}
+function prev(){{
+  var svg=slides[cur].querySelector('.forge-animated');
+  if(svg){{
+    var fc=parseInt(svg.dataset.current||'0');
+    if(fc>0){{svg.dataset.current=''+(fc-1);show(cur);return}}
+  }}
+  show(cur-1);
+}}
+document.addEventListener('keydown',function(e){{
+  if(e.key==='ArrowRight'||e.key===' ')next();
+  else if(e.key==='ArrowLeft')prev();
+  else if(e.key==='Escape')window.close();
+}});
+show(0);
+</script>
+<script>
+var es=new EventSource('http://localhost:{port}/__reload');
+var ver=null;
+es.onmessage=function(e){{var v=e.data.trim();if(ver===null){{ver=v;return}};if(v!==ver)location.reload()}};
+</script>
+</body>
+</html>"##,
+        svgs = svgs,
+        notes_js = notes_js,
+        port = port,
+    );
+
+    let _ = std::fs::write(out_dir.join("present.html"), html);
+}
 
 fn content_type_for(path: &Path) -> &'static str {
     match path.extension().and_then(|e| e.to_str()) {

@@ -52,11 +52,12 @@ model-diagram/
 | `forge generate` | Working | Model → static documentation website |
 | `forge generate --baseline` | Working | Diff highlighting (green/amber) vs baseline |
 | `forge watch` | Working | Auto-rebuild on .forge/.md changes |
-| `forge serve` | Working | Live-reload preview server (SSE) |
+| `forge serve` | Working | Live-reload preview server (SSE) + `--present` mode |
 | `forge lsp` | Working | IDE integration (diagnostics, hover, completion, go-to-def) |
 | `forge mcp` | Working | MCP server for AI agent access (6 tools) |
-| `forge export` | Not started | JSON/YAML export (JSON exists inside generate) |
-| `forge import` | Not started | Import from PlantUML/Mermaid |
+| `forge export` | Working | JSON/YAML model export |
+| `forge import` | Working | Import from PlantUML C4 / Mermaid flowchart |
+| `forge check --format sarif` | Working | SARIF 2.1.0 output for GitHub Code Scanning |
 
 ### View Types (11)
 
