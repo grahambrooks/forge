@@ -1,0 +1,36 @@
+forge/examples/docs/adr-006-async-notifications-and-caching.md
+  67bf62b4b404fba2 1-44
+forge/examples/payments.forge
+  67bf62b4b404fba2 165
+forge/src/diff.rs
+  67bf62b4b404fba2 1-508
+forge/examples/payments-baseline.forge
+  67bf62b4b404fba2 1-107
+forge/src/main.rs
+  67bf62b4b404fba2 3,85-88,213,231-258,274
+forge/src/generate.rs
+  67bf62b4b404fba2 19,48-49,70,74-77,100,107,120,245,250-322,446,452-463,476-477,488-495,820-832,858-895,974,1002,1023,1042,1096,1119,1139-1198
+forge/src/parser.rs
+  67bf62b4b404fba2 1124,1129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "03f32d25220f6431f617c4be877734ec02132dad",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 925,
+      "total_deletions": 19,
+      "accepted_lines": 923,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/c03cb6527b58306b56aaa890ae8272ed91cdf55c6fc3b6e190213bedb1220df8"
+    }
+  }
+}
