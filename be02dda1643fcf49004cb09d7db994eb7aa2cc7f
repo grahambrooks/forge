@@ -1,0 +1,38 @@
+forge/src/main.rs
+  67bf62b4b404fba2 1,40-61,139-178
+CLAUDE.md
+  67bf62b4b404fba2 19,23-28,45,50-51,54,66-67,90
+forge/src/analyze/emit.rs
+  67bf62b4b404fba2 1-393
+forge/src/analyze/mod.rs
+  67bf62b4b404fba2 1-62,64-67,69-103
+forge/src/analyze/code.rs
+  67bf62b4b404fba2 1-30,32,34-438
+forge/src/analyze/ci.rs
+  67bf62b4b404fba2 1-278
+forge/src/analyze/docker.rs
+  67bf62b4b404fba2 1-339
+forge/Cargo.toml
+  67bf62b4b404fba2 9-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "be02dda1643fcf49004cb09d7db994eb7aa2cc7f",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 1685,
+      "total_deletions": 68,
+      "accepted_lines": 1627,
+      "overriden_lines": 3,
+      "messages_url": "https://usegitai.com/cas/9e55462d2ec80318dddc5524c6b38825fe1a5f99211a6d32e2173b13269d53aa"
+    }
+  }
+}
