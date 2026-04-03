@@ -257,9 +257,13 @@ fn inject_live_reload(out_dir: &Path, port: u16) {
     let script = format!(
         r#"<script>
 (function(){{
+  var ver=null;
   var es=new EventSource('http://localhost:{}/__reload');
-  es.onmessage=function(){{ location.reload(); }};
-  es.onerror=function(){{ setTimeout(function(){{ location.reload(); }},2000); }};
+  es.onmessage=function(e){{
+    var v=e.data.trim();
+    if(ver===null){{ ver=v; return; }}
+    if(v!==ver){{ location.reload(); }}
+  }};
 }})();
 </script>"#,
         port
