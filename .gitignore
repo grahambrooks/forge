@@ -20,3 +20,4 @@ __pycache__/
 
 # Generated output
 forge/output/
+.site/
