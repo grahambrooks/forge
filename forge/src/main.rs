@@ -1,3 +1,4 @@
+mod check;
 mod layout;
 mod model;
 mod parser;
@@ -34,6 +35,20 @@ enum Commands {
         /// Rendering style: 'filled' or 'outline'
         #[arg(long, default_value = "filled")]
         style: String,
+    },
+    /// Lint and validate a model against architectural rules
+    Check {
+        /// Input .forge file
+        #[arg(long, default_value = "forge.forge")]
+        source: PathBuf,
+
+        /// Minimum severity to report: error, warning, info
+        #[arg(long, default_value = "warning")]
+        severity: String,
+
+        /// Output format: text, json
+        #[arg(long, default_value = "text")]
+        format: String,
     },
 }
 
@@ -98,5 +113,83 @@ fn main() {
 
             eprintln!("Done.");
         }
+        Commands::Check {
+            source,
+            severity,
+            format,
+        } => {
+            let min_severity = match check::Severity::from_str(&severity) {
+                Some(s) => s,
+                None => {
+                    eprintln!("Error: --severity must be 'error', 'warning', or 'info'");
+                    process::exit(1);
+                }
+            };
+
+            let text = match fs::read_to_string(&source) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {}: {}", source.display(), e);
+                    process::exit(1);
+                }
+            };
+
+            let model = match parser::parse(&text) {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            let violations = check::check(&model, min_severity);
+
+            if format == "json" {
+                print_violations_json(&violations);
+            } else {
+                print_violations_text(&violations);
+            }
+
+            let has_errors = violations.iter().any(|v| v.severity == check::Severity::Error);
+            let has_warnings = violations.iter().any(|v| v.severity == check::Severity::Warning);
+
+            if has_errors {
+                process::exit(2);
+            } else if has_warnings {
+                process::exit(1);
+            }
+        }
     }
+}
+
+fn print_violations_text(violations: &[check::Violation]) {
+    if violations.is_empty() {
+        eprintln!("No issues found.");
+        return;
+    }
+    eprintln!("Found {} issue(s):\n", violations.len());
+    for v in violations {
+        println!("{}", v);
+    }
+}
+
+fn print_violations_json(violations: &[check::Violation]) {
+    println!("[");
+    for (i, v) in violations.iter().enumerate() {
+        let comma = if i + 1 < violations.len() { "," } else { "" };
+        let id = v
+            .element_id
+            .as_deref()
+            .map(|s| format!("\"{}\"", s))
+            .unwrap_or_else(|| "null".to_string());
+        println!(
+            "  {{\"rule\": \"{}\", \"severity\": \"{}\", \"element\": {}, \"message\": \"{}\"}}{}",
+            v.rule,
+            v.severity,
+            id,
+            v.message.replace('"', "\\\""),
+            comma
+        );
+    }
+    println!("]");
 }

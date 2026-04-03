@@ -16,9 +16,10 @@ model-diagram/
     ├── examples/
     │   └── payments.forge       # Reference DSL example (payments platform)
     ├── src/                     # Rust implementation
-    │   ├── main.rs              # CLI entry point (clap)
+    │   ├── main.rs              # CLI entry point (clap): build + check subcommands
     │   ├── model.rs             # Semantic model (ElementKind, Element, Relationship, View, Model)
     │   ├── parser.rs            # Hand-written recursive descent parser
+    │   ├── check.rs             # Architectural linter (8 built-in rules)
     │   ├── layout.rs            # Layout algorithms (system context, container, pipeline)
     │   └── render.rs            # SVG renderer (filled + outline modes, C4 palette)
     ├── output/                  # Generated SVGs and PNGs (both filled + outline)
@@ -35,9 +36,11 @@ model-diagram/
 - SVG renderer with two modes: **filled** (canonical C4 colors) and **outline** (wireframe)
 - Structurizr-style rendering: person silhouette, database cylinder, gate diamond, drop shadows, legend, edge label pills
 - Complex shapes render cleanly in outline mode (single unified paths, no internal construction lines)
-- CLI with `build` subcommand, `--source`, `--view`, `--out`, `--style` flags (via `clap`)
+- CLI with `build` and `check` subcommands (via `clap`)
 - Working example: `payments.forge` producing SystemContext, Containers, and Pipeline views
 - Output matches the Python prototype (16 elements, 5 relationships, 3 views)
+- Architectural linter with 8 built-in rules: dependency-cycles, orphaned-elements, missing-descriptions, missing-technology, database-direct-access, chatty-coupling, gate-coverage, empty-views
+- Lint output in text or JSON format, configurable severity filter, exit codes for CI integration
 
 ### What needs to be built
 The remaining commands from DESIGN.md (`analyze`, `generate`, `check`, `mcp`, `watch`, `serve`, `export`, `import`, `lsp`) and the Cargo workspace restructuring.
@@ -50,6 +53,8 @@ cd forge
 cargo build
 cargo run -- build --source examples/payments.forge --out output
 cargo run -- build --source examples/payments.forge --out output --style outline
+cargo run -- check --source examples/payments.forge
+cargo run -- check --source examples/payments.forge --severity info --format json
 ```
 
 ### View results
@@ -71,11 +76,11 @@ Open `forge/output/preview.html` in a browser for side-by-side filled/outline co
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `forge build` | Working (Rust + Python) | Parse .forge → render SVGs |
+| `forge build` | Working | Parse .forge → render SVGs |
 | `forge analyze` | Design complete | Scan codebases → generate .forge model |
 | `forge generate` | Design complete | Model → static documentation website |
 | `forge generate --diff` | Design complete | Highlight architectural changes |
-| `forge check` | Design complete | Lint model against architectural rules |
+| `forge check` | Working | Lint model against architectural rules |
 | `forge mcp` | Design complete | MCP server for AI agent access |
 | `forge watch` | Design complete | Incremental rebuild on file changes |
 | `forge serve` | Design complete | Local preview server with live reload |
@@ -121,9 +126,8 @@ forge "System Name" {
 
 ## Next Steps (Priority Order)
 
-1. **Restructure into Cargo workspace** with internal crates matching DESIGN.md §4.2 (`forge-parser`, `forge-model`, `forge-layout`, `forge-render`, `forge-cli`)
-2. **Add unit and integration tests** — parse `examples/*.forge` and verify SVG output structure
-3. **Implement `forge check`** with the built-in rule set from DESIGN.md §8.5
+1. **Restructure into Cargo workspace** with internal crates matching DESIGN.md §4.2 (`forge-parser`, `forge-model`, `forge-layout`, `forge-render`, `forge-check`, `forge-cli`)
+2. **Add custom rule support** — `.forge-rules` declarative syntax from DESIGN.md §8.5
 4. **Implement `forge analyze`** starting with the code scanner (tree-sitter) and git scanner (gix)
 5. **Implement `forge generate`** for static site output
 6. **Implement `forge diff`** for model comparison
