@@ -99,7 +99,7 @@ Open `forge/output/preview.html` in a browser for side-by-side filled/outline co
 | `forge serve` | Design complete | Local preview server with live reload |
 | `forge export` | Design complete | Export as JSON/YAML |
 | `forge import` | Design complete | Import from PlantUML/Mermaid |
-| `forge lsp` | Design complete | Language Server Protocol |
+| `forge lsp` | Working | Language Server Protocol (see EDITORS.md) |
 
 ## DSL Quick Reference
 

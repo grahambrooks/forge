@@ -3,6 +3,7 @@ mod check;
 mod diff;
 mod generate;
 mod layout;
+mod lsp;
 mod model;
 mod parser;
 mod render;
@@ -101,6 +102,8 @@ enum Commands {
         #[arg(long, default_value = "text")]
         format: String,
     },
+    /// Start the Language Server Protocol server (stdio)
+    Lsp,
 }
 
 fn main() {
@@ -336,6 +339,13 @@ fn main() {
             } else if has_warnings {
                 process::exit(1);
             }
+        }
+        Commands::Lsp => {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("failed to create tokio runtime")
+                .block_on(lsp::run());
         }
     }
 }
