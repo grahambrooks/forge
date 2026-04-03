@@ -80,17 +80,20 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
             .then(a.name.cmp(&b.name))
     });
 
-    // Generate pages
-    let nav = build_nav(model, base);
+    // Generate pages — root pages use "./" prefix, subdir pages use "../"
+    let root_prefix = if base == "/" { "./" } else { base.as_str() };
+    let sub_prefix = if base == "/" { "../" } else { base.as_str() };
 
     // Index page
-    let index_html = render_index(&title, model, &violations, &nav, base);
+    let nav_root = build_nav(model, root_prefix);
+    let index_html = render_index(&title, model, &violations, &nav_root, root_prefix);
     fs::write(out.join("index.html"), &index_html).map_err(|e| format!("write: {}", e))?;
 
     // View pages
+    let nav_sub = build_nav(model, sub_prefix);
     for view in &model.views {
         let svg = view_svgs.get(&view.key).unwrap();
-        let html = render_view_page(&title, model, view, svg, &nav, base);
+        let html = render_view_page(&title, model, view, svg, &nav_sub, sub_prefix);
         fs::write(out.join(format!("views/{}.html", view.key)), &html)
             .map_err(|e| format!("write: {}", e))?;
     }
@@ -103,7 +106,7 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
         ) {
             continue;
         }
-        let html = render_element_page(&title, model, el, &nav, base);
+        let html = render_element_page(&title, model, el, &nav_sub, sub_prefix);
         let slug = el.id.replace('.', "-");
         fs::write(out.join(format!("elements/{}.html", slug)), &html)
             .map_err(|e| format!("write: {}", e))?;
