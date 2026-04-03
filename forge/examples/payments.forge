@@ -334,6 +334,49 @@ forge "Payment Platform" {
       include *
       title "Payment Platform — Team Ownership"
     }
+
+    container payments "PaymentFlow" {
+      title "Payment Flow — Step by Step"
+      autoLayout tb
+
+      animation {
+        frame "Customer initiates payment" {
+          include customer
+          include payments.api
+          include customer -> payments.api
+          notes "The customer sends a payment request via HTTPS to the Payment API."
+        }
+
+        frame "API delegates to processor" {
+          include payments.processor
+          include payments.api -> payments.processor
+          notes "The API validates the request and delegates to the Payment Processor via gRPC."
+        }
+
+        frame "Transaction recorded" {
+          include payments.db
+          include payments.processor -> payments.db
+          notes "The processor writes the transaction to the Ledger DB with full ACID guarantees."
+        }
+
+        frame "Receipt notification sent" {
+          include payments.notifier
+          include payments.processor -> payments.notifier
+          notes "An async message triggers the Notification Service to send a receipt."
+        }
+
+        frame "Complete payment flow" {
+          include *
+          highlight payments.api -> payments.processor {
+            color "#E65100"
+            label "Critical path"
+          }
+          highlight payments.processor -> payments.db {
+            color "#E65100"
+          }
+        }
+      }
+    }
   }
 
   docs {

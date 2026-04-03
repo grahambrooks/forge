@@ -599,6 +599,7 @@ mod tests {
             title: None,
             auto_layout: AutoLayout::TopBottom,
             include_all: true,
+            animation: Animation::default(),
         });
         let violations = check(&model, Severity::Warning);
         assert!(violations.iter().any(|v| v.rule == "empty-views"));

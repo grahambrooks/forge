@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
+use crate::animate;
 use crate::check;
 use crate::diff::{ChangeKind, DiffResult};
 use crate::layout;
@@ -72,6 +73,9 @@ pub fn generate(
     for view in &model.views {
         let lo = layout::compute_layout(model, view);
         let mut svg = render::render_svg(&lo, &config.style);
+        if !view.animation.is_empty() {
+            svg = animate::animate_svg(&svg, view, model);
+        }
         if let Some(dr) = diff {
             svg = inject_diff_highlights(&svg, dr);
         }
@@ -462,6 +466,14 @@ fn render_view_page(
     }
 
     main.push_str(&format!(r#"<div class="forge-diagram-wrap">{}</div>"#, svg));
+
+    // Inject playback script for animated views
+    if !view.animation.is_empty() {
+        main.push_str(&format!(
+            "<p class=\"forge-anim-hint\">Click the diagram or use arrow keys to step through frames.</p>\n<script>{}</script>",
+            animate::playback_script()
+        ));
+    }
 
     page_template(&format!("{} — {}", view_title, title), &main, nav, base)
 }
@@ -974,7 +986,7 @@ mod tests {
 
         let report = generate(&model, &config, None).expect("generate should succeed");
         assert!(report.pages > 0);
-        assert_eq!(report.diagrams, 10);
+        assert_eq!(report.diagrams, 11);
 
         // Check files exist
         assert!(tmp.join("index.html").exists());

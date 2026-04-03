@@ -83,6 +83,46 @@ pub struct StageLink {
     pub to: String,
 }
 
+// ── Animation ──
+
+#[derive(Debug, Clone)]
+pub struct FrameHighlight {
+    pub target: String,
+    pub color: Option<String>,
+    pub line_width: Option<f64>,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FrameState {
+    pub target: String,
+    #[allow(dead_code)]
+    pub label: String,
+    pub color: Option<String>,
+    pub pulse: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnimationFrame {
+    pub label: String,
+    pub includes: Vec<String>,
+    pub include_all: bool,
+    pub highlights: Vec<FrameHighlight>,
+    pub states: Vec<FrameState>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Animation {
+    pub frames: Vec<AnimationFrame>,
+}
+
+impl Animation {
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct View {
     pub kind: ViewKind,
@@ -91,6 +131,7 @@ pub struct View {
     pub title: Option<String>,
     pub auto_layout: AutoLayout,
     pub include_all: bool,
+    pub animation: Animation,
 }
 
 #[derive(Debug, Clone)]

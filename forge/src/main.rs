@@ -1,4 +1,5 @@
 mod analyze;
+mod animate;
 mod check;
 mod custom_rules;
 mod diff;
@@ -147,7 +148,12 @@ fn main() {
                 }
 
                 let lo = layout::compute_layout(&model, v);
-                let svg = render::render_svg(&lo, &style);
+                let mut svg = render::render_svg(&lo, &style);
+
+                // Apply animation if the view has frames
+                if !v.animation.is_empty() {
+                    svg = animate::animate_svg(&svg, v, &model);
+                }
 
                 let path = out.join(format!("{}.svg", v.key));
                 fs::write(&path, &svg).unwrap_or_else(|e| {

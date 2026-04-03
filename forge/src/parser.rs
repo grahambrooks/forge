@@ -850,6 +850,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -865,6 +866,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -881,6 +883,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -896,6 +899,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -909,6 +913,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -924,6 +929,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -939,6 +945,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -958,6 +965,7 @@ impl Parser {
                         title: None,
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
+                        animation: Animation::default(),
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -1015,6 +1023,9 @@ impl Parser {
                 "title" => {
                     view.title = Some(self.parse_string()?);
                 }
+                "animation" => {
+                    self.parse_animation(&mut view.animation)?;
+                }
                 _ => {
                     if self.peek_after_ws() == Some('"') {
                         self.parse_string()?;
@@ -1022,6 +1033,171 @@ impl Parser {
                         self.skip_block()?;
                     }
                 }
+            }
+        }
+    }
+
+    // ── Animation ──
+
+    fn parse_animation(&mut self, anim: &mut Animation) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in animation"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "frame" {
+                let label = self.parse_string()?;
+                let mut frame = AnimationFrame {
+                    label,
+                    includes: Vec::new(),
+                    include_all: false,
+                    highlights: Vec::new(),
+                    states: Vec::new(),
+                    notes: None,
+                };
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    if self.at_end() {
+                        return Err(self.error("unexpected EOF in frame"));
+                    }
+                    let prop = self.parse_ident()?;
+                    match prop.as_str() {
+                        "include" => {
+                            self.skip_ws();
+                            if self.peek() == Some('*') {
+                                self.advance();
+                                frame.include_all = true;
+                            } else {
+                                // Read element/relationship references
+                                // Could be: "element", "el1 -> el2", or comma-separated
+                                let ref1 = self.parse_ident()?;
+                                self.skip_ws();
+                                if self.peek() == Some('-') {
+                                    // relationship: ref1 -> ref2
+                                    self.advance(); // -
+                                    self.expect('>')?;
+                                    let ref2 = self.parse_ident()?;
+                                    let r1 = self.resolve_ref(&ref1);
+                                    let r2 = self.resolve_ref(&ref2);
+                                    frame.includes.push(format!("{} -> {}", r1, r2));
+                                } else {
+                                    frame.includes.push(self.resolve_ref(&ref1));
+                                }
+                            }
+                        }
+                        "highlight" => {
+                            let target = self.parse_ident()?;
+                            let resolved = self.resolve_ref(&target);
+                            let mut hl = FrameHighlight {
+                                target: resolved,
+                                color: None,
+                                line_width: None,
+                                label: None,
+                            };
+                            // Check for -> (relationship highlight)
+                            self.skip_ws();
+                            if self.peek() == Some('-') {
+                                self.advance();
+                                self.expect('>')?;
+                                let t2 = self.parse_ident()?;
+                                hl.target = format!("{} -> {}", hl.target, self.resolve_ref(&t2));
+                                // May chain: a -> b -> c
+                                self.skip_ws();
+                                while self.peek() == Some('-') {
+                                    self.advance();
+                                    self.expect('>')?;
+                                    let tn = self.parse_ident()?;
+                                    hl.target
+                                        .push_str(&format!(" -> {}", self.resolve_ref(&tn)));
+                                }
+                            }
+                            if self.peek_after_ws() == Some('{') {
+                                self.expect('{')?;
+                                loop {
+                                    self.skip_ws();
+                                    if self.peek() == Some('}') {
+                                        self.advance();
+                                        break;
+                                    }
+                                    let hp = self.parse_ident()?;
+                                    match hp.as_str() {
+                                        "color" => hl.color = Some(self.parse_string()?),
+                                        "lineWidth" => {
+                                            let v = self.parse_ident()?;
+                                            hl.line_width = v.parse().ok();
+                                        }
+                                        "label" => hl.label = Some(self.parse_string()?),
+                                        _ => {
+                                            if self.peek_after_ws() == Some('"') {
+                                                self.parse_string()?;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            frame.highlights.push(hl);
+                        }
+                        "state" => {
+                            let target = self.parse_ident()?;
+                            let resolved = self.resolve_ref(&target);
+                            let state_label = self.parse_string()?;
+                            let mut state = FrameState {
+                                target: resolved,
+                                label: state_label,
+                                color: None,
+                                pulse: false,
+                            };
+                            if self.peek_after_ws() == Some('{') {
+                                self.expect('{')?;
+                                loop {
+                                    self.skip_ws();
+                                    if self.peek() == Some('}') {
+                                        self.advance();
+                                        break;
+                                    }
+                                    let sp = self.parse_ident()?;
+                                    match sp.as_str() {
+                                        "color" => state.color = Some(self.parse_string()?),
+                                        "pulse" => {
+                                            let v = self.parse_ident()?;
+                                            state.pulse = v == "true";
+                                        }
+                                        _ => {
+                                            if self.peek_after_ws() == Some('"') {
+                                                self.parse_string()?;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            frame.states.push(state);
+                        }
+                        "notes" => {
+                            frame.notes = Some(self.parse_string()?);
+                        }
+                        _ => {
+                            if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            } else if self.peek_after_ws() == Some('{') {
+                                self.skip_block()?;
+                            }
+                        }
+                    }
+                }
+                anim.frames.push(frame);
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
             }
         }
     }
@@ -1360,7 +1536,7 @@ mod tests {
         let m = payments_model();
         assert_eq!(m.elements.len(), 30); // 16 structural/process + 4 components + 8 deployment + 2 branches
         assert_eq!(m.relationships.len(), 11); // 5 model + 4 component + 2 branch flows
-        assert_eq!(m.views.len(), 10); // +1 component view
+        assert_eq!(m.views.len(), 11); // +1 component view, +1 animated view
     }
 
     #[test]
@@ -1750,5 +1926,24 @@ mod tests {
             .unwrap();
         assert_eq!(cv.key, "APIComponents");
         assert_eq!(cv.scope.as_deref(), Some("payments.api"));
+    }
+
+    #[test]
+    fn parse_animation_frames() {
+        let m = payments_model();
+        let animated = m.views.iter().find(|v| v.key == "PaymentFlow").unwrap();
+        assert!(!animated.animation.is_empty());
+        assert_eq!(animated.animation.frames.len(), 5);
+
+        let f1 = &animated.animation.frames[0];
+        assert_eq!(f1.label, "Customer initiates payment");
+        assert!(!f1.includes.is_empty());
+        assert!(f1.notes.is_some());
+
+        let f5 = &animated.animation.frames[4];
+        assert_eq!(f5.label, "Complete payment flow");
+        assert!(f5.include_all);
+        assert!(!f5.highlights.is_empty());
+        assert_eq!(f5.highlights[0].color.as_deref(), Some("#E65100"));
     }
 }
