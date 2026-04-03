@@ -1121,12 +1121,12 @@ mod tests {
     #[test]
     fn parse_docs() {
         let m = payments_model();
-        assert_eq!(m.docs.len(), 4);
+        assert_eq!(m.docs.len(), 5);
         assert_eq!(m.docs[0].title, "Overview");
         assert_eq!(m.docs[0].path, "docs/overview.md");
         assert_eq!(m.docs[1].title, "Architecture Decisions");
         assert_eq!(m.docs[3].title, "Security");
-        assert_eq!(m.docs[3].order, 3);
+        assert_eq!(m.docs[4].title, "ADR-006: Async Notifications and Caching");
     }
 
     #[test]

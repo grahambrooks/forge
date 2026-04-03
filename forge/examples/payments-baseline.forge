@@ -20,25 +20,13 @@ forge "Payment Platform" {
         description "Core payment processing logic"
       }
 
-      notifier = container "Notification Service" {
-        technology "Go"
-        description "Sends email and SMS receipts"
-      }
-
       db = container "Ledger DB" {
         technology "PostgreSQL 16"
         tags "database"
       }
 
-      cache = container "Session Cache" {
-        technology "Redis"
-        tags "database"
-      }
-
       api -> processor "delegates to" "gRPC"
-      api -> cache "reads sessions" "Redis protocol"
       processor -> db "reads/writes" "SQL"
-      processor -> notifier "sends receipt" "async message"
     }
 
     customer -> payments.api "makes payments" "HTTPS"
@@ -90,47 +78,6 @@ forge "Payment Platform" {
     }
   }
 
-  deployment "production" {
-    node "AWS" {
-      technology "Amazon Web Services"
-
-      node "us-east-1" {
-        technology "AWS Region"
-
-        node "EKS Cluster" {
-          technology "Kubernetes 1.29"
-
-          node "API Pods" {
-            technology "3 replicas"
-            instance api
-          }
-
-          node "Processor Pods" {
-            technology "3 replicas"
-            instance processor
-          }
-
-          node "Notification Pods" {
-            technology "2 replicas"
-            instance notifier
-          }
-        }
-
-        node "RDS" {
-          technology "Managed PostgreSQL"
-          description "Primary + 2 read replicas, synchronous replication"
-          instance db
-        }
-
-        node "ElastiCache" {
-          technology "Managed Redis"
-          description "3-node cluster with consistent hashing"
-          instance cache
-        }
-      }
-    }
-  }
-
   views {
     systemContext payments "SystemContext" {
       include *
@@ -149,12 +96,6 @@ forge "Payment Platform" {
       autoLayout lr
       title "Payment API — CI/CD Pipeline"
     }
-
-    deploymentView "production" "Deployment" {
-      include *
-      autoLayout tb
-      title "Payment Platform — Production Deployment"
-    }
   }
 
   docs {
@@ -162,19 +103,5 @@ forge "Payment Platform" {
     doc "Architecture Decisions" "docs/architecture-decisions.md"
     doc "Deployment" "docs/deployment.md"
     doc "Security" "docs/security.md"
-    doc "ADR-006: Async Notifications and Caching" "docs/adr-006-async-notifications-and-caching.md"
-  }
-
-  styles {
-    element "person" {
-      shape person
-      background "#08427B"
-      color "#ffffff"
-    }
-    element "container" {
-      shape roundedBox
-      background "#438DD5"
-      color "#ffffff"
-    }
   }
 }

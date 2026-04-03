@@ -16,6 +16,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::check;
+use crate::diff::{ChangeKind, DiffResult};
 use crate::layout;
 use crate::model::*;
 use crate::render;
@@ -42,7 +43,11 @@ impl Default for GenerateConfig {
 }
 
 /// Generate the complete static site.
-pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport, String> {
+pub fn generate(
+    model: &Model,
+    config: &GenerateConfig,
+    diff: Option<&DiffResult>,
+) -> Result<GenerateReport, String> {
     let out = &config.out_dir;
     let title = config
         .title
@@ -62,11 +67,14 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
         fs::create_dir_all(out.join(dir)).map_err(|e| format!("mkdir: {}", e))?;
     }
 
-    // Render all view SVGs
+    // Render all view SVGs (with diff highlighting if available)
     let mut view_svgs: HashMap<String, String> = HashMap::new();
     for view in &model.views {
         let lo = layout::compute_layout(model, view);
-        let svg = render::render_svg(&lo, &config.style);
+        let mut svg = render::render_svg(&lo, &config.style);
+        if let Some(dr) = diff {
+            svg = inject_diff_highlights(&svg, dr);
+        }
         let svg_path = out.join(format!("assets/diagrams/{}.svg", view.key));
         fs::write(&svg_path, &svg).map_err(|e| format!("write svg: {}", e))?;
         view_svgs.insert(view.key.clone(), svg);
@@ -89,14 +97,14 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
 
     // Index page
     let nav_root = build_nav(model, root_prefix);
-    let index_html = render_index(&title, model, &violations, &nav_root, root_prefix);
+    let index_html = render_index(&title, model, &violations, &nav_root, root_prefix, diff);
     fs::write(out.join("index.html"), &index_html).map_err(|e| format!("write: {}", e))?;
 
     // View pages
     let nav_sub = build_nav(model, sub_prefix);
     for view in &model.views {
         let svg = view_svgs.get(&view.key).unwrap();
-        let html = render_view_page(&title, model, view, svg, &nav_sub, sub_prefix);
+        let html = render_view_page(&title, model, view, svg, &nav_sub, sub_prefix, diff);
         fs::write(out.join(format!("views/{}.html", view.key)), &html)
             .map_err(|e| format!("write: {}", e))?;
     }
@@ -109,7 +117,7 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
         ) {
             continue;
         }
-        let html = render_element_page(&title, model, el, &nav_sub, sub_prefix);
+        let html = render_element_page(&title, model, el, &nav_sub, sub_prefix, diff);
         let slug = el.id.replace('.', "-");
         fs::write(out.join(format!("elements/{}.html", slug)), &html)
             .map_err(|e| format!("write: {}", e))?;
@@ -234,10 +242,84 @@ fn render_index(
     violations: &[check::Violation],
     nav: &str,
     base: &str,
+    diff: Option<&DiffResult>,
 ) -> String {
     let mut main = String::new();
 
     main.push_str(&format!("<h1>{}</h1>", esc(title)));
+
+    // Diff summary banner
+    if let Some(dr) = diff {
+        main.push_str(r#"<div class="forge-diff-banner">"#);
+        main.push_str(r#"<h2>What Changed</h2>"#);
+        main.push_str(&format!(
+            r#"<p class="forge-diff-desc">{}</p>"#,
+            esc(&dr.description)
+        ));
+        main.push_str(&format!(
+            r#"<div class="forge-diff-stats"><span class="forge-diff--added">{} added</span> <span class="forge-diff--modified">{} modified</span> <span class="forge-diff--removed">{} removed</span></div>"#,
+            dr.added_count(),
+            dr.modified_count(),
+            dr.removed_count()
+        ));
+
+        // Detailed change table
+        if !dr.element_changes.is_empty() {
+            main.push_str(r#"<table class="forge-table"><thead><tr><th>Change</th><th>Element</th><th>Type</th><th>Details</th></tr></thead><tbody>"#);
+            for c in &dr.element_changes {
+                let (cls, label) = match c.change {
+                    ChangeKind::Added => ("forge-diff--added", "Added"),
+                    ChangeKind::Modified => ("forge-diff--modified", "Modified"),
+                    ChangeKind::Removed => ("forge-diff--removed", "Removed"),
+                };
+                let slug = c.id.replace('.', "-");
+                let el_link = if c.change != ChangeKind::Removed {
+                    format!(
+                        r#"<a href="{}elements/{}.html">{}</a>"#,
+                        base,
+                        slug,
+                        esc(&c.name)
+                    )
+                } else {
+                    esc(&c.name)
+                };
+                main.push_str(&format!(
+                    r#"<tr><td class="{}">{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"#,
+                    cls,
+                    label,
+                    el_link,
+                    kind_display(c.kind),
+                    esc(&c.details.join("; "))
+                ));
+            }
+            main.push_str("</tbody></table>");
+        }
+
+        // Link to driving ADR (new docs)
+        let new_docs: Vec<_> = dr
+            .doc_changes
+            .iter()
+            .filter(|d| d.change == ChangeKind::Added)
+            .collect();
+        if !new_docs.is_empty() {
+            main.push_str(r#"<div class="forge-diff-rationale"><strong>Rationale:</strong> "#);
+            for (i, d) in new_docs.iter().enumerate() {
+                let slug = slugify_doc(&d.title);
+                if i > 0 {
+                    main.push_str(", ");
+                }
+                main.push_str(&format!(
+                    r#"<a href="{}docs/{}.html">{}</a>"#,
+                    base,
+                    slug,
+                    esc(&d.title)
+                ));
+            }
+            main.push_str("</div>");
+        }
+
+        main.push_str("</div>");
+    }
     if !model.description.is_empty() {
         main.push_str(&format!(
             "<p class=\"forge-desc\">{}</p>",
@@ -361,11 +443,24 @@ fn render_view_page(
     svg: &str,
     nav: &str,
     base: &str,
+    diff: Option<&DiffResult>,
 ) -> String {
     let view_title = view.title.as_deref().unwrap_or(&view.key);
     let mut main = String::new();
 
     main.push_str(&format!("<h1>{}</h1>", esc(view_title)));
+
+    // Diff legend if changes exist
+    if let Some(dr) = diff {
+        if !dr.is_empty() {
+            main.push_str(r#"<div class="forge-diff-legend">"#);
+            main.push_str(r#"<span class="forge-diff--added">&#9632; Added</span> "#);
+            main.push_str(r#"<span class="forge-diff--modified">&#9632; Modified</span> "#);
+            main.push_str(r#"<span class="forge-diff--removed">&#9632; Removed</span>"#);
+            main.push_str("</div>");
+        }
+    }
+
     main.push_str(&format!(r#"<div class="forge-diagram-wrap">{}</div>"#, svg));
 
     page_template(&format!("{} — {}", view_title, title), &main, nav, base)
@@ -373,7 +468,14 @@ fn render_view_page(
 
 // ─── Element Page ────────────────────────────────────────────────
 
-fn render_element_page(title: &str, model: &Model, el: &Element, nav: &str, base: &str) -> String {
+fn render_element_page(
+    title: &str,
+    model: &Model,
+    el: &Element,
+    nav: &str,
+    base: &str,
+    diff: Option<&DiffResult>,
+) -> String {
     let mut main = String::new();
 
     main.push_str(&format!("<h1>{}</h1>", esc(&el.name)));
@@ -382,6 +484,15 @@ fn render_element_page(title: &str, model: &Model, el: &Element, nav: &str, base
         kind_css(el.kind),
         kind_display(el.kind)
     ));
+
+    // Diff change indicator
+    if let Some(dr) = diff {
+        if dr.added_ids.contains(&el.id) {
+            main.push_str(r#" <span class="forge-badge forge-diff--added">Added</span>"#);
+        } else if dr.modified_ids.contains(&el.id) {
+            main.push_str(r#" <span class="forge-badge forge-diff--modified">Modified</span>"#);
+        }
+    }
 
     // Properties table
     main.push_str(r#"<table class="forge-table forge-props"><tbody>"#);
@@ -706,6 +817,19 @@ h2{margin:1.5em 0 0.5em;font-size:1.25rem;font-weight:600;border-bottom:1px soli
 .forge-diagram-wrap{margin:1em 0;overflow-x:auto}
 .forge-diagram-wrap svg{max-width:100%;height:auto}
 
+/* Diff */
+.forge-diff-banner{background:#f0f7ff;border:1px solid #b8d4f0;border-radius:8px;padding:1.25rem 1.5rem;margin:1.5em 0}
+.forge-diff-banner h2{margin:0 0 0.5em;border:none;padding:0;font-size:1.2rem}
+.forge-diff-desc{margin:0.3em 0 0.8em;color:#333;font-size:1rem}
+.forge-diff-stats{display:flex;gap:1.5rem;font-weight:600;font-size:0.9rem}
+.forge-diff--added{color:#16a34a}
+.forge-diff--modified{color:#d97706}
+.forge-diff--removed{color:#dc2626}
+.forge-diff-rationale{margin-top:1em;padding-top:0.8em;border-top:1px solid #c8ddf0;font-size:0.95rem}
+.forge-diff-legend{display:flex;gap:1.5rem;font-size:0.85rem;font-weight:600;margin:0.5em 0 1em;padding:0.5em 0.75em;background:#f6f8fa;border-radius:4px;width:fit-content}
+.forge-diff-highlight--added{outline:3px solid #16a34a;outline-offset:2px;border-radius:4px}
+.forge-diff-highlight--modified{outline:3px solid #d97706;outline-offset:2px;border-radius:4px}
+
 /* Documentation */
 .forge-doc{line-height:1.7}
 .forge-doc h2{margin:1.8em 0 0.5em;font-size:1.25rem;font-weight:600;border-bottom:1px solid #e2e6ea;padding-bottom:0.3em}
@@ -730,6 +854,44 @@ h2{margin:1.5em 0 0.5em;font-size:1.25rem;font-weight:600;border-bottom:1px soli
   .forge-main{padding:1rem}
 }
 "#;
+
+// ─── Diff SVG Highlighting ───────────────────────────────────────
+
+/// Post-process SVG to inject highlight classes on elements that changed.
+/// Looks for `data-id="xxx"` attributes and adds a CSS class to the parent <g>.
+fn inject_diff_highlights(svg: &str, diff: &DiffResult) -> String {
+    let mut result = svg.to_string();
+    for id in &diff.added_ids {
+        let needle = format!(r#"data-id="{}""#, id);
+        if let Some(pos) = result.find(&needle) {
+            // Find the preceding class=" in this <g> tag
+            if let Some(class_start) = result[..pos].rfind("class=\"") {
+                let insert_at = class_start + 7; // after class="
+                result.insert_str(insert_at, "forge-diff-highlight--added ");
+            }
+        }
+    }
+    for id in &diff.modified_ids {
+        let needle = format!(r#"data-id="{}""#, id);
+        if let Some(pos) = result.find(&needle) {
+            if let Some(class_start) = result[..pos].rfind("class=\"") {
+                let insert_at = class_start + 7;
+                result.insert_str(insert_at, "forge-diff-highlight--modified ");
+            }
+        }
+    }
+    // Inject diff CSS into the SVG <style> block
+    if !diff.added_ids.is_empty() || !diff.modified_ids.is_empty() {
+        let diff_css = r#"
+    .forge-diff-highlight--added > rect, .forge-diff-highlight--added > circle, .forge-diff-highlight--added > path { stroke: #16a34a !important; stroke-width: 3 !important; }
+    .forge-diff-highlight--modified > rect, .forge-diff-highlight--modified > circle, .forge-diff-highlight--modified > path { stroke: #d97706 !important; stroke-width: 3 !important; }
+"#;
+        if let Some(style_end) = result.find("</style>") {
+            result.insert_str(style_end, diff_css);
+        }
+    }
+    result
+}
 
 // ─── Utilities ───────────────────────────────────────────────────
 
@@ -809,7 +971,7 @@ mod tests {
             ..Default::default()
         };
 
-        let report = generate(&model, &config).expect("generate should succeed");
+        let report = generate(&model, &config, None).expect("generate should succeed");
         assert!(report.pages > 0);
         assert_eq!(report.diagrams, 4);
 
@@ -837,7 +999,7 @@ mod tests {
             out_dir: tmp.clone(),
             ..Default::default()
         };
-        generate(&model, &config).unwrap();
+        generate(&model, &config, None).unwrap();
 
         let html = fs::read_to_string(tmp.join("index.html")).unwrap();
         assert!(html.contains("Payment Platform"));
@@ -858,7 +1020,7 @@ mod tests {
             out_dir: tmp.clone(),
             ..Default::default()
         };
-        generate(&model, &config).unwrap();
+        generate(&model, &config, None).unwrap();
 
         let html = fs::read_to_string(tmp.join("views/SystemContext.html")).unwrap();
         assert!(html.contains("<svg"));
@@ -877,7 +1039,7 @@ mod tests {
             out_dir: tmp.clone(),
             ..Default::default()
         };
-        generate(&model, &config).unwrap();
+        generate(&model, &config, None).unwrap();
 
         let html = fs::read_to_string(tmp.join("elements/payments-api.html")).unwrap();
         assert!(html.contains("Payment API"));
@@ -931,7 +1093,7 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
 
         let config = examples_config(tmp.clone());
-        let report = generate(&model, &config).expect("generate should succeed");
+        let report = generate(&model, &config, None).expect("generate should succeed");
         assert!(report.pages >= 21); // 17 + 4 docs
 
         assert!(tmp.join("docs/overview.html").exists());
@@ -954,7 +1116,7 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
 
         let config = examples_config(tmp.clone());
-        generate(&model, &config).unwrap();
+        generate(&model, &config, None).unwrap();
 
         let html = fs::read_to_string(tmp.join("docs/architecture-decisions.html")).unwrap();
         // Markdown headings should render as HTML
@@ -973,5 +1135,65 @@ mod tests {
         assert!(html.contains("<h1>Hello</h1>"));
         assert!(html.contains("<strong>bold</strong>"));
         assert!(html.contains("<li>item 1</li>"));
+    }
+
+    fn baseline_model() -> Model {
+        let text = include_str!("../examples/payments-baseline.forge");
+        parser::parse(text).unwrap()
+    }
+
+    #[test]
+    fn generate_with_diff_shows_changes() {
+        let baseline = baseline_model();
+        let current = payments_model();
+        let dr = crate::diff::diff(&baseline, &current);
+
+        let tmp = std::env::temp_dir().join("forge_gen_test_diff");
+        let _ = fs::remove_dir_all(&tmp);
+        let examples_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples");
+        let config = GenerateConfig {
+            out_dir: tmp.clone(),
+            source_dir: examples_dir,
+            ..Default::default()
+        };
+
+        generate(&current, &config, Some(&dr)).unwrap();
+
+        // Index should have diff banner
+        let index = fs::read_to_string(tmp.join("index.html")).unwrap();
+        assert!(index.contains("What Changed"));
+        assert!(index.contains("forge-diff-banner"));
+        assert!(index.contains("Added"));
+
+        // SVGs should have diff highlight classes
+        let svg = fs::read_to_string(tmp.join("assets/diagrams/Containers.svg")).unwrap();
+        assert!(
+            svg.contains("forge-diff-highlight--added"),
+            "SVG should highlight added elements"
+        );
+
+        // New ADR should be linked as rationale
+        assert!(index.contains("ADR-006"));
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn diff_highlights_injected_into_svg() {
+        let svg = r#"<svg><defs><style></style></defs><g class="forge-element" data-id="new.svc"></g></svg>"#;
+        let mut dr = DiffResult {
+            element_changes: Vec::new(),
+            relationship_changes: Vec::new(),
+            doc_changes: Vec::new(),
+            description: String::new(),
+            added_ids: std::collections::HashSet::new(),
+            modified_ids: std::collections::HashSet::new(),
+            removed_ids: std::collections::HashSet::new(),
+        };
+        dr.added_ids.insert("new.svc".into());
+
+        let result = inject_diff_highlights(svg, &dr);
+        assert!(result.contains("forge-diff-highlight--added"));
+        assert!(result.contains("stroke: #16a34a"));
     }
 }

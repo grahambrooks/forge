@@ -1,5 +1,6 @@
 mod analyze;
 mod check;
+mod diff;
 mod generate;
 mod layout;
 mod model;
@@ -81,6 +82,10 @@ enum Commands {
         /// Diagram rendering style: 'filled' or 'outline'
         #[arg(long, default_value = "filled")]
         style: String,
+
+        /// Baseline .forge file to diff against (highlights changes)
+        #[arg(long)]
+        baseline: Option<PathBuf>,
     },
     /// Lint and validate a model against architectural rules
     Check {
@@ -205,6 +210,7 @@ fn main() {
             title,
             base_url,
             style,
+            baseline,
         } => {
             let text = match fs::read_to_string(&source) {
                 Ok(t) => t,
@@ -222,6 +228,34 @@ fn main() {
                 }
             };
 
+            // Load and diff baseline if provided
+            let diff_result = if let Some(ref baseline_path) = baseline {
+                let baseline_text = match fs::read_to_string(baseline_path) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        eprintln!("Error reading baseline: {}: {}", baseline_path.display(), e);
+                        process::exit(1);
+                    }
+                };
+                let baseline_model = match parser::parse(&baseline_text) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        eprintln!("Error parsing baseline: {}", e);
+                        process::exit(1);
+                    }
+                };
+                let dr = diff::diff(&baseline_model, &model);
+                eprintln!(
+                    "Diff: {} added, {} modified, {} removed",
+                    dr.added_count(),
+                    dr.modified_count(),
+                    dr.removed_count()
+                );
+                Some(dr)
+            } else {
+                None
+            };
+
             eprintln!("Generating site from \"{}\"...", model.name);
 
             let source_dir = source
@@ -237,7 +271,7 @@ fn main() {
                 source_dir,
             };
 
-            match generate::generate(&model, &config) {
+            match generate::generate(&model, &config, diff_result.as_ref()) {
                 Ok(report) => {
                     eprintln!(
                         "  {} pages, {} diagrams → {}",
