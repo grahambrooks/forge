@@ -1,0 +1,24 @@
+forge/PUBLISHING.md
+  67bf62b4b404fba2 1-340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "bf97de2c551f3b87a2ad8e77c06c28b2fdd5135d",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 340,
+      "total_deletions": 0,
+      "accepted_lines": 340,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/5ef6beb17302ba9b0990de6f47a2f2c763fc4a948224471669fbee8e605d410c"
+    }
+  }
+}
