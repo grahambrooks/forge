@@ -28,6 +28,9 @@ pub enum ViewKind {
     Deployment,
     TechStack,
     Branching,
+    DataModel,
+    TrustBoundaryView,
+    TeamMap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,6 +113,48 @@ pub struct TechCategory {
     pub entries: Vec<TechEntry>,
 }
 
+// ── Data Model ──
+
+#[derive(Debug, Clone)]
+pub struct DataField {
+    pub name: String,
+    pub field_type: String,
+    pub constraints: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DataEntity {
+    pub name: String,
+    pub fields: Vec<DataField>,
+    pub owner: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DataRelation {
+    pub from_entity: String,
+    pub to_entity: String,
+    pub label: String,
+    pub cardinality: String, // "1:1", "1:N", "N:M"
+}
+
+// ── Trust Boundaries ──
+
+#[derive(Debug, Clone)]
+pub struct TrustBoundary {
+    pub name: String,
+    pub level: String, // "public", "dmz", "internal", "pci", "restricted"
+    pub members: Vec<String>,
+}
+
+// ── Team Ownership ──
+
+#[derive(Debug, Clone)]
+pub struct Team {
+    pub name: String,
+    pub owns: Vec<String>,
+    pub contact: Option<String>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Model {
     pub name: String,
@@ -120,6 +165,10 @@ pub struct Model {
     pub stage_links: Vec<StageLink>,
     pub docs: Vec<Doc>,
     pub tech_stack: Vec<TechCategory>,
+    pub data_entities: Vec<DataEntity>,
+    pub data_relations: Vec<DataRelation>,
+    pub trust_boundaries: Vec<TrustBoundary>,
+    pub teams: Vec<Team>,
 }
 
 impl Model {

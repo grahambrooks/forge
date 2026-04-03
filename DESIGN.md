@@ -1409,6 +1409,28 @@ forge lsp                   Start the Language Server Protocol server
 - Documentation and example gallery
 - Cross-compilation and release automation (Linux musl, macOS universal, Windows MSVC)
 
+### Phase 6 — Complete Modeling (Future)
+
+Additional model dimensions for a comprehensive architecture picture:
+
+**Data & Integration**
+- **Data model**: `dataModel` block with entities, fields (name, type, constraints), and relationships (1:1, 1:N, N:M). `dataModelView` renders as an ER diagram. Entities are linked to owning containers.
+- **API catalog**: `api` block per container with endpoints (method, path, payload). API surface view showing contracts between systems.
+- **Event/message flows**: `eventFlow` block defining topics, queues, publishers, subscribers. Flow view showing async communication paths at runtime.
+
+**Runtime & Operations**
+- **Environment configuration**: `config` block per environment with feature flags, config values, and secret references. Shows what differs between staging and prod.
+- **SLA/SLO definitions**: `slo` block per container with latency, availability, and error budget targets. Ties back to quality attributes in docs.
+- **Dependency health**: `dependency` block for external systems, third-party APIs, and SaaS dependencies with criticality ratings.
+
+**Security & Governance**
+- **Trust boundaries**: `trustBoundary` blocks that group containers into security zones (public, DMZ, internal, PCI scope). Rendered as colored boundary regions on container views. Boundary-crossing relationships are highlighted.
+- **Data classification**: PII, financial, public tags per data store with visual indicators.
+
+**Team & Ownership**
+- **Team ownership map**: `teams` block with team definitions and ownership assignments to containers, pipelines, and repositories. `teamView` renders an ownership grid.
+- **On-call/runbook links**: Operational context per container linking to external runbook systems.
+
 ---
 
 ## 11. Technology Choices

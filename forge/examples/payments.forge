@@ -168,6 +168,96 @@ forge "Payment Platform" {
     }
   }
 
+  dataModel {
+    entity "Transaction" {
+      field "id" "UUID" "PK"
+      field "amount" "DECIMAL(19,4)" "NOT NULL"
+      field "currency" "VARCHAR(3)" "NOT NULL"
+      field "status" "ENUM" "NOT NULL"
+      field "customer_id" "UUID" "FK"
+      field "created_at" "TIMESTAMP" "NOT NULL"
+      field "updated_at" "TIMESTAMP" "NOT NULL"
+      owner db
+    }
+
+    entity "Customer" {
+      field "id" "UUID" "PK"
+      field "email" "VARCHAR(255)" "UNIQUE"
+      field "name" "VARCHAR(100)"
+      field "created_at" "TIMESTAMP" "NOT NULL"
+      owner db
+    }
+
+    entity "PaymentMethod" {
+      field "id" "UUID" "PK"
+      field "customer_id" "UUID" "FK"
+      field "type" "ENUM" "NOT NULL"
+      field "token" "VARCHAR(255)" "NOT NULL"
+      field "last_four" "VARCHAR(4)"
+      field "expiry" "DATE"
+      owner db
+    }
+
+    entity "Session" {
+      field "id" "UUID" "PK"
+      field "customer_id" "UUID"
+      field "idempotency_key" "VARCHAR(255)" "UNIQUE"
+      field "ttl" "INTEGER" "seconds"
+      owner cache
+    }
+
+    relationship "Customer" "Transaction" {
+      label "places"
+      cardinality "1:N"
+    }
+    relationship "Customer" "PaymentMethod" {
+      label "has"
+      cardinality "1:N"
+    }
+    relationship "PaymentMethod" "Transaction" {
+      label "used in"
+      cardinality "1:N"
+    }
+  }
+
+  trustBoundaries {
+    boundary "Public Internet" {
+      level "public"
+      includes customer
+    }
+    boundary "API Gateway (DMZ)" {
+      level "dmz"
+      includes payments.api
+    }
+    boundary "Internal Services" {
+      level "internal"
+      includes payments.processor
+      includes payments.notifier
+    }
+    boundary "PCI Data Zone" {
+      level "pci"
+      includes payments.db
+      includes payments.cache
+    }
+  }
+
+  teams {
+    team "Platform Team" {
+      owns payments.api
+      owns payments.processor
+      owns payments.db
+      contact "#platform-eng on Slack"
+    }
+    team "Notifications Team" {
+      owns payments.notifier
+      contact "#notifications on Slack"
+    }
+    team "Infrastructure Team" {
+      owns payments.cache
+      contact "#infra-oncall on Slack"
+    }
+  }
+
   views {
     systemContext payments "SystemContext" {
       include *
@@ -202,6 +292,21 @@ forge "Payment Platform" {
       include *
       autoLayout tb
       title "Payment API — Branching Strategy"
+    }
+
+    dataModelView "DataModel" {
+      include *
+      title "Payment Platform — Data Model"
+    }
+
+    trustBoundaryView "TrustBoundaries" {
+      include *
+      title "Payment Platform — Trust Boundaries"
+    }
+
+    teamView "Teams" {
+      include *
+      title "Payment Platform — Team Ownership"
     }
   }
 

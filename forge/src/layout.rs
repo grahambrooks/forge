@@ -75,6 +75,9 @@ pub fn compute_layout(model: &Model, view: &View) -> Layout {
         ViewKind::Deployment => layout_deployment(model, view),
         ViewKind::TechStack => layout_tech_stack(model, view),
         ViewKind::Branching => layout_branching(model, view),
+        ViewKind::DataModel => layout_data_model(model, view),
+        ViewKind::TrustBoundaryView => layout_trust_boundary(model, view),
+        ViewKind::TeamMap => layout_team_map(model, view),
     }
 }
 
@@ -846,6 +849,289 @@ fn layout_branching(model: &Model, view: &View) -> Layout {
         title: Some(title),
         nodes,
         edges,
+    }
+}
+
+// ─── Data Model View ─────────────────────────────────────────────
+
+const ENTITY_W: f64 = 220.0;
+const ENTITY_HEADER_H: f64 = 32.0;
+const ENTITY_FIELD_H: f64 = 20.0;
+const ENTITY_PAD: f64 = 10.0;
+const ENTITY_GAP: f64 = 60.0;
+const ENTITY_COLS: usize = 3;
+
+fn layout_data_model(model: &Model, view: &View) -> Layout {
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+
+    for (i, entity) in model.data_entities.iter().enumerate() {
+        let col = i % ENTITY_COLS;
+        let row = i / ENTITY_COLS;
+        let x = PAD + col as f64 * (ENTITY_W + ENTITY_GAP);
+        let y = TITLE_H + 10.0 + row as f64 * (200.0 + ENTITY_GAP);
+        let h = ENTITY_HEADER_H + entity.fields.len() as f64 * ENTITY_FIELD_H + ENTITY_PAD * 2.0;
+
+        let fields_desc = entity
+            .fields
+            .iter()
+            .map(|f| {
+                let c = if f.constraints.is_empty() {
+                    String::new()
+                } else {
+                    format!(" ({})", f.constraints.join(", "))
+                };
+                format!("{}: {}{}", f.name, f.field_type, c)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let sublabel = entity.owner.as_ref().map(|o| {
+            let owner_name = model.elements.get(o).map(|e| e.name.as_str()).unwrap_or(o);
+            format!("Owner: {}", owner_name)
+        });
+
+        nodes.push(LayoutNode {
+            id: format!("_entity_{}", entity.name.to_lowercase().replace(' ', "-")),
+            label: entity.name.clone(),
+            sublabel,
+            kind: ElementKind::Container,
+            tags: vec!["data-entity".into()],
+            rect: Rect {
+                x,
+                y,
+                w: ENTITY_W,
+                h,
+            },
+            description: Some(fields_desc),
+            depth: 0,
+            children_ids: Vec::new(),
+        });
+    }
+
+    for rel in &model.data_relations {
+        let from_id = format!(
+            "_entity_{}",
+            rel.from_entity.to_lowercase().replace(' ', "-")
+        );
+        let to_id = format!("_entity_{}", rel.to_entity.to_lowercase().replace(' ', "-"));
+        edges.push(LayoutEdge {
+            frm: from_id,
+            to: to_id,
+            label: format!("{} [{}]", rel.label, rel.cardinality),
+            technology: None,
+        });
+    }
+
+    let max_x = nodes
+        .iter()
+        .map(|n| n.rect.x + n.rect.w)
+        .fold(400.0_f64, f64::max)
+        + PAD;
+    let max_y = nodes
+        .iter()
+        .map(|n| n.rect.y + n.rect.h)
+        .fold(200.0_f64, f64::max)
+        + PAD
+        + 40.0;
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — Data Model", model.name));
+
+    Layout {
+        width: max_x,
+        height: max_y,
+        title: Some(title),
+        nodes,
+        edges,
+    }
+}
+
+// ─── Trust Boundary View ─────────────────────────────────────────
+
+const BOUNDARY_PAD: f64 = 24.0;
+const BOUNDARY_HEADER: f64 = 34.0;
+const BOUNDARY_MEMBER_W: f64 = 180.0;
+const BOUNDARY_MEMBER_H: f64 = 60.0;
+const BOUNDARY_MEMBER_GAP: f64 = 16.0;
+
+fn layout_trust_boundary(model: &Model, view: &View) -> Layout {
+    let mut nodes = Vec::new();
+    let mut y = TITLE_H + 10.0;
+
+    let max_members = model
+        .trust_boundaries
+        .iter()
+        .map(|b| b.members.len())
+        .max()
+        .unwrap_or(1);
+    let zone_w = (max_members as f64 * (BOUNDARY_MEMBER_W + BOUNDARY_MEMBER_GAP)
+        - BOUNDARY_MEMBER_GAP
+        + BOUNDARY_PAD * 2.0)
+        .max(400.0);
+
+    for boundary in &model.trust_boundaries {
+        let zone_h = BOUNDARY_HEADER + BOUNDARY_MEMBER_H + BOUNDARY_PAD * 2.0;
+        let mut tags = vec!["trust-zone".into()];
+        tags.push(format!("trust-{}", boundary.level));
+
+        nodes.push(LayoutNode {
+            id: format!("_zone_{}", boundary.name.to_lowercase().replace(' ', "-")),
+            label: format!("{} [{}]", boundary.name, boundary.level),
+            sublabel: None,
+            kind: ElementKind::DeploymentNode,
+            tags,
+            rect: Rect {
+                x: PAD,
+                y,
+                w: zone_w,
+                h: zone_h,
+            },
+            description: None,
+            depth: 0,
+            children_ids: Vec::new(),
+        });
+
+        let mut mx = PAD + BOUNDARY_PAD;
+        let my = y + BOUNDARY_HEADER;
+        for member_id in &boundary.members {
+            let member = model.elements.get(member_id);
+            let label = member.map(|e| e.name.as_str()).unwrap_or(member_id);
+            let sublabel = member.and_then(|e| e.technology.as_ref().map(|t| format!("[{}]", t)));
+            let kind = member.map(|e| e.kind).unwrap_or(ElementKind::Container);
+            let member_tags = member.map(|e| e.tags.clone()).unwrap_or_default();
+
+            nodes.push(LayoutNode {
+                id: format!(
+                    "_zone_{}._m_{}",
+                    boundary.name.to_lowercase().replace(' ', "-"),
+                    member_id.replace('.', "-")
+                ),
+                label: label.to_string(),
+                sublabel,
+                kind,
+                tags: member_tags,
+                rect: Rect {
+                    x: mx,
+                    y: my,
+                    w: BOUNDARY_MEMBER_W,
+                    h: BOUNDARY_MEMBER_H,
+                },
+                description: None,
+                depth: 1,
+                children_ids: Vec::new(),
+            });
+            mx += BOUNDARY_MEMBER_W + BOUNDARY_MEMBER_GAP;
+        }
+        y += zone_h + DEPLOY_GAP;
+    }
+
+    let canvas_w = zone_w + PAD * 2.0;
+    let canvas_h = y + PAD;
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — Trust Boundaries", model.name));
+
+    Layout {
+        width: canvas_w,
+        height: canvas_h,
+        title: Some(title),
+        nodes,
+        edges: Vec::new(),
+    }
+}
+
+// ─── Team Map View ───────────────────────────────────────────────
+
+const TEAM_W: f64 = 500.0;
+const TEAM_HEADER_H: f64 = 36.0;
+const TEAM_MEMBER_H: f64 = 28.0;
+const TEAM_PAD: f64 = 14.0;
+
+fn layout_team_map(model: &Model, view: &View) -> Layout {
+    let mut nodes = Vec::new();
+    let mut y = TITLE_H + 10.0;
+
+    for team in &model.teams {
+        let team_h = TEAM_HEADER_H + team.owns.len() as f64 * TEAM_MEMBER_H + TEAM_PAD * 2.0;
+
+        let owns_desc = team
+            .owns
+            .iter()
+            .map(|id| {
+                model
+                    .elements
+                    .get(id)
+                    .map(|e| e.name.clone())
+                    .unwrap_or_else(|| id.clone())
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        nodes.push(LayoutNode {
+            id: format!("_team_{}", team.name.to_lowercase().replace(' ', "-")),
+            label: team.name.clone(),
+            sublabel: team.contact.clone(),
+            kind: ElementKind::DeploymentNode,
+            tags: vec!["team".into()],
+            rect: Rect {
+                x: PAD,
+                y,
+                w: TEAM_W,
+                h: team_h,
+            },
+            description: Some(owns_desc),
+            depth: 0,
+            children_ids: Vec::new(),
+        });
+
+        let mut oy = y + TEAM_HEADER_H;
+        for owned_id in &team.owns {
+            let el = model.elements.get(owned_id);
+            let label = el.map(|e| e.name.as_str()).unwrap_or(owned_id);
+            let kind = el.map(|e| e.kind).unwrap_or(ElementKind::Container);
+            let sublabel = el.and_then(|e| e.technology.as_ref().map(|t| format!("[{}]", t)));
+
+            nodes.push(LayoutNode {
+                id: format!(
+                    "_team_{}._o_{}",
+                    team.name.to_lowercase().replace(' ', "-"),
+                    owned_id.replace('.', "-")
+                ),
+                label: label.to_string(),
+                sublabel,
+                kind,
+                tags: Vec::new(),
+                rect: Rect {
+                    x: PAD + TEAM_PAD,
+                    y: oy,
+                    w: TEAM_W - TEAM_PAD * 2.0,
+                    h: TEAM_MEMBER_H,
+                },
+                description: None,
+                depth: 1,
+                children_ids: Vec::new(),
+            });
+            oy += TEAM_MEMBER_H;
+        }
+        y += team_h + DEPLOY_GAP;
+    }
+
+    let canvas_w = TEAM_W + PAD * 2.0;
+    let canvas_h = y + PAD;
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — Team Ownership", model.name));
+
+    Layout {
+        width: canvas_w,
+        height: canvas_h,
+        title: Some(title),
+        nodes,
+        edges: Vec::new(),
     }
 }
 

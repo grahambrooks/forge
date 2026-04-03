@@ -233,6 +233,9 @@ impl Parser {
                 "process" => self.parse_process()?,
                 "deployment" => self.parse_deployment()?,
                 "techStack" => self.parse_tech_stack()?,
+                "dataModel" => self.parse_data_model()?,
+                "trustBoundaries" => self.parse_trust_boundaries()?,
+                "teams" => self.parse_teams()?,
                 "views" => self.parse_views()?,
                 "docs" => self.parse_docs()?,
                 "styles" => {
@@ -924,6 +927,25 @@ impl Parser {
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
                 }
+                "dataModelView" | "trustBoundaryView" | "teamView" => {
+                    let vk = match kind_str.as_str() {
+                        "dataModelView" => ViewKind::DataModel,
+                        "trustBoundaryView" => ViewKind::TrustBoundaryView,
+                        "teamView" => ViewKind::TeamMap,
+                        _ => unreachable!(),
+                    };
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: vk,
+                        key,
+                        scope: None,
+                        title: None,
+                        auto_layout: AutoLayout::TopBottom,
+                        include_all: false,
+                    };
+                    self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
                 _ => {
                     // Skip unknown view types
                     loop {
@@ -1060,6 +1082,204 @@ impl Parser {
         }
     }
 
+    // ── Data Model ──
+
+    fn parse_data_model(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in dataModel"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "entity" {
+                let name = self.parse_string()?;
+                let mut entity = DataEntity {
+                    name,
+                    fields: Vec::new(),
+                    owner: None,
+                };
+                if self.peek_after_ws() == Some('{') {
+                    self.expect('{')?;
+                    loop {
+                        self.skip_ws();
+                        if self.peek() == Some('}') {
+                            self.advance();
+                            break;
+                        }
+                        let prop = self.parse_ident()?;
+                        match prop.as_str() {
+                            "field" => {
+                                let fname = self.parse_string()?;
+                                let ftype = self.parse_string()?;
+                                let mut constraints = Vec::new();
+                                while self.peek_after_ws() == Some('"') {
+                                    constraints.push(self.parse_string()?);
+                                }
+                                entity.fields.push(DataField {
+                                    name: fname,
+                                    field_type: ftype,
+                                    constraints,
+                                });
+                            }
+                            "owner" => {
+                                let owner_ref = self.parse_ident()?;
+                                entity.owner = Some(self.resolve_ref(&owner_ref));
+                            }
+                            _ => {
+                                if self.peek_after_ws() == Some('"') {
+                                    self.parse_string()?;
+                                } else if self.peek_after_ws() == Some('{') {
+                                    self.skip_block()?;
+                                }
+                            }
+                        }
+                    }
+                }
+                self.model.data_entities.push(entity);
+            } else if kw == "relationship" {
+                let from = self.parse_string()?;
+                let to = self.parse_string()?;
+                let mut label = String::new();
+                let mut cardinality = "1:N".to_string();
+                if self.peek_after_ws() == Some('{') {
+                    self.expect('{')?;
+                    loop {
+                        self.skip_ws();
+                        if self.peek() == Some('}') {
+                            self.advance();
+                            break;
+                        }
+                        let p = self.parse_ident()?;
+                        match p.as_str() {
+                            "label" => label = self.parse_string()?,
+                            "cardinality" => cardinality = self.parse_string()?,
+                            _ => {
+                                if self.peek_after_ws() == Some('"') {
+                                    self.parse_string()?;
+                                }
+                            }
+                        }
+                    }
+                }
+                self.model.data_relations.push(DataRelation {
+                    from_entity: from,
+                    to_entity: to,
+                    label,
+                    cardinality,
+                });
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
+    // ── Trust Boundaries ──
+
+    fn parse_trust_boundaries(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in trustBoundaries"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "boundary" {
+                let name = self.parse_string()?;
+                let mut boundary = TrustBoundary {
+                    name,
+                    level: "internal".into(),
+                    members: Vec::new(),
+                };
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let prop = self.parse_ident()?;
+                    match prop.as_str() {
+                        "level" => boundary.level = self.parse_string()?,
+                        "member" | "includes" => {
+                            let member = self.parse_ident()?;
+                            boundary.members.push(self.resolve_ref(&member));
+                        }
+                        _ => {
+                            if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            } else if self.peek_after_ws() == Some('{') {
+                                self.skip_block()?;
+                            }
+                        }
+                    }
+                }
+                self.model.trust_boundaries.push(boundary);
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
+    // ── Teams ──
+
+    fn parse_teams(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in teams"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "team" {
+                let name = self.parse_string()?;
+                let mut team = Team {
+                    name,
+                    owns: Vec::new(),
+                    contact: None,
+                };
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let prop = self.parse_ident()?;
+                    match prop.as_str() {
+                        "owns" => {
+                            let target = self.parse_ident()?;
+                            team.owns.push(self.resolve_ref(&target));
+                        }
+                        "contact" => team.contact = Some(self.parse_string()?),
+                        _ => {
+                            if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            } else if self.peek_after_ws() == Some('{') {
+                                self.skip_block()?;
+                            }
+                        }
+                    }
+                }
+                self.model.teams.push(team);
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
     // ── Docs ──
 
     fn parse_docs(&mut self) -> Result<(), ParseError> {
@@ -1114,7 +1334,7 @@ mod tests {
         let m = payments_model();
         assert_eq!(m.elements.len(), 26); // 16 structural/process + 8 deployment + 2 branches
         assert_eq!(m.relationships.len(), 7); // 5 model + 2 branch flows
-        assert_eq!(m.views.len(), 6); // SystemContext, Containers, Pipeline, Deployment, TechStack, Branching
+        assert_eq!(m.views.len(), 9); // SystemContext, Containers, Pipeline, Deployment, TechStack, Branching, DataModel, TrustBoundaries, Teams
     }
 
     #[test]
@@ -1433,5 +1653,48 @@ mod tests {
             .unwrap();
         assert_eq!(bv.key, "Branching");
         assert_eq!(bv.scope.as_deref(), Some("trunk-based"));
+    }
+
+    #[test]
+    fn parse_data_model() {
+        let m = payments_model();
+        assert_eq!(m.data_entities.len(), 4);
+        let txn = m
+            .data_entities
+            .iter()
+            .find(|e| e.name == "Transaction")
+            .unwrap();
+        assert!(txn.fields.len() >= 5);
+        assert_eq!(txn.fields[0].name, "id");
+        assert_eq!(txn.fields[0].field_type, "UUID");
+        assert!(txn.owner.is_some());
+
+        assert_eq!(m.data_relations.len(), 3);
+        assert!(m
+            .data_relations
+            .iter()
+            .any(|r| r.from_entity == "Customer" && r.to_entity == "Transaction"));
+    }
+
+    #[test]
+    fn parse_trust_boundaries() {
+        let m = payments_model();
+        assert_eq!(m.trust_boundaries.len(), 4);
+        let pci = m
+            .trust_boundaries
+            .iter()
+            .find(|b| b.level == "pci")
+            .unwrap();
+        assert_eq!(pci.name, "PCI Data Zone");
+        assert!(pci.members.iter().any(|m| m.contains("db")));
+    }
+
+    #[test]
+    fn parse_teams() {
+        let m = payments_model();
+        assert_eq!(m.teams.len(), 3);
+        let platform = m.teams.iter().find(|t| t.name == "Platform Team").unwrap();
+        assert!(platform.owns.len() >= 3);
+        assert_eq!(platform.contact.as_deref(), Some("#platform-eng on Slack"));
     }
 }

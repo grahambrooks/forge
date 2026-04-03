@@ -316,12 +316,19 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::Deployment => "deploymentView",
         ViewKind::TechStack => "techStackView",
         ViewKind::Branching => "branchingView",
+        ViewKind::DataModel => "dataModelView",
+        ViewKind::TrustBoundaryView => "trustBoundaryView",
+        ViewKind::TeamMap => "teamView",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");
     let scope_ref = scope.split('.').next_back().unwrap_or(scope);
 
-    if view.kind == ViewKind::TechStack {
+    if view.kind == ViewKind::TechStack
+        || view.kind == ViewKind::DataModel
+        || view.kind == ViewKind::TrustBoundaryView
+        || view.kind == ViewKind::TeamMap
+    {
         // techStackView has no scope, just a key
         o.push_str(&format!(
             "{}{} \"{}\" {{\n",

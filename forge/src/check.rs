@@ -374,6 +374,9 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
                 e.kind == ElementKind::Branch
                     && e.properties.get("strategy").map(|s| s.as_str()) == Some(scope_id)
             }),
+            ViewKind::DataModel => !model.data_entities.is_empty(),
+            ViewKind::TrustBoundaryView => !model.trust_boundaries.is_empty(),
+            ViewKind::TeamMap => !model.teams.is_empty(),
         };
         if !has_content {
             violations.push(Violation {
