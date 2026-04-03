@@ -1,0 +1,24 @@
+forge/src/serve.rs
+  67bf62b4b404fba2 260,262-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "b5a12bc9acf3421d120f2b6cde33857cb66cb3fb",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 2,
+      "accepted_lines": 6,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/67fce81e7436e00dace305c454476eff05faed0ddca7e4ebcd5e0104115454c9"
+    }
+  }
+}
