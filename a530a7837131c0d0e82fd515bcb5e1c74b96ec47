@@ -1,0 +1,44 @@
+forge/Cargo.toml
+  67bf62b4b404fba2 12
+forge/examples/docs/deployment.md
+  67bf62b4b404fba2 1-59
+forge/examples/docs/security.md
+  67bf62b4b404fba2 1-64
+forge/src/generate.rs
+  67bf62b4b404fba2 8,29,39,61,118-136,154-155,211-225,508-551,709-724,903-972
+forge/examples/docs/overview.md
+  67bf62b4b404fba2 1-29
+forge/src/main.rs
+  67bf62b4b404fba2 227-231,237
+forge/src/analyze/emit.rs
+  67bf62b4b404fba2 99-111
+forge/src/parser.rs
+  67bf62b4b404fba2 235,749-767,769-776,1006-1022
+forge/examples/docs/architecture-decisions.md
+  67bf62b4b404fba2 1-72
+forge/src/model.rs
+  67bf62b4b404fba2 88-95,104
+forge/examples/payments.forge
+  67bf62b4b404fba2 113-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "a530a7837131c0d0e82fd515bcb5e1c74b96ec47",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 483,
+      "total_deletions": 6,
+      "accepted_lines": 475,
+      "overriden_lines": 1,
+      "messages_url": "https://usegitai.com/cas/e2cc289dfa78a4d886b37675384dc888563797254181cd7f2df947730c5d82ec"
+    }
+  }
+}
