@@ -973,7 +973,7 @@ mod tests {
 
         let report = generate(&model, &config, None).expect("generate should succeed");
         assert!(report.pages > 0);
-        assert_eq!(report.diagrams, 4);
+        assert_eq!(report.diagrams, 5);
 
         // Check files exist
         assert!(tmp.join("index.html").exists());

@@ -232,6 +232,7 @@ impl Parser {
                 "model" => self.parse_model()?,
                 "process" => self.parse_process()?,
                 "deployment" => self.parse_deployment()?,
+                "techStack" => self.parse_tech_stack()?,
                 "views" => self.parse_views()?,
                 "docs" => self.parse_docs()?,
                 "styles" => {
@@ -797,6 +798,19 @@ impl Parser {
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
                 }
+                "techStackView" => {
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: ViewKind::TechStack,
+                        key,
+                        scope: None,
+                        title: None,
+                        auto_layout: AutoLayout::TopBottom,
+                        include_all: false,
+                    };
+                    self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
                 _ => {
                     // Skip unknown view types
                     loop {
@@ -861,6 +875,78 @@ impl Parser {
         }
     }
 
+    // ── Tech Stack ──
+
+    fn parse_tech_stack(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in techStack"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "category" {
+                let cat_name = self.parse_string()?;
+                let mut entries = Vec::new();
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    if self.at_end() {
+                        return Err(self.error("unexpected EOF in techStack category"));
+                    }
+                    let inner = self.parse_ident()?;
+                    if inner == "tech" {
+                        let tech_name = self.parse_string()?;
+                        let mut entry = TechEntry {
+                            name: tech_name,
+                            version: None,
+                            purpose: None,
+                        };
+                        if self.peek_after_ws() == Some('{') {
+                            self.expect('{')?;
+                            loop {
+                                self.skip_ws();
+                                if self.peek() == Some('}') {
+                                    self.advance();
+                                    break;
+                                }
+                                let prop = self.parse_ident()?;
+                                match prop.as_str() {
+                                    "version" => entry.version = Some(self.parse_string()?),
+                                    "purpose" => entry.purpose = Some(self.parse_string()?),
+                                    _ => {
+                                        if self.peek_after_ws() == Some('"') {
+                                            self.parse_string()?;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        entries.push(entry);
+                    } else if self.peek_after_ws() == Some('"') {
+                        self.parse_string()?;
+                    } else if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
+                    }
+                }
+                self.model.tech_stack.push(TechCategory {
+                    name: cat_name,
+                    entries,
+                });
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
     // ── Docs ──
 
     fn parse_docs(&mut self) -> Result<(), ParseError> {
@@ -915,7 +1001,7 @@ mod tests {
         let m = payments_model();
         assert_eq!(m.elements.len(), 24); // 16 structural/process + 8 deployment nodes
         assert_eq!(m.relationships.len(), 5);
-        assert_eq!(m.views.len(), 4); // SystemContext, Containers, Pipeline, Deployment
+        assert_eq!(m.views.len(), 5); // SystemContext, Containers, Pipeline, Deployment, TechStack
     }
 
     #[test]
@@ -1171,5 +1257,34 @@ mod tests {
             .unwrap();
         assert_eq!(dv.key, "Deployment");
         assert_eq!(dv.scope.as_deref(), Some("production"));
+    }
+
+    #[test]
+    fn parse_tech_stack() {
+        let m = payments_model();
+        assert_eq!(m.tech_stack.len(), 5);
+        assert_eq!(m.tech_stack[0].name, "Languages & Frameworks");
+        assert_eq!(m.tech_stack[0].entries.len(), 4);
+
+        let rust = &m.tech_stack[0].entries[0];
+        assert_eq!(rust.name, "Rust");
+        assert_eq!(rust.version.as_deref(), Some("1.75"));
+        assert_eq!(rust.purpose.as_deref(), Some("Payment API and Processor"));
+
+        // Data stores
+        assert_eq!(m.tech_stack[1].name, "Data Stores");
+        assert_eq!(m.tech_stack[1].entries.len(), 2);
+    }
+
+    #[test]
+    fn parse_tech_stack_view() {
+        let m = payments_model();
+        let tsv = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::TechStack)
+            .unwrap();
+        assert_eq!(tsv.key, "TechStack");
+        assert!(tsv.title.as_ref().unwrap().contains("Technology Stack"));
     }
 }

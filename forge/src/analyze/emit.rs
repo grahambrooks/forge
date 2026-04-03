@@ -96,6 +96,31 @@ pub fn emit(model: &Model) -> String {
         o.push_str("  }\n");
     }
 
+    // ── Tech Stack section ──
+    if !model.tech_stack.is_empty() {
+        o.push_str("\n  techStack {\n");
+        for cat in &model.tech_stack {
+            o.push_str(&format!("    category \"{}\" {{\n", escape(&cat.name)));
+            for entry in &cat.entries {
+                o.push_str(&format!("      tech \"{}\"", escape(&entry.name)));
+                if entry.version.is_some() || entry.purpose.is_some() {
+                    o.push_str(" {\n");
+                    if let Some(ref v) = entry.version {
+                        o.push_str(&format!("        version \"{}\"\n", escape(v)));
+                    }
+                    if let Some(ref p) = entry.purpose {
+                        o.push_str(&format!("        purpose \"{}\"\n", escape(p)));
+                    }
+                    o.push_str("      }\n");
+                } else {
+                    o.push('\n');
+                }
+            }
+            o.push_str("    }\n");
+        }
+        o.push_str("  }\n");
+    }
+
     // ── Docs section ──
     if !model.docs.is_empty() {
         o.push_str("\n  docs {\n");
@@ -289,12 +314,21 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::Container => "container",
         ViewKind::PipelineView => "pipelineView",
         ViewKind::Deployment => "deploymentView",
+        ViewKind::TechStack => "techStackView",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");
     let scope_ref = scope.split('.').next_back().unwrap_or(scope);
 
-    if view.kind == ViewKind::PipelineView || view.kind == ViewKind::Deployment {
+    if view.kind == ViewKind::TechStack {
+        // techStackView has no scope, just a key
+        o.push_str(&format!(
+            "{}{} \"{}\" {{\n",
+            pad,
+            kind_str,
+            escape(&view.key)
+        ));
+    } else if view.kind == ViewKind::PipelineView || view.kind == ViewKind::Deployment {
         o.push_str(&format!(
             "{}{} \"{}\" \"{}\" {{\n",
             pad,

@@ -131,6 +131,43 @@ forge "Payment Platform" {
     }
   }
 
+  techStack {
+    category "Languages & Frameworks" {
+      tech "Rust" { version "1.75"
+        purpose "Payment API and Processor" }
+      tech "Actix-web" { version "4"
+        purpose "HTTP/REST framework" }
+      tech "Tonic" { version "0.11"
+        purpose "gRPC framework" }
+      tech "Go" { version "1.21"
+        purpose "Notification Service" }
+    }
+    category "Data Stores" {
+      tech "PostgreSQL" { version "16"
+        purpose "Ledger and transaction data" }
+      tech "Redis" { version "7"
+        purpose "Session cache and rate limiting" }
+    }
+    category "Infrastructure" {
+      tech "Kubernetes" { version "1.29"
+        purpose "Container orchestration" }
+      tech "AWS" { purpose "Cloud platform (EKS, RDS, ElastiCache)" }
+      tech "Docker" { purpose "Container images" }
+      tech "Terraform" { purpose "Infrastructure as code" }
+    }
+    category "CI/CD & Tooling" {
+      tech "GitHub Actions" { purpose "CI/CD pipelines" }
+      tech "Trivy" { purpose "Container security scanning" }
+      tech "Gitleaks" { purpose "Secret detection" }
+      tech "Cargo" { purpose "Rust build system and package manager" }
+    }
+    category "Observability" {
+      tech "Grafana" { purpose "Dashboards and alerting" }
+      tech "Prometheus" { purpose "Metrics collection" }
+      tech "CloudWatch" { purpose "Log aggregation" }
+    }
+  }
+
   views {
     systemContext payments "SystemContext" {
       include *
@@ -154,6 +191,11 @@ forge "Payment Platform" {
       include *
       autoLayout tb
       title "Payment Platform — Production Deployment"
+    }
+
+    techStackView "TechStack" {
+      include *
+      title "Payment Platform — Technology Stack"
     }
   }
 

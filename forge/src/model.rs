@@ -26,6 +26,7 @@ pub enum ViewKind {
     Container,
     PipelineView,
     Deployment,
+    TechStack,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -95,6 +96,19 @@ pub struct Doc {
     pub order: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct TechEntry {
+    pub name: String,
+    pub version: Option<String>,
+    pub purpose: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TechCategory {
+    pub name: String,
+    pub entries: Vec<TechEntry>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Model {
     pub name: String,
@@ -104,6 +118,7 @@ pub struct Model {
     pub views: Vec<View>,
     pub stage_links: Vec<StageLink>,
     pub docs: Vec<Doc>,
+    pub tech_stack: Vec<TechCategory>,
 }
 
 impl Model {

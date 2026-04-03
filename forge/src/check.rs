@@ -369,6 +369,7 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
                 e.kind == ElementKind::DeploymentNode
                     && e.properties.get("environment").map(|s| s.as_str()) == Some(scope_id)
             }),
+            ViewKind::TechStack => !model.tech_stack.is_empty(),
         };
         if !has_content {
             violations.push(Violation {
