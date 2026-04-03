@@ -85,6 +85,14 @@ pub struct View {
     pub include_all: bool,
 }
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct Doc {
+    pub title: String,
+    pub path: String,
+    pub order: usize,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Model {
     pub name: String,
@@ -93,6 +101,7 @@ pub struct Model {
     pub relationships: Vec<Relationship>,
     pub views: Vec<View>,
     pub stage_links: Vec<StageLink>,
+    pub docs: Vec<Doc>,
 }
 
 impl Model {

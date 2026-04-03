@@ -224,11 +224,17 @@ fn main() {
 
             eprintln!("Generating site from \"{}\"...", model.name);
 
+            let source_dir = source
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| PathBuf::from("."));
+
             let config = generate::GenerateConfig {
                 out_dir: out.clone(),
                 title,
                 base_url,
                 style,
+                source_dir,
             };
 
             match generate::generate(&model, &config) {

@@ -5,6 +5,7 @@
 //!   ├── index.html           — Landing page with model overview
 //!   ├── views/*.html         — One page per view with embedded SVG
 //!   ├── elements/*.html      — Detail page per element
+//!   ├── docs/*.html          — Markdown documentation pages
 //!   ├── assets/
 //!   │   ├── forge.css        — Default site styles
 //!   │   └── diagrams/*.svg   — Rendered SVGs
@@ -25,6 +26,7 @@ pub struct GenerateConfig {
     pub title: Option<String>,
     pub base_url: String,
     pub style: String,
+    pub source_dir: PathBuf,
 }
 
 impl Default for GenerateConfig {
@@ -34,6 +36,7 @@ impl Default for GenerateConfig {
             title: None,
             base_url: "/".into(),
             style: "filled".into(),
+            source_dir: PathBuf::from("."),
         }
     }
 }
@@ -55,7 +58,7 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
     let base = &config.base_url;
 
     // Create directories
-    for dir in &["", "views", "elements", "assets", "assets/diagrams"] {
+    for dir in &["", "views", "elements", "docs", "assets", "assets/diagrams"] {
         fs::create_dir_all(out.join(dir)).map_err(|e| format!("mkdir: {}", e))?;
     }
 
@@ -112,6 +115,25 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
             .map_err(|e| format!("write: {}", e))?;
     }
 
+    // Doc pages
+    let mut doc_count = 0;
+    for doc in &model.docs {
+        let md_path = config.source_dir.join(&doc.path);
+        let md_content = match fs::read_to_string(&md_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("  Warning: could not read {}: {}", md_path.display(), e);
+                continue;
+            }
+        };
+        let html_body = render_markdown(&md_content);
+        let html = render_doc_page(&title, doc, &html_body, &nav_sub, sub_prefix);
+        let slug = slugify_doc(&doc.title);
+        fs::write(out.join(format!("docs/{}.html", slug)), &html)
+            .map_err(|e| format!("write: {}", e))?;
+        doc_count += 1;
+    }
+
     // CSS
     fs::write(out.join("assets/forge.css"), CSS).map_err(|e| format!("write css: {}", e))?;
 
@@ -129,7 +151,8 @@ pub fn generate(model: &Model, config: &GenerateConfig) -> Result<GenerateReport
                     ElementKind::Gate | ElementKind::Step | ElementKind::Artifact
                 )
             })
-            .count();
+            .count()
+        + doc_count;
     Ok(GenerateReport {
         pages: page_count,
         diagrams: model.views.len(),
@@ -185,7 +208,21 @@ fn build_nav(model: &Model, base: &str) -> String {
             esc(&el.name)
         ));
     }
-    nav.push_str("</ul></div></nav>");
+    nav.push_str("</ul></div>");
+    if !model.docs.is_empty() {
+        nav.push_str(r#"<div class="forge-nav__section"><span>Documentation</span><ul>"#);
+        for doc in &model.docs {
+            let slug = slugify_doc(&doc.title);
+            nav.push_str(&format!(
+                r#"<li><a href="{}docs/{}.html">{}</a></li>"#,
+                base,
+                slug,
+                esc(&doc.title)
+            ));
+        }
+        nav.push_str("</ul></div>");
+    }
+    nav.push_str("</nav>");
     nav
 }
 
@@ -468,6 +505,50 @@ fn render_element_page(title: &str, model: &Model, el: &Element, nav: &str, base
     page_template(&format!("{} — {}", el.name, title), &main, nav, base)
 }
 
+// ─── Doc Page ────────────────────────────────────────────────────
+
+fn render_doc_page(
+    title: &str,
+    doc: &crate::model::Doc,
+    html_body: &str,
+    nav: &str,
+    base: &str,
+) -> String {
+    let mut main = String::new();
+    main.push_str(&format!("<h1>{}</h1>", esc(&doc.title)));
+    main.push_str(&format!(r#"<div class="forge-doc">{}</div>"#, html_body));
+    page_template(&format!("{} — {}", doc.title, title), &main, nav, base)
+}
+
+fn render_markdown(md: &str) -> String {
+    use pulldown_cmark::{html, Options, Parser};
+    let opts = Options::ENABLE_TABLES
+        | Options::ENABLE_STRIKETHROUGH
+        | Options::ENABLE_TASKLISTS
+        | Options::ENABLE_HEADING_ATTRIBUTES;
+    let parser = Parser::new_ext(md, opts);
+    let mut html_output = String::new();
+    html::push_html(&mut html_output, parser);
+    html_output
+}
+
+fn slugify_doc(title: &str) -> String {
+    title
+        .to_lowercase()
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .replace("--", "-")
+        .trim_matches('-')
+        .to_string()
+}
+
 // ─── JSON Export ─────────────────────────────────────────────────
 
 fn render_json(model: &Model) -> String {
@@ -624,6 +705,22 @@ h2{margin:1.5em 0 0.5em;font-size:1.25rem;font-weight:600;border-bottom:1px soli
 /* Diagram */
 .forge-diagram-wrap{margin:1em 0;overflow-x:auto}
 .forge-diagram-wrap svg{max-width:100%;height:auto}
+
+/* Documentation */
+.forge-doc{line-height:1.7}
+.forge-doc h2{margin:1.8em 0 0.5em;font-size:1.25rem;font-weight:600;border-bottom:1px solid #e2e6ea;padding-bottom:0.3em}
+.forge-doc h3{margin:1.4em 0 0.4em;font-size:1.1rem;font-weight:600}
+.forge-doc p{margin:0.6em 0}
+.forge-doc ul,.forge-doc ol{margin:0.5em 0;padding-left:1.5em}
+.forge-doc li{margin:0.3em 0}
+.forge-doc pre{background:#1a1a2e;color:#e0e0e0;padding:1rem;border-radius:6px;overflow-x:auto;font-size:0.85rem;line-height:1.5}
+.forge-doc code{background:#f0f2f5;padding:2px 6px;border-radius:3px;font-size:0.88em}
+.forge-doc pre code{background:none;padding:0;font-size:1em}
+.forge-doc blockquote{border-left:3px solid #1168BD;margin:1em 0;padding:0.5em 1em;background:#f6f8fa;color:#555}
+.forge-doc table{border-collapse:collapse;margin:1em 0;width:100%}
+.forge-doc th,.forge-doc td{padding:0.5rem 0.75rem;border:1px solid #e2e6ea;text-align:left}
+.forge-doc th{background:#f6f8fa;font-weight:600}
+.forge-doc img{max-width:100%}
 
 /* Responsive */
 @media(max-width:768px){
@@ -802,5 +899,75 @@ mod tests {
         assert!(nav.contains("Payment Platform"));
         assert!(nav.contains("views/SystemContext.html"));
         assert!(nav.contains("elements/"));
+    }
+
+    #[test]
+    fn nav_has_docs_section() {
+        let model = payments_model();
+        let nav = build_nav(&model, "/");
+        assert!(nav.contains("Documentation"));
+        assert!(nav.contains("docs/overview.html"));
+        assert!(nav.contains("docs/security.html"));
+    }
+
+    fn examples_config(tmp: PathBuf) -> GenerateConfig {
+        // Point source_dir at the examples/ directory so doc files resolve
+        let examples_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples");
+        GenerateConfig {
+            out_dir: tmp,
+            source_dir: examples_dir,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn generate_produces_doc_pages() {
+        let model = payments_model();
+        let tmp = std::env::temp_dir().join("forge_gen_test_docs");
+        let _ = fs::remove_dir_all(&tmp);
+
+        let config = examples_config(tmp.clone());
+        let report = generate(&model, &config).expect("generate should succeed");
+        assert!(report.pages >= 21); // 17 + 4 docs
+
+        assert!(tmp.join("docs/overview.html").exists());
+        assert!(tmp.join("docs/architecture-decisions.html").exists());
+        assert!(tmp.join("docs/deployment.html").exists());
+        assert!(tmp.join("docs/security.html").exists());
+
+        let html = fs::read_to_string(tmp.join("docs/overview.html")).unwrap();
+        assert!(html.contains("Overview"));
+        assert!(html.contains("Business Context"));
+        assert!(html.contains("forge-doc"));
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn doc_page_renders_markdown() {
+        let model = payments_model();
+        let tmp = std::env::temp_dir().join("forge_gen_test_docs_md");
+        let _ = fs::remove_dir_all(&tmp);
+
+        let config = examples_config(tmp.clone());
+        generate(&model, &config).unwrap();
+
+        let html = fs::read_to_string(tmp.join("docs/architecture-decisions.html")).unwrap();
+        // Markdown headings should render as HTML
+        assert!(html.contains("<h2>"));
+        // Bold text from **Status**: etc
+        assert!(html.contains("<strong>"));
+        // List items from consequences
+        assert!(html.contains("<li>"));
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn markdown_renderer_basic() {
+        let html = render_markdown("# Hello\n\nSome **bold** text.\n\n- item 1\n- item 2\n");
+        assert!(html.contains("<h1>Hello</h1>"));
+        assert!(html.contains("<strong>bold</strong>"));
+        assert!(html.contains("<li>item 1</li>"));
     }
 }

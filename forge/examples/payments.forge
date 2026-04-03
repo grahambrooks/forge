@@ -110,6 +110,13 @@ forge "Payment Platform" {
     }
   }
 
+  docs {
+    doc "Overview" "docs/overview.md"
+    doc "Architecture Decisions" "docs/architecture-decisions.md"
+    doc "Deployment" "docs/deployment.md"
+    doc "Security" "docs/security.md"
+  }
+
   styles {
     element "person" {
       shape person

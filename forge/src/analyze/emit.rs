@@ -96,6 +96,19 @@ pub fn emit(model: &Model) -> String {
         o.push_str("  }\n");
     }
 
+    // ── Docs section ──
+    if !model.docs.is_empty() {
+        o.push_str("\n  docs {\n");
+        for doc in &model.docs {
+            o.push_str(&format!(
+                "    doc \"{}\" \"{}\"\n",
+                escape(&doc.title),
+                escape(&doc.path)
+            ));
+        }
+        o.push_str("  }\n");
+    }
+
     o.push_str("}\n");
     o
 }

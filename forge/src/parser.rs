@@ -232,6 +232,7 @@ impl Parser {
                 "model" => self.parse_model()?,
                 "process" => self.parse_process()?,
                 "views" => self.parse_views()?,
+                "docs" => self.parse_docs()?,
                 "styles" => {
                     self.skip_block()?;
                 }
@@ -745,6 +746,34 @@ impl Parser {
             }
         }
     }
+
+    // ── Docs ──
+
+    fn parse_docs(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        let mut order = 0;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in docs"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "doc" {
+                let title = self.parse_string()?;
+                let path = self.parse_string()?;
+                self.model.docs.push(Doc { title, path, order });
+                order += 1;
+            } else if self.peek_after_ws() == Some('"') {
+                self.parse_string()?;
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
 }
 
 pub fn parse(text: &str) -> Result<Model, ParseError> {
@@ -973,5 +1002,22 @@ mod tests {
         assert_eq!(repo.kind, ElementKind::Repository);
         assert_eq!(repo.name, "payments-api");
         assert!(repo.properties.contains_key("url"));
+    }
+
+    #[test]
+    fn parse_docs() {
+        let m = payments_model();
+        assert_eq!(m.docs.len(), 4);
+        assert_eq!(m.docs[0].title, "Overview");
+        assert_eq!(m.docs[0].path, "docs/overview.md");
+        assert_eq!(m.docs[1].title, "Architecture Decisions");
+        assert_eq!(m.docs[3].title, "Security");
+        assert_eq!(m.docs[3].order, 3);
+    }
+
+    #[test]
+    fn parse_docs_empty() {
+        let m = parse(r#"forge "X" { docs {} model {} views {} }"#).unwrap();
+        assert!(m.docs.is_empty());
     }
 }
