@@ -1,0 +1,7 @@
+// People and actors
+
+model {
+  customer = person "Customer" {
+    description "End user making payments"
+  }
+}

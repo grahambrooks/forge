@@ -1,0 +1,27 @@
+// Payment Service system and containers
+
+model {
+  payments = system "Payment Service" {
+    description "Processes card and bank payments"
+
+    api = container "Payment API" {
+      technology "Rust / Actix"
+      description "REST + gRPC gateway"
+    }
+
+    processor = container "Payment Processor" {
+      technology "Rust"
+      description "Core payment processing logic"
+    }
+
+    db = container "Ledger DB" {
+      technology "PostgreSQL 16"
+      tags "database"
+    }
+
+    api -> processor "delegates to" "gRPC"
+    processor -> db "reads/writes" "SQL"
+  }
+
+  customer -> payments.api "makes payments" "HTTPS"
+}

@@ -1,0 +1,26 @@
+// Custom architectural rules for the payments team
+
+rule "max-container-coupling" {
+    description "No container should depend on more than 5 others"
+    severity error
+    scope container
+    condition count(outgoing_relationships) > 5
+    message "{element.name} has {count} outgoing dependencies (max 5)"
+}
+
+rule "require-https-for-external" {
+    description "All external-facing relationships must use HTTPS"
+    severity error
+    scope relationship
+    condition source.kind == "person"
+    condition technology != "HTTPS"
+    message "Relationship from {source.name} uses {technology}, expected HTTPS"
+}
+
+rule "containers-need-technology" {
+    description "Every container must specify its technology"
+    severity warning
+    scope container
+    condition technology == ""
+    message "{element.name} has no technology specified"
+}

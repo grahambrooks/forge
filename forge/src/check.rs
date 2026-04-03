@@ -355,29 +355,32 @@ fn check_gate_coverage(model: &Model, violations: &mut Vec<Violation>) {
 fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
     for view in &model.views {
         let scope_id = view.scope.as_deref().unwrap_or("");
-        let has_content = match view.kind {
-            ViewKind::SystemContext => model.elements.contains_key(scope_id),
-            ViewKind::Container => model
-                .elements
-                .values()
-                .any(|e| e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Container),
-            ViewKind::PipelineView => model
-                .elements
-                .values()
-                .any(|e| e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Stage),
-            ViewKind::Deployment => model.elements.values().any(|e| {
-                e.kind == ElementKind::DeploymentNode
-                    && e.properties.get("environment").map(|s| s.as_str()) == Some(scope_id)
-            }),
-            ViewKind::TechStack => !model.tech_stack.is_empty(),
-            ViewKind::Branching => model.elements.values().any(|e| {
-                e.kind == ElementKind::Branch
-                    && e.properties.get("strategy").map(|s| s.as_str()) == Some(scope_id)
-            }),
-            ViewKind::DataModel => !model.data_entities.is_empty(),
-            ViewKind::TrustBoundaryView => !model.trust_boundaries.is_empty(),
-            ViewKind::TeamMap => !model.teams.is_empty(),
-        };
+        let has_content =
+            match view.kind {
+                ViewKind::SystemContext => model.elements.contains_key(scope_id),
+                ViewKind::Container => model.elements.values().any(|e| {
+                    e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Container
+                }),
+                ViewKind::PipelineView => model
+                    .elements
+                    .values()
+                    .any(|e| e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Stage),
+                ViewKind::Deployment => model.elements.values().any(|e| {
+                    e.kind == ElementKind::DeploymentNode
+                        && e.properties.get("environment").map(|s| s.as_str()) == Some(scope_id)
+                }),
+                ViewKind::TechStack => !model.tech_stack.is_empty(),
+                ViewKind::Branching => model.elements.values().any(|e| {
+                    e.kind == ElementKind::Branch
+                        && e.properties.get("strategy").map(|s| s.as_str()) == Some(scope_id)
+                }),
+                ViewKind::DataModel => !model.data_entities.is_empty(),
+                ViewKind::TrustBoundaryView => !model.trust_boundaries.is_empty(),
+                ViewKind::TeamMap => !model.teams.is_empty(),
+                ViewKind::Component => model.elements.values().any(|e| {
+                    e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Component
+                }),
+            };
         if !has_content {
             violations.push(Violation {
                 rule: "empty-views",

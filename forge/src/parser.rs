@@ -188,7 +188,8 @@ impl Parser {
         if self.scope.is_empty() {
             local.to_string()
         } else {
-            format!("{}.{}", self.scope.join("."), local)
+            // Use the last scope entry (which is already a full path)
+            format!("{}.{}", self.scope.last().unwrap(), local)
         }
     }
 
@@ -197,7 +198,7 @@ impl Parser {
             return full.clone();
         }
         if !self.scope.is_empty() {
-            let scoped = format!("{}.{}", self.scope.join("."), name);
+            let scoped = format!("{}.{}", self.scope.last().unwrap(), name);
             if self.model.elements.contains_key(&scoped) {
                 return scoped;
             }
@@ -290,7 +291,7 @@ impl Parser {
             let parent = if self.scope.is_empty() {
                 None
             } else {
-                Some(self.scope.join("."))
+                Some(self.scope.last().unwrap().clone())
             };
 
             let mut el = Element::new(&full_id, kind, &name);
@@ -927,6 +928,21 @@ impl Parser {
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
                 }
+                "component" => {
+                    let scope_raw = self.parse_ident()?;
+                    let scope = self.resolve_ref(&scope_raw);
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: ViewKind::Component,
+                        key,
+                        scope: Some(scope),
+                        title: None,
+                        auto_layout: AutoLayout::TopBottom,
+                        include_all: false,
+                    };
+                    self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
                 "dataModelView" | "trustBoundaryView" | "teamView" => {
                     let vk = match kind_str.as_str() {
                         "dataModelView" => ViewKind::DataModel,
@@ -1314,6 +1330,16 @@ pub fn parse(text: &str) -> Result<Model, ParseError> {
     p.parse()
 }
 
+/// Parse with preprocessing (resolves !include, !fragment, !use, !if).
+pub fn parse_with_preprocess(text: &str, base_dir: &std::path::Path) -> Result<Model, ParseError> {
+    let processed = crate::preprocess::preprocess(text, base_dir).map_err(|e| ParseError {
+        msg: e.msg,
+        line: 0,
+        col: 0,
+    })?;
+    parse(&processed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1332,9 +1358,9 @@ mod tests {
     #[test]
     fn parse_element_counts() {
         let m = payments_model();
-        assert_eq!(m.elements.len(), 26); // 16 structural/process + 8 deployment + 2 branches
-        assert_eq!(m.relationships.len(), 7); // 5 model + 2 branch flows
-        assert_eq!(m.views.len(), 9); // SystemContext, Containers, Pipeline, Deployment, TechStack, Branching, DataModel, TrustBoundaries, Teams
+        assert_eq!(m.elements.len(), 30); // 16 structural/process + 4 components + 8 deployment + 2 branches
+        assert_eq!(m.relationships.len(), 11); // 5 model + 4 component + 2 branch flows
+        assert_eq!(m.views.len(), 10); // +1 component view
     }
 
     #[test]
@@ -1696,5 +1722,33 @@ mod tests {
         let platform = m.teams.iter().find(|t| t.name == "Platform Team").unwrap();
         assert!(platform.owns.len() >= 3);
         assert_eq!(platform.contact.as_deref(), Some("#platform-eng on Slack"));
+    }
+
+    #[test]
+    fn parse_components() {
+        let m = payments_model();
+        let components: Vec<_> = m
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Component)
+            .collect();
+        assert_eq!(components.len(), 4);
+
+        let rest = m.elements.get("payments.api.rest").expect("REST component");
+        assert_eq!(rest.name, "REST Controller");
+        assert_eq!(rest.parent.as_deref(), Some("payments.api"));
+        assert_eq!(rest.technology.as_deref(), Some("Actix-web"));
+    }
+
+    #[test]
+    fn parse_component_view() {
+        let m = payments_model();
+        let cv = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Component)
+            .unwrap();
+        assert_eq!(cv.key, "APIComponents");
+        assert_eq!(cv.scope.as_deref(), Some("payments.api"));
     }
 }

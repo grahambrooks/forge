@@ -1,0 +1,19 @@
+// View definitions — included inside the views { } block
+
+systemContext payments "SystemContext" {
+  include *
+  autoLayout lr
+  title "System Context"
+}
+
+container payments "Containers" {
+  include *
+  autoLayout tb
+  title "Containers"
+}
+
+pipelineView "ci" "Pipeline" {
+  include *
+  autoLayout lr
+  title "CI Pipeline"
+}

@@ -319,6 +319,7 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::DataModel => "dataModelView",
         ViewKind::TrustBoundaryView => "trustBoundaryView",
         ViewKind::TeamMap => "teamView",
+        ViewKind::Component => "component",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");

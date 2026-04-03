@@ -31,6 +31,7 @@ pub enum ViewKind {
     DataModel,
     TrustBoundaryView,
     TeamMap,
+    Component,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

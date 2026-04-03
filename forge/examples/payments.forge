@@ -13,6 +13,26 @@ forge "Payment Platform" {
       api = container "Payment API" {
         technology "Rust / Actix"
         description "REST + gRPC gateway"
+
+        rest = component "REST Controller" {
+          technology "Actix-web"
+          description "Handles HTTP/REST requests"
+        }
+        grpc = component "gRPC Service" {
+          technology "Tonic"
+          description "Handles gRPC requests"
+        }
+        auth = component "Auth Middleware" {
+          technology "JWT"
+          description "Validates tokens and API keys"
+        }
+        router = component "Request Router" {
+          description "Routes requests to handlers"
+        }
+        rest -> router "forwards to"
+        grpc -> router "forwards to"
+        auth -> rest "protects"
+        auth -> grpc "protects"
       }
 
       processor = container "Payment Processor" {
@@ -269,6 +289,12 @@ forge "Payment Platform" {
       include *
       autoLayout tb
       title "Payment Platform — Containers"
+    }
+
+    component payments.api "APIComponents" {
+      include *
+      autoLayout tb
+      title "Payment API — Components"
     }
 
     pipelineView "payments-ci" "Pipeline" {

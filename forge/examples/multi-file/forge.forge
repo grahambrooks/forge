@@ -1,0 +1,22 @@
+// Multi-file Forge example — demonstrates !include, !fragment, and !if
+//
+// This is the workspace root. Each concern lives in its own file.
+
+forge "Payment Platform" {
+  description "Architecture and delivery model for Payments"
+
+  !include model/people.forge
+  !include model/system.forge
+
+  !include process/pipeline.forge
+
+  views {
+    !include views/all.forge
+  }
+
+  !if env("FORGE_INCLUDE_DOCS") {
+    docs {
+      doc "Overview" "../docs/overview.md"
+    }
+  }
+}

@@ -1,16 +1,18 @@
 mod analyze;
 mod check;
+mod custom_rules;
 mod diff;
 mod generate;
 mod layout;
 mod lsp;
 mod model;
 mod parser;
+mod preprocess;
 mod render;
 
 use clap::{Parser, Subcommand};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 #[derive(Parser)]
@@ -101,6 +103,10 @@ enum Commands {
         /// Output format: text, json
         #[arg(long, default_value = "text")]
         format: String,
+
+        /// Custom rules file (.forge-rules)
+        #[arg(long)]
+        rules: Option<PathBuf>,
     },
     /// Start the Language Server Protocol server (stdio)
     Lsp,
@@ -121,21 +127,7 @@ fn main() {
                 process::exit(1);
             }
 
-            let text = match fs::read_to_string(&source) {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("Error: {}: {}", source.display(), e);
-                    process::exit(1);
-                }
-            };
-
-            let model = match parser::parse(&text) {
-                Ok(m) => m,
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    process::exit(1);
-                }
-            };
+            let model = load_model(&source);
 
             eprintln!("Parsed model: \"{}\"", model.name);
             eprintln!("  Elements: {}", model.elements.len());
@@ -215,38 +207,11 @@ fn main() {
             style,
             baseline,
         } => {
-            let text = match fs::read_to_string(&source) {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("Error: {}: {}", source.display(), e);
-                    process::exit(1);
-                }
-            };
-
-            let model = match parser::parse(&text) {
-                Ok(m) => m,
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    process::exit(1);
-                }
-            };
+            let model = load_model(&source);
 
             // Load and diff baseline if provided
             let diff_result = if let Some(ref baseline_path) = baseline {
-                let baseline_text = match fs::read_to_string(baseline_path) {
-                    Ok(t) => t,
-                    Err(e) => {
-                        eprintln!("Error reading baseline: {}: {}", baseline_path.display(), e);
-                        process::exit(1);
-                    }
-                };
-                let baseline_model = match parser::parse(&baseline_text) {
-                    Ok(m) => m,
-                    Err(e) => {
-                        eprintln!("Error parsing baseline: {}", e);
-                        process::exit(1);
-                    }
-                };
+                let baseline_model = load_model(baseline_path);
                 let dr = diff::diff(&baseline_model, &model);
                 eprintln!(
                     "Diff: {} added, {} modified, {} removed",
@@ -294,6 +259,7 @@ fn main() {
             source,
             severity,
             format,
+            rules,
         } => {
             let min_severity = match check::Severity::from_str(&severity) {
                 Some(s) => s,
@@ -303,23 +269,30 @@ fn main() {
                 }
             };
 
-            let text = match fs::read_to_string(&source) {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("Error: {}: {}", source.display(), e);
-                    process::exit(1);
-                }
-            };
+            let model = load_model(&source);
 
-            let model = match parser::parse(&text) {
-                Ok(m) => m,
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    process::exit(1);
-                }
-            };
+            let mut violations = check::check(&model, min_severity);
 
-            let violations = check::check(&model, min_severity);
+            // Apply custom rules if provided
+            if let Some(ref rules_path) = rules {
+                let rules_text = match fs::read_to_string(rules_path) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        eprintln!("Error reading rules: {}: {}", rules_path.display(), e);
+                        process::exit(1);
+                    }
+                };
+                let custom = match custom_rules::parse_rules(&rules_text) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("Error parsing rules: {}", e);
+                        process::exit(1);
+                    }
+                };
+                let mut custom_violations = custom_rules::evaluate_rules(&custom, &model);
+                custom_violations.retain(|v| v.severity >= min_severity);
+                violations.extend(custom_violations);
+            }
 
             if format == "json" {
                 print_violations_json(&violations);
@@ -380,4 +353,22 @@ fn print_violations_json(violations: &[check::Violation]) {
         );
     }
     println!("]");
+}
+
+fn load_model(source: &Path) -> model::Model {
+    let text = match fs::read_to_string(source) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Error: {}: {}", source.display(), e);
+            process::exit(1);
+        }
+    };
+    let base_dir = source.parent().unwrap_or(Path::new("."));
+    match parser::parse_with_preprocess(&text, base_dir) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            process::exit(1);
+        }
+    }
 }

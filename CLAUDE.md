@@ -48,12 +48,16 @@ model-diagram/
 - Output matches the Python prototype (16 elements, 5 relationships, 3 views)
 - Architectural linter with 8 built-in rules: dependency-cycles, orphaned-elements, missing-descriptions, missing-technology, database-direct-access, chatty-coupling, gate-coverage, empty-views
 - Lint output in text or JSON format, configurable severity filter, exit codes for CI integration
+- Custom lint rules via `.forge-rules` files (declarative scope/condition/message syntax, `--rules` flag)
 - Codebase analyzer with 3 scanners: code (Cargo.toml, package.json, go.mod, pyproject.toml, pom.xml, build.gradle), CI (GitHub Actions), Docker (Dockerfile, docker-compose.yml)
 - .forge DSL emitter with round-trip support (parse → emit → re-parse)
 - Static documentation site generator: index page with model overview and check results, per-view pages with embedded SVGs, per-element detail pages with relationships, JSON export, responsive CSS theme with sidebar navigation
+- Preprocessor: `!include` (path + glob), `!fragment`/`!use` (reusable blocks), `!if env()` (conditional inclusion)
+- 10 view types: systemContext, container, component, pipelineView, deploymentView, techStackView, branchingView, dataModelView, trustBoundaryView, teamView
+- LSP server for IDE integration (see EDITORS.md)
 
 ### What needs to be built
-The remaining commands from DESIGN.md (`generate`, `mcp`, `watch`, `serve`, `export`, `import`, `lsp`), additional analyze scanners (git, k8s, openapi, tree-sitter code analysis), custom lint rules, and the Cargo workspace restructuring.
+The remaining commands from DESIGN.md (`mcp`, `watch`, `serve`, `export`, `import`), additional analyze scanners (git, k8s, openapi, tree-sitter code analysis), animation engine, and the Cargo workspace restructuring.
 
 ## Key Commands
 
@@ -92,7 +96,7 @@ Open `forge/output/preview.html` in a browser for side-by-side filled/outline co
 | `forge build` | Working | Parse .forge → render SVGs |
 | `forge analyze` | Working (code, ci, docker scanners) | Scan codebases → generate .forge model |
 | `forge generate` | Working | Model → static documentation website |
-| `forge generate --diff` | Design complete | Highlight architectural changes |
+| `forge generate --baseline` | Working | Highlight architectural changes vs baseline |
 | `forge check` | Working | Lint model against architectural rules |
 | `forge mcp` | Design complete | MCP server for AI agent access |
 | `forge watch` | Design complete | Incremental rebuild on file changes |

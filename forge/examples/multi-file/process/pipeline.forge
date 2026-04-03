@@ -1,0 +1,13 @@
+// CI/CD pipeline
+
+process {
+  pipeline "ci" {
+    build = stage "Build" {
+      step "cargo build"
+    }
+    test = stage "Test" {
+      needs build
+      step "cargo test"
+    }
+  }
+}
