@@ -237,6 +237,11 @@ impl Parser {
                 "dataModel" => self.parse_data_model()?,
                 "trustBoundaries" => self.parse_trust_boundaries()?,
                 "teams" => self.parse_teams()?,
+                "apis" => self.parse_apis()?,
+                "eventFlows" => self.parse_event_flows()?,
+                "envConfig" => self.parse_env_config()?,
+                "slos" => self.parse_slos()?,
+                "dependencies" => self.parse_dependencies()?,
                 "views" => self.parse_views()?,
                 "docs" => self.parse_docs()?,
                 "styles" => {
@@ -950,11 +955,14 @@ impl Parser {
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
                 }
-                "dataModelView" | "trustBoundaryView" | "teamView" => {
+                "dataModelView" | "trustBoundaryView" | "teamView" | "apiCatalogView"
+                | "eventFlowView" => {
                     let vk = match kind_str.as_str() {
                         "dataModelView" => ViewKind::DataModel,
                         "trustBoundaryView" => ViewKind::TrustBoundaryView,
                         "teamView" => ViewKind::TeamMap,
+                        "apiCatalogView" => ViewKind::ApiCatalogView,
+                        "eventFlowView" => ViewKind::EventFlowView,
                         _ => unreachable!(),
                     };
                     let key = self.parse_string()?;
@@ -1472,6 +1480,275 @@ impl Parser {
         }
     }
 
+    // ── APIs ──
+
+    fn parse_apis(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in apis"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "api" {
+                let container_ref = self.parse_ident()?;
+                let container = self.resolve_ref(&container_ref);
+                let mut endpoints = Vec::new();
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let inner = self.parse_ident()?;
+                    if inner == "endpoint" {
+                        let method_path = self.parse_string()?;
+                        let (method, path) = method_path
+                            .split_once(' ')
+                            .map(|(m, p)| (m.to_string(), p.to_string()))
+                            .unwrap_or((method_path.clone(), String::new()));
+                        let mut ep = ApiEndpoint {
+                            method,
+                            path,
+                            description: None,
+                            request_body: None,
+                            response: None,
+                        };
+                        if self.peek_after_ws() == Some('{') {
+                            self.expect('{')?;
+                            loop {
+                                self.skip_ws();
+                                if self.peek() == Some('}') {
+                                    self.advance();
+                                    break;
+                                }
+                                let p = self.parse_ident()?;
+                                match p.as_str() {
+                                    "description" => ep.description = Some(self.parse_string()?),
+                                    "request" => ep.request_body = Some(self.parse_string()?),
+                                    "response" => ep.response = Some(self.parse_string()?),
+                                    _ => {
+                                        if self.peek_after_ws() == Some('"') {
+                                            self.parse_string()?;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        endpoints.push(ep);
+                    } else if self.peek_after_ws() == Some('{') {
+                        self.skip_block()?;
+                    }
+                }
+                self.model.api_catalogs.push(ApiCatalog {
+                    container,
+                    endpoints,
+                });
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
+    // ── Event Flows ──
+
+    fn parse_event_flows(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in eventFlows"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "flow" {
+                let name = self.parse_string()?;
+                let mut flow = EventFlow {
+                    name,
+                    topic: None,
+                    publishers: Vec::new(),
+                    subscribers: Vec::new(),
+                    description: None,
+                };
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let p = self.parse_ident()?;
+                    match p.as_str() {
+                        "topic" => flow.topic = Some(self.parse_string()?),
+                        "description" => flow.description = Some(self.parse_string()?),
+                        "publisher" => {
+                            let r = self.parse_ident()?;
+                            flow.publishers.push(self.resolve_ref(&r));
+                        }
+                        "subscriber" => {
+                            let r = self.parse_ident()?;
+                            flow.subscribers.push(self.resolve_ref(&r));
+                        }
+                        _ => {
+                            if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            } else if self.peek_after_ws() == Some('{') {
+                                self.skip_block()?;
+                            }
+                        }
+                    }
+                }
+                self.model.event_flows.push(flow);
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
+    // ── Environment Config ──
+
+    fn parse_env_config(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in envConfig"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "env" {
+                let name = self.parse_string()?;
+                let mut entries = Vec::new();
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let key = self.parse_ident()?;
+                    let value = self.parse_string()?;
+                    entries.push(ConfigEntry { key, value });
+                }
+                self.model.env_configs.push(EnvConfig { name, entries });
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
+    // ── SLOs ──
+
+    fn parse_slos(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in slos"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "slo" {
+                let container_ref = self.parse_ident()?;
+                let container = self.resolve_ref(&container_ref);
+                let mut slo = Slo {
+                    container,
+                    latency_p99: None,
+                    availability: None,
+                    error_budget: None,
+                };
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let p = self.parse_ident()?;
+                    match p.as_str() {
+                        "latency" | "latency_p99" => slo.latency_p99 = Some(self.parse_string()?),
+                        "availability" => slo.availability = Some(self.parse_string()?),
+                        "error_budget" | "errorBudget" => {
+                            slo.error_budget = Some(self.parse_string()?)
+                        }
+                        _ => {
+                            if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            }
+                        }
+                    }
+                }
+                self.model.slos.push(slo);
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
+    // ── External Dependencies ──
+
+    fn parse_dependencies(&mut self) -> Result<(), ParseError> {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error("unexpected EOF in dependencies"));
+            }
+            let kw = self.parse_ident()?;
+            if kw == "dependency" {
+                let name = self.parse_string()?;
+                let mut dep = ExternalDependency {
+                    name,
+                    kind: "api".into(),
+                    criticality: "medium".into(),
+                    url: None,
+                    description: None,
+                };
+                self.expect('{')?;
+                loop {
+                    self.skip_ws();
+                    if self.peek() == Some('}') {
+                        self.advance();
+                        break;
+                    }
+                    let p = self.parse_ident()?;
+                    match p.as_str() {
+                        "kind" | "type" => dep.kind = self.parse_string()?,
+                        "criticality" => dep.criticality = self.parse_string()?,
+                        "url" => dep.url = Some(self.parse_string()?),
+                        "description" => dep.description = Some(self.parse_string()?),
+                        _ => {
+                            if self.peek_after_ws() == Some('"') {
+                                self.parse_string()?;
+                            }
+                        }
+                    }
+                }
+                self.model.dependencies.push(dep);
+            } else if self.peek_after_ws() == Some('{') {
+                self.skip_block()?;
+            }
+        }
+    }
+
     // ── Docs ──
 
     fn parse_docs(&mut self) -> Result<(), ParseError> {
@@ -1536,7 +1813,7 @@ mod tests {
         let m = payments_model();
         assert_eq!(m.elements.len(), 30); // 16 structural/process + 4 components + 8 deployment + 2 branches
         assert_eq!(m.relationships.len(), 11); // 5 model + 4 component + 2 branch flows
-        assert_eq!(m.views.len(), 11); // +1 component view, +1 animated view
+        assert_eq!(m.views.len(), 13); // +1 component, +1 animated, +1 apiCatalog, +1 eventFlow
     }
 
     #[test]
@@ -1945,5 +2222,63 @@ mod tests {
         assert!(f5.include_all);
         assert!(!f5.highlights.is_empty());
         assert_eq!(f5.highlights[0].color.as_deref(), Some("#E65100"));
+    }
+
+    #[test]
+    fn parse_api_catalog() {
+        let m = payments_model();
+        assert_eq!(m.api_catalogs.len(), 2);
+        let api = m
+            .api_catalogs
+            .iter()
+            .find(|a| a.container.contains("api"))
+            .unwrap();
+        assert!(api.endpoints.len() >= 4);
+        assert_eq!(api.endpoints[0].method, "POST");
+        assert!(api.endpoints[0].path.contains("/payments"));
+    }
+
+    #[test]
+    fn parse_event_flows() {
+        let m = payments_model();
+        assert_eq!(m.event_flows.len(), 3);
+        let flow = m
+            .event_flows
+            .iter()
+            .find(|f| f.name == "payment-completed")
+            .unwrap();
+        assert!(flow.topic.is_some());
+        assert!(!flow.publishers.is_empty());
+        assert!(!flow.subscribers.is_empty());
+    }
+
+    #[test]
+    fn parse_env_config() {
+        let m = payments_model();
+        assert_eq!(m.env_configs.len(), 2);
+        let prod = m
+            .env_configs
+            .iter()
+            .find(|e| e.name == "production")
+            .unwrap();
+        assert!(prod.entries.iter().any(|e| e.key == "PAYMENT_GATEWAY"));
+    }
+
+    #[test]
+    fn parse_slos() {
+        let m = payments_model();
+        assert!(!m.slos.is_empty());
+        let api_slo = m.slos.iter().find(|s| s.container.contains("api")).unwrap();
+        assert!(api_slo.latency_p99.is_some());
+        assert!(api_slo.availability.is_some());
+    }
+
+    #[test]
+    fn parse_dependencies() {
+        let m = payments_model();
+        assert_eq!(m.dependencies.len(), 4);
+        let stripe = m.dependencies.iter().find(|d| d.name == "Stripe").unwrap();
+        assert_eq!(stripe.criticality, "critical");
+        assert!(stripe.url.is_some());
     }
 }

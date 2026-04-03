@@ -32,6 +32,8 @@ pub enum ViewKind {
     TrustBoundaryView,
     TeamMap,
     Component,
+    ApiCatalogView,
+    EventFlowView,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -197,6 +199,71 @@ pub struct Team {
     pub contact: Option<String>,
 }
 
+// ── API Catalog ──
+
+#[derive(Debug, Clone)]
+pub struct ApiEndpoint {
+    pub method: String,
+    pub path: String,
+    pub description: Option<String>,
+    pub request_body: Option<String>,
+    pub response: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ApiCatalog {
+    pub container: String,
+    pub endpoints: Vec<ApiEndpoint>,
+}
+
+// ── Event Flows ──
+
+#[derive(Debug, Clone)]
+pub struct EventFlow {
+    pub name: String,
+    pub topic: Option<String>,
+    pub publishers: Vec<String>,
+    pub subscribers: Vec<String>,
+    pub description: Option<String>,
+}
+
+// ── Environment Config ──
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct ConfigEntry {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct EnvConfig {
+    pub name: String,
+    pub entries: Vec<ConfigEntry>,
+}
+
+// ── SLOs ──
+
+#[derive(Debug, Clone)]
+pub struct Slo {
+    pub container: String,
+    pub latency_p99: Option<String>,
+    pub availability: Option<String>,
+    pub error_budget: Option<String>,
+}
+
+// ── External Dependencies ──
+
+#[derive(Debug, Clone)]
+pub struct ExternalDependency {
+    pub name: String,
+    pub kind: String,        // "api", "saas", "database", "cdn", etc.
+    pub criticality: String, // "critical", "high", "medium", "low"
+    pub url: Option<String>,
+    pub description: Option<String>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Model {
     pub name: String,
@@ -211,6 +278,11 @@ pub struct Model {
     pub data_relations: Vec<DataRelation>,
     pub trust_boundaries: Vec<TrustBoundary>,
     pub teams: Vec<Team>,
+    pub api_catalogs: Vec<ApiCatalog>,
+    pub event_flows: Vec<EventFlow>,
+    pub env_configs: Vec<EnvConfig>,
+    pub slos: Vec<Slo>,
+    pub dependencies: Vec<ExternalDependency>,
 }
 
 impl Model {

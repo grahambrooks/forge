@@ -435,6 +435,28 @@ fn render_index(
         main.push_str("</tbody></table>");
     }
 
+    // External dependencies
+    if !model.dependencies.is_empty() {
+        main.push_str("<h2>External Dependencies</h2>");
+        main.push_str(r#"<table class="forge-table"><thead><tr><th>Name</th><th>Type</th><th>Criticality</th><th>Description</th></tr></thead><tbody>"#);
+        for dep in &model.dependencies {
+            let crit_cls = match dep.criticality.as_str() {
+                "critical" => "forge-sev--error",
+                "high" => "forge-sev--warning",
+                _ => "",
+            };
+            main.push_str(&format!(
+                r#"<tr><td>{}</td><td>{}</td><td class="{}">{}</td><td>{}</td></tr>"#,
+                esc(&dep.name),
+                esc(&dep.kind),
+                crit_cls,
+                esc(&dep.criticality),
+                esc(dep.description.as_deref().unwrap_or(""))
+            ));
+        }
+        main.push_str("</tbody></table>");
+    }
+
     page_template(title, &main, nav, base)
 }
 
@@ -623,6 +645,65 @@ fn render_element_page(
             ));
         }
         main.push_str("</tbody></table>");
+    }
+
+    // ── Phase 6: SLOs ──
+    let slos: Vec<_> = model.slos.iter().filter(|s| s.container == el.id).collect();
+    if !slos.is_empty() {
+        main.push_str("<h2>Service Level Objectives</h2>");
+        main.push_str(r#"<table class="forge-table"><tbody>"#);
+        for slo in &slos {
+            if let Some(ref l) = slo.latency_p99 {
+                main.push_str(&format!(
+                    "<tr><th>Latency (p99)</th><td>{}</td></tr>",
+                    esc(l)
+                ));
+            }
+            if let Some(ref a) = slo.availability {
+                main.push_str(&format!(
+                    "<tr><th>Availability</th><td>{}</td></tr>",
+                    esc(a)
+                ));
+            }
+            if let Some(ref e) = slo.error_budget {
+                main.push_str(&format!(
+                    "<tr><th>Error Budget</th><td>{}</td></tr>",
+                    esc(e)
+                ));
+            }
+        }
+        main.push_str("</tbody></table>");
+    }
+
+    // ── Phase 6: API Endpoints ──
+    let apis: Vec<_> = model
+        .api_catalogs
+        .iter()
+        .filter(|a| a.container == el.id)
+        .collect();
+    if !apis.is_empty() {
+        main.push_str("<h2>API Endpoints</h2>");
+        main.push_str(r#"<table class="forge-table"><thead><tr><th>Endpoint</th><th>Description</th></tr></thead><tbody>"#);
+        for catalog in &apis {
+            for ep in &catalog.endpoints {
+                main.push_str(&format!(
+                    "<tr><td><code>{} {}</code></td><td>{}</td></tr>",
+                    esc(&ep.method),
+                    esc(&ep.path),
+                    esc(ep.description.as_deref().unwrap_or(""))
+                ));
+            }
+        }
+        main.push_str("</tbody></table>");
+    }
+
+    // ── Phase 6: Runbook / operational properties ──
+    if let Some(runbook) = el.properties.get("runbook") {
+        main.push_str(&format!(
+            "<h2>Runbook</h2><p><a href=\"{}\">{}</a></p>",
+            esc(runbook),
+            esc(runbook)
+        ));
     }
 
     page_template(&format!("{} — {}", el.name, title), &main, nav, base)
@@ -1028,7 +1109,7 @@ mod tests {
 
         let report = generate(&model, &config, None).expect("generate should succeed");
         assert!(report.pages > 0);
-        assert_eq!(report.diagrams, 11);
+        assert_eq!(report.diagrams, 13);
 
         // Check files exist
         assert!(tmp.join("index.html").exists());

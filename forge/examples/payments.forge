@@ -278,6 +278,114 @@ forge "Payment Platform" {
     }
   }
 
+  apis {
+    api payments.api {
+      endpoint "POST /payments" {
+        description "Create a new payment"
+        request "{ amount, currency, customer_id, payment_method_id }"
+        response "{ id, status, created_at }"
+      }
+      endpoint "GET /payments/{id}" {
+        description "Get payment details"
+        response "{ id, amount, currency, status, customer_id }"
+      }
+      endpoint "POST /payments/{id}/refund" {
+        description "Refund a payment"
+        request "{ amount, reason }"
+        response "{ id, status, refund_id }"
+      }
+      endpoint "GET /payments" {
+        description "List payments with filters"
+        response "{ items: [...], total, page }"
+      }
+    }
+    api payments.processor {
+      endpoint "ProcessPayment" {
+        description "gRPC: process a payment authorization"
+      }
+      endpoint "CapturePayment" {
+        description "gRPC: capture a previously authorized payment"
+      }
+    }
+  }
+
+  eventFlows {
+    flow "payment-completed" {
+      topic "payments.events.completed"
+      description "Emitted after successful payment capture"
+      publisher payments.processor
+      subscriber payments.notifier
+    }
+    flow "payment-failed" {
+      topic "payments.events.failed"
+      description "Emitted when payment processing fails"
+      publisher payments.processor
+      subscriber payments.notifier
+    }
+    flow "receipt-sent" {
+      topic "notifications.events.sent"
+      description "Emitted after receipt email/SMS delivery"
+      publisher payments.notifier
+    }
+  }
+
+  envConfig {
+    env "staging" {
+      PAYMENT_GATEWAY "stripe-test"
+      DATABASE_URL "postgres://staging-rds:5432/payments"
+      REDIS_URL "redis://staging-cache:6379"
+      LOG_LEVEL "debug"
+      FEATURE_3DS "true"
+    }
+    env "production" {
+      PAYMENT_GATEWAY "stripe-live"
+      DATABASE_URL "postgres://prod-rds:5432/payments"
+      REDIS_URL "redis://prod-cache:6379"
+      LOG_LEVEL "warn"
+      FEATURE_3DS "true"
+      RATE_LIMIT "10000"
+    }
+  }
+
+  slos {
+    slo payments.api {
+      latency "< 200ms p99"
+      availability "99.99%"
+      error_budget "0.01% per month"
+    }
+    slo payments.processor {
+      latency "< 500ms p99"
+      availability "99.99%"
+    }
+    slo payments.db {
+      availability "99.999%"
+    }
+  }
+
+  dependencies {
+    dependency "Stripe" {
+      kind "payment-processor"
+      criticality "critical"
+      url "https://api.stripe.com"
+      description "Primary payment gateway for card processing"
+    }
+    dependency "Adyen" {
+      kind "payment-processor"
+      criticality "high"
+      description "Secondary payment gateway, EU fallback"
+    }
+    dependency "AWS SES" {
+      kind "saas"
+      criticality "medium"
+      description "Email delivery for payment receipts"
+    }
+    dependency "Twilio" {
+      kind "saas"
+      criticality "medium"
+      description "SMS delivery for payment receipts"
+    }
+  }
+
   views {
     systemContext payments "SystemContext" {
       include *
@@ -333,6 +441,16 @@ forge "Payment Platform" {
     teamView "Teams" {
       include *
       title "Payment Platform — Team Ownership"
+    }
+
+    apiCatalogView "APICatalog" {
+      include *
+      title "Payment Platform — API Catalog"
+    }
+
+    eventFlowView "EventFlows" {
+      include *
+      title "Payment Platform — Event Flows"
     }
 
     container payments "PaymentFlow" {

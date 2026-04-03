@@ -320,6 +320,8 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::TrustBoundaryView => "trustBoundaryView",
         ViewKind::TeamMap => "teamView",
         ViewKind::Component => "component",
+        ViewKind::ApiCatalogView => "apiCatalogView",
+        ViewKind::EventFlowView => "eventFlowView",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");
@@ -329,6 +331,8 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         || view.kind == ViewKind::DataModel
         || view.kind == ViewKind::TrustBoundaryView
         || view.kind == ViewKind::TeamMap
+        || view.kind == ViewKind::ApiCatalogView
+        || view.kind == ViewKind::EventFlowView
     {
         // techStackView has no scope, just a key
         o.push_str(&format!(

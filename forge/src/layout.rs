@@ -78,6 +78,8 @@ pub fn compute_layout(model: &Model, view: &View) -> Layout {
         ViewKind::DataModel => layout_data_model(model, view),
         ViewKind::TrustBoundaryView => layout_trust_boundary(model, view),
         ViewKind::TeamMap => layout_team_map(model, view),
+        ViewKind::ApiCatalogView => layout_api_catalog(model, view),
+        ViewKind::EventFlowView => layout_event_flow(model, view),
     }
 }
 
@@ -1362,6 +1364,210 @@ fn layout_team_map(model: &Model, view: &View) -> Layout {
         title: Some(title),
         nodes,
         edges: Vec::new(),
+    }
+}
+
+// ─── API Catalog View (stub) ────────────────────────────────────
+
+fn layout_api_catalog(model: &Model, view: &View) -> Layout {
+    let mut nodes = Vec::new();
+    let mut y = TITLE_H + 10.0;
+    let card_w = 400.0;
+    let card_h = 28.0;
+    let group_pad = 16.0;
+    let group_header = 34.0;
+
+    for catalog in &model.api_catalogs {
+        let container_name = model
+            .elements
+            .get(&catalog.container)
+            .map(|e| e.name.as_str())
+            .unwrap_or(&catalog.container);
+        let group_h = group_header + catalog.endpoints.len() as f64 * card_h + group_pad * 2.0;
+
+        // Container group box
+        nodes.push(LayoutNode {
+            id: format!("_api_{}", catalog.container.replace('.', "-")),
+            label: container_name.to_string(),
+            sublabel: None,
+            kind: ElementKind::DeploymentNode,
+            tags: vec!["api-group".into()],
+            rect: Rect {
+                x: PAD,
+                y,
+                w: card_w + group_pad * 2.0,
+                h: group_h,
+            },
+            description: None,
+            depth: 0,
+            children_ids: Vec::new(),
+        });
+
+        // Endpoint cards
+        let mut ey = y + group_header;
+        for ep in &catalog.endpoints {
+            let label = format!("{} {}", ep.method, ep.path);
+            nodes.push(LayoutNode {
+                id: format!(
+                    "_ep_{}_{}",
+                    catalog.container.replace('.', "-"),
+                    ep.path.replace('/', "-")
+                ),
+                label,
+                sublabel: ep.description.clone(),
+                kind: ElementKind::Container,
+                tags: vec!["api-endpoint".into()],
+                rect: Rect {
+                    x: PAD + group_pad,
+                    y: ey,
+                    w: card_w,
+                    h: card_h,
+                },
+                description: None,
+                depth: 1,
+                children_ids: Vec::new(),
+            });
+            ey += card_h;
+        }
+        y += group_h + DEPLOY_GAP;
+    }
+
+    let canvas_w = card_w + group_pad * 2.0 + PAD * 2.0;
+    let canvas_h = y + PAD;
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — API Catalog", model.name));
+    Layout {
+        width: canvas_w,
+        height: canvas_h,
+        title: Some(title),
+        nodes,
+        edges: Vec::new(),
+    }
+}
+
+// ─── Event Flow View ─────────────────────────────────────────────
+
+fn layout_event_flow(model: &Model, view: &View) -> Layout {
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+    let topic_w = 200.0;
+    let topic_h = 50.0;
+    let actor_w = 160.0;
+    let actor_h = 50.0;
+    let mut y = TITLE_H + 10.0;
+
+    for flow in &model.event_flows {
+        let topic_x = PAD + actor_w + H_GAP;
+        let topic_id = format!(
+            "_topic_{}",
+            flow.name.replace(|c: char| !c.is_alphanumeric(), "-")
+        );
+
+        // Topic node (center)
+        nodes.push(LayoutNode {
+            id: topic_id.clone(),
+            label: flow.topic.as_deref().unwrap_or(&flow.name).to_string(),
+            sublabel: flow.description.clone(),
+            kind: ElementKind::Stage,
+            tags: vec!["event-topic".into()],
+            rect: Rect {
+                x: topic_x,
+                y,
+                w: topic_w,
+                h: topic_h,
+            },
+            description: None,
+            depth: 0,
+            children_ids: Vec::new(),
+        });
+
+        // Publishers (left)
+        let mut py = y;
+        for pub_id in &flow.publishers {
+            let pub_name = model
+                .elements
+                .get(pub_id)
+                .map(|e| e.name.as_str())
+                .unwrap_or(pub_id);
+            let pid = format!("{}_pub_{}", topic_id, pub_id.replace('.', "-"));
+            nodes.push(LayoutNode {
+                id: pid.clone(),
+                label: pub_name.to_string(),
+                sublabel: Some("publisher".into()),
+                kind: ElementKind::Container,
+                tags: Vec::new(),
+                rect: Rect {
+                    x: PAD,
+                    y: py,
+                    w: actor_w,
+                    h: actor_h,
+                },
+                description: None,
+                depth: 0,
+                children_ids: Vec::new(),
+            });
+            edges.push(LayoutEdge {
+                frm: pid,
+                to: topic_id.clone(),
+                label: "publishes".into(),
+                technology: None,
+            });
+            py += actor_h + 10.0;
+        }
+
+        // Subscribers (right)
+        let sub_x = topic_x + topic_w + H_GAP;
+        let mut sy = y;
+        for sub_id in &flow.subscribers {
+            let sub_name = model
+                .elements
+                .get(sub_id)
+                .map(|e| e.name.as_str())
+                .unwrap_or(sub_id);
+            let sid = format!("{}_sub_{}", topic_id, sub_id.replace('.', "-"));
+            nodes.push(LayoutNode {
+                id: sid.clone(),
+                label: sub_name.to_string(),
+                sublabel: Some("subscriber".into()),
+                kind: ElementKind::Container,
+                tags: Vec::new(),
+                rect: Rect {
+                    x: sub_x,
+                    y: sy,
+                    w: actor_w,
+                    h: actor_h,
+                },
+                description: None,
+                depth: 0,
+                children_ids: Vec::new(),
+            });
+            edges.push(LayoutEdge {
+                frm: topic_id.clone(),
+                to: sid,
+                label: "delivers".into(),
+                technology: None,
+            });
+            sy += actor_h + 10.0;
+        }
+
+        let row_h = f64::max(py, sy) - y;
+        y += row_h.max(topic_h) + V_GAP;
+    }
+
+    let canvas_w = PAD + actor_w + H_GAP + topic_w + H_GAP + actor_w + PAD;
+    let canvas_h = y + PAD;
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — Event Flows", model.name));
+    Layout {
+        width: canvas_w,
+        height: canvas_h,
+        title: Some(title),
+        nodes,
+        edges,
     }
 }
 

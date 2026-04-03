@@ -380,6 +380,8 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
                 ViewKind::Component => model.elements.values().any(|e| {
                     e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Component
                 }),
+                ViewKind::ApiCatalogView => !model.api_catalogs.is_empty(),
+                ViewKind::EventFlowView => !model.event_flows.is_empty(),
             };
         if !has_content {
             violations.push(Violation {
