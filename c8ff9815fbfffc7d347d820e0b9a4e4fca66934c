@@ -1,0 +1,24 @@
+forge/src/animate.rs
+  67bf62b4b404fba2 143-161,165-190,234-264,266-280,282-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "c8ff9815fbfffc7d347d820e0b9a4e4fca66934c",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 112,
+      "total_deletions": 19,
+      "accepted_lines": 104,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/666bc7ce081d9ad74e4d3e4734d02b0c106d7fdbd1a2802e164694e17f2f383d"
+    }
+  }
+}
