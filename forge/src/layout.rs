@@ -22,7 +22,6 @@ const SYSTEM_H: f64 = 140.0;
 const STAGE_W: f64 = 170.0;
 const STAGE_H: f64 = 80.0;
 const GATE_W: f64 = 70.0;
-const GATE_H: f64 = 70.0;
 const H_GAP: f64 = 80.0;
 const V_GAP: f64 = 70.0;
 const PAD: f64 = 60.0;
@@ -82,14 +81,103 @@ pub fn compute_layout(model: &Model, view: &View) -> Layout {
     }
 }
 
+// ─── Text Measurement ────────────────────────────────────────────
+
+const CHAR_W_NAME: f64 = 7.7; // 14px bold
+const CHAR_W_SMALL: f64 = 6.0; // 11px / 10px
+const LINE_H: f64 = 16.0;
+const BOX_PAD_X: f64 = 20.0;
+const BOX_PAD_Y: f64 = 14.0;
+const MIN_NODE_W: f64 = 160.0;
+const MIN_NODE_H: f64 = 60.0;
+
+fn estimate_text_w(text: &str, char_w: f64) -> f64 {
+    text.len() as f64 * char_w
+}
+
+/// Wrap text into lines fitting within max_w, return the lines.
+fn wrap_text(text: &str, max_w: f64, char_w: f64) -> Vec<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let mut lines = Vec::new();
+    let mut line: Vec<&str> = Vec::new();
+    let mut est_w = 0.0;
+    for w in &words {
+        let w_est = w.len() as f64 * char_w;
+        if est_w + w_est > max_w && !line.is_empty() {
+            lines.push(line.join(" "));
+            line = vec![w];
+            est_w = w_est;
+        } else {
+            line.push(w);
+            est_w += w_est + char_w * 0.6;
+        }
+    }
+    if !line.is_empty() {
+        lines.push(line.join(" "));
+    }
+    lines
+}
+
+/// Measure the required (width, height) for a structural element.
+fn measure_element(el: &Element) -> (f64, f64) {
+    let sub = el.technology.as_ref().map(|t| format!("[{}]", t));
+
+    // Compute minimum width from the widest text line
+    let name_w = estimate_text_w(&el.name, CHAR_W_NAME);
+    let kind_label = kind_label_for(el.kind);
+    let kind_w = kind_label
+        .map(|k| estimate_text_w(&format!("[{}]", k), CHAR_W_SMALL))
+        .unwrap_or(0.0);
+    let tech_w = sub
+        .as_ref()
+        .map(|s| estimate_text_w(s, CHAR_W_SMALL))
+        .unwrap_or(0.0);
+
+    // For description, we'll wrap it — but need a target width first
+    let base_w = name_w.max(kind_w).max(tech_w) + BOX_PAD_X * 2.0;
+    // Clamp width: at least min, at most a reasonable max
+    let target_w = base_w.clamp(MIN_NODE_W, 320.0);
+    let desc_max_w = target_w - BOX_PAD_X * 2.0;
+
+    let mut line_count = 1; // name
+    if kind_label.is_some() {
+        line_count += 1;
+    }
+    if let Some(ref desc) = el.description {
+        let wrapped = wrap_text(desc, desc_max_w, CHAR_W_SMALL);
+        line_count += wrapped.len().min(3); // max 3 lines of description
+    }
+    if sub.is_some() {
+        line_count += 1;
+    }
+
+    let content_h = line_count as f64 * LINE_H;
+    let h = (content_h + BOX_PAD_Y * 2.0).max(MIN_NODE_H);
+
+    // For person elements, add head+shoulders space
+    let (w, h) = match el.kind {
+        ElementKind::Person => (target_w.max(PERSON_W), h + 62.0), // silhouette
+        ElementKind::System => (target_w.max(SYSTEM_W), h.max(SYSTEM_H)),
+        _ => (target_w, h),
+    };
+
+    (w, h)
+}
+
+fn kind_label_for(kind: ElementKind) -> Option<&'static str> {
+    match kind {
+        ElementKind::Person => Some("Person"),
+        ElementKind::System => Some("Software System"),
+        ElementKind::Container => Some("Container"),
+        ElementKind::Component => Some("Component"),
+        _ => None,
+    }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
 
 fn dims_for(el: &Element) -> (f64, f64) {
-    match el.kind {
-        ElementKind::Person => (PERSON_W, PERSON_H),
-        ElementKind::System => (SYSTEM_W, SYSTEM_H),
-        _ => (NODE_W, NODE_H),
-    }
+    measure_element(el)
 }
 
 fn make_node(el: &Element, x: f64, y: f64) -> LayoutNode {
@@ -331,33 +419,46 @@ fn layout_pipeline(model: &Model, view: &View) -> Layout {
     let stage_cy = TITLE_H + 30.0;
 
     for stage in &ordered {
+        // Auto-size stage based on name + optional environment sublabel
+        let env_sub = stage.properties.get("environment");
+        let name_w = estimate_text_w(&stage.name, CHAR_W_NAME);
+        let sub_w = env_sub
+            .map(|s| estimate_text_w(&format!("[{}]", s), CHAR_W_SMALL))
+            .unwrap_or(0.0);
+        let sw = name_w.max(sub_w).max(STAGE_W - BOX_PAD_X * 2.0) + BOX_PAD_X * 2.0;
+        let line_count = if env_sub.is_some() { 2 } else { 1 };
+        let sh = (line_count as f64 * LINE_H + BOX_PAD_Y * 2.0).max(STAGE_H);
+
         nodes.push(LayoutNode {
             id: stage.id.clone(),
             label: stage.name.clone(),
-            sublabel: stage.properties.get("environment").cloned(),
+            sublabel: env_sub.cloned(),
             kind: ElementKind::Stage,
             tags: stage.tags.clone(),
             rect: Rect {
                 x,
                 y: stage_cy,
-                w: STAGE_W,
-                h: STAGE_H,
+                w: sw,
+                h: sh,
             },
             description: None,
             depth: 0,
             children_ids: Vec::new(),
         });
-        x += STAGE_W + H_GAP;
+        x += sw + H_GAP;
 
-        // Gates
+        // Gates — auto-size based on name
         let gates: Vec<&Element> = model
             .elements
             .values()
             .filter(|e| e.kind == ElementKind::Gate && e.parent.as_deref() == Some(&stage.id))
             .collect();
         for g in gates {
-            let gx = x - H_GAP / 2.0 - GATE_W / 2.0;
-            let gy = stage_cy + (STAGE_H - GATE_H) / 2.0;
+            let gate_text_w = estimate_text_w(&g.name, CHAR_W_SMALL);
+            let gw = (gate_text_w + 30.0).max(GATE_W);
+            let gh = gw; // keep diamond square
+            let gx = x - H_GAP / 2.0 - gw / 2.0;
+            let gy = stage_cy + (sh - gh) / 2.0;
             nodes.push(LayoutNode {
                 id: g.id.clone(),
                 label: g.name.clone(),
@@ -367,8 +468,8 @@ fn layout_pipeline(model: &Model, view: &View) -> Layout {
                 rect: Rect {
                     x: gx,
                     y: gy,
-                    w: GATE_W,
-                    h: GATE_H,
+                    w: gw,
+                    h: gh,
                 },
                 description: None,
                 depth: 0,
@@ -387,7 +488,8 @@ fn layout_pipeline(model: &Model, view: &View) -> Layout {
     }
 
     let w = x + PAD;
-    let h = TITLE_H + STAGE_H + 100.0;
+    let max_node_h = nodes.iter().map(|n| n.rect.h).fold(STAGE_H, f64::max);
+    let h = TITLE_H + max_node_h + 100.0;
     let title = view.title.clone().unwrap_or_else(|| {
         pipeline
             .map(|p| format!("{} — Pipeline", p.name))
@@ -967,26 +1069,52 @@ fn layout_data_model(model: &Model, view: &View) -> Layout {
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
 
+    // Measure entity widths first so we can compute proper column layout
+    let entity_data: Vec<(String, String, f64, f64)> = model
+        .data_entities
+        .iter()
+        .map(|entity| {
+            let fields_desc = entity
+                .fields
+                .iter()
+                .map(|f| {
+                    let c = if f.constraints.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" ({})", f.constraints.join(", "))
+                    };
+                    format!("{}: {}{}", f.name, f.field_type, c)
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            // Measure required width from widest field
+            let name_w = estimate_text_w(&entity.name, CHAR_W_NAME);
+            let max_field_w = entity
+                .fields
+                .iter()
+                .map(|f| {
+                    let line = format!("{}: {}", f.name, f.field_type);
+                    estimate_text_w(&line, CHAR_W_SMALL)
+                })
+                .fold(0.0_f64, f64::max);
+            let w = name_w.max(max_field_w).max(ENTITY_W - 30.0) + 30.0;
+            let h =
+                ENTITY_HEADER_H + entity.fields.len() as f64 * ENTITY_FIELD_H + ENTITY_PAD * 2.0;
+            (entity.name.clone(), fields_desc, w, h)
+        })
+        .collect();
+
+    let max_entity_w = entity_data
+        .iter()
+        .map(|(_, _, w, _)| *w)
+        .fold(ENTITY_W, f64::max);
+
     for (i, entity) in model.data_entities.iter().enumerate() {
         let col = i % ENTITY_COLS;
         let row = i / ENTITY_COLS;
-        let x = PAD + col as f64 * (ENTITY_W + ENTITY_GAP);
+        let x = PAD + col as f64 * (max_entity_w + ENTITY_GAP);
+        let (_, ref fields_desc, _, h) = entity_data[i];
         let y = TITLE_H + 10.0 + row as f64 * (200.0 + ENTITY_GAP);
-        let h = ENTITY_HEADER_H + entity.fields.len() as f64 * ENTITY_FIELD_H + ENTITY_PAD * 2.0;
-
-        let fields_desc = entity
-            .fields
-            .iter()
-            .map(|f| {
-                let c = if f.constraints.is_empty() {
-                    String::new()
-                } else {
-                    format!(" ({})", f.constraints.join(", "))
-                };
-                format!("{}: {}{}", f.name, f.field_type, c)
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
 
         let sublabel = entity.owner.as_ref().map(|o| {
             let owner_name = model.elements.get(o).map(|e| e.name.as_str()).unwrap_or(o);
@@ -1002,10 +1130,10 @@ fn layout_data_model(model: &Model, view: &View) -> Layout {
             rect: Rect {
                 x,
                 y,
-                w: ENTITY_W,
+                w: max_entity_w,
                 h,
             },
-            description: Some(fields_desc),
+            description: Some(fields_desc.clone()),
             depth: 0,
             children_ids: Vec::new(),
         });

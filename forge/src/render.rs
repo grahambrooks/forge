@@ -293,7 +293,9 @@ fn render_node(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         esc(&n.id)
     ));
 
-    if n.kind == ElementKind::Branch {
+    if n.tags.contains(&"data-entity".to_string()) {
+        render_entity_table(o, n);
+    } else if n.kind == ElementKind::Branch {
         render_branch(o, n);
     } else if n.kind == ElementKind::DeploymentNode {
         render_deployment_node(o, n);
@@ -387,37 +389,82 @@ fn render_person(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
 fn render_box(o: &mut Vec<String>, n: &LayoutNode) {
     let r = &n.rect;
     let cx = r.x + r.w / 2.0;
+    let max_text_w = r.w - 24.0;
 
     o.push(format!(
         r#"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" class="forge-shadow" />"#,
         r.x, r.y, r.w, r.h
     ));
 
-    let mut lines: Vec<(&str, String)> = Vec::new();
-    lines.push(("name", n.label.clone()));
+    // Compute all text lines with wrapping
+    struct TextLine {
+        cls: &'static str,
+        text: String,
+    }
+    let mut lines: Vec<TextLine> = Vec::new();
+    lines.push(TextLine {
+        cls: "name",
+        text: n.label.clone(),
+    });
     if let Some(kl) = kind_label(n.kind) {
-        lines.push(("kind", format!("[{}]", kl)));
+        lines.push(TextLine {
+            cls: "kind",
+            text: format!("[{}]", kl),
+        });
     }
     if let Some(ref desc) = n.description {
-        lines.push(("desc", desc.clone()));
+        // Wrap description to fit box width
+        let wrapped = wrap_text_render(desc, max_text_w, 6.0);
+        for line in wrapped.into_iter().take(3) {
+            lines.push(TextLine {
+                cls: "desc",
+                text: line,
+            });
+        }
     }
     if let Some(ref sub) = n.sublabel {
-        lines.push(("tech", sub.clone()));
+        lines.push(TextLine {
+            cls: "tech",
+            text: sub.clone(),
+        });
     }
 
     let total_h = lines.len() as f64 * 16.0;
     let mut ty = r.y + (r.h - total_h) / 2.0 + 14.0;
 
-    for (cls, text) in &lines {
+    for line in &lines {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
             cx,
             ty,
-            cls,
-            esc(text)
+            line.cls,
+            esc(&line.text)
         ));
         ty += 16.0;
     }
+}
+
+/// Word-wrap text for rendering. Returns lines that fit within max_w.
+fn wrap_text_render(text: &str, max_w: f64, char_w: f64) -> Vec<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let mut lines = Vec::new();
+    let mut line: Vec<&str> = Vec::new();
+    let mut est_w = 0.0;
+    for w in &words {
+        let w_est = w.len() as f64 * char_w;
+        if est_w + w_est > max_w && !line.is_empty() {
+            lines.push(line.join(" "));
+            line = vec![w];
+            est_w = w_est;
+        } else {
+            line.push(w);
+            est_w += w_est + char_w * 0.6;
+        }
+    }
+    if !line.is_empty() {
+        lines.push(line.join(" "));
+    }
+    lines
 }
 
 fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
@@ -446,6 +493,90 @@ fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
             esc(text)
         ));
         ty += 16.0;
+    }
+}
+
+fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
+    let r = &n.rect;
+    let header_h = 32.0;
+    let row_h = 20.0;
+    let pad = 10.0;
+
+    // Outer box
+    o.push(format!(
+        r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" fill="#fff" stroke="#438DD5" stroke-width="1.5" rx="4" ry="4" />"##,
+        r.x, r.y, r.w, r.h
+    ));
+
+    // Header background
+    o.push(format!(
+        r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" fill="#438DD5" rx="4" ry="0" />"##,
+        r.x, r.y, r.w, header_h
+    ));
+    // Header corners fix (cover bottom radius)
+    o.push(format!(
+        r##"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="4" fill="#438DD5" />"##,
+        r.x,
+        r.y + header_h - 4.0,
+        r.w
+    ));
+
+    // Entity name in header
+    o.push(format!(
+        r##"      <text x="{:.0}" y="{:.0}" class="forge-label--name" fill="#fff">{}</text>"##,
+        r.x + r.w / 2.0,
+        r.y + 21.0,
+        esc(&n.label)
+    ));
+
+    // Owner subtitle
+    if let Some(ref sub) = n.sublabel {
+        o.push(format!(
+            r##"      <text x="{:.0}" y="{:.0}" font-size="9" fill="#c0d8ec" text-anchor="end">{}</text>"##,
+            r.x + r.w - pad,
+            r.y + 21.0,
+            esc(sub)
+        ));
+    }
+
+    // Field rows from description (newline-separated)
+    if let Some(ref desc) = n.description {
+        let fields: Vec<&str> = desc.split('\n').collect();
+        let mut fy = r.y + header_h + pad + 12.0;
+        for field in fields {
+            // Split "name: type (constraints)"
+            let (fname, frest) = field.split_once(':').unwrap_or((field, ""));
+            let frest = frest.trim();
+
+            // Row separator line
+            if fy > r.y + header_h + pad + 12.0 {
+                o.push(format!(
+                    r##"      <line x1="{:.0}" y1="{:.0}" x2="{:.0}" y2="{:.0}" stroke="#e2e6ea" stroke-width="0.5" />"##,
+                    r.x + pad,
+                    fy - row_h + 4.0,
+                    r.x + r.w - pad,
+                    fy - row_h + 4.0
+                ));
+            }
+
+            // Field name (left-aligned, bold)
+            o.push(format!(
+                r##"      <text x="{:.0}" y="{:.0}" font-size="11" font-weight="600" fill="#333" text-anchor="start">{}</text>"##,
+                r.x + pad,
+                fy,
+                esc(fname.trim())
+            ));
+
+            // Field type + constraints (right-aligned)
+            o.push(format!(
+                r##"      <text x="{:.0}" y="{:.0}" font-size="10" fill="#888" text-anchor="end">{}</text>"##,
+                r.x + r.w - pad,
+                fy,
+                esc(frest)
+            ));
+
+            fy += row_h;
+        }
     }
 }
 
@@ -668,8 +799,19 @@ fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
     ));
 
     if !edge.label.is_empty() {
+        // Place label at the middle third of the edge to avoid node overlap
         let mx = (ex1 + ex2) / 2.0;
         let my = (ey1 + ey2) / 2.0;
+
+        // For near-vertical edges, offset the label horizontally to avoid overlap
+        let dx = (ex2 - ex1).abs();
+        let dy = (ey2 - ey1).abs();
+        let (mx, my) = if dy > dx * 2.0 {
+            // Near-vertical: offset label to the right
+            (mx + 40.0, my)
+        } else {
+            (mx, my)
+        };
 
         let label_text = &edge.label;
         let tech_text = edge.technology.as_ref().map(|t| format!("[{}]", t));
