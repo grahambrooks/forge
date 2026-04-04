@@ -1,0 +1,28 @@
+.github/workflows/ci.yml
+  67bf62b4b404fba2 8-10,19-21,32-33,36,50-52
+.github/workflows/homebrew.yml
+  67bf62b4b404fba2 14-15,17,23,28,35,38,44,47,54,57,71,78,80
+.github/workflows/release.yml
+  67bf62b4b404fba2 39,41,52,55,66,70,73,83,86,90,98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "f0cf91dfd4065403f4c55c6fdd6f36d968e344fb",
+  "prompts": {
+    "67bf62b4b404fba2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31900658-f78a-4bce-8779-ccc75666e1c5",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 55,
+      "accepted_lines": 37,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/97581b83b1daaf68f2c845e975e22672ab6e9c73d9340989da7d9f648c44dff5"
+    }
+  }
+}
