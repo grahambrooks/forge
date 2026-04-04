@@ -333,11 +333,6 @@ fn cmd_check(source: &Path, severity: &str, format: &str, rules: Option<&Path>) 
         .iter()
         .any(|v| v.severity == check::Severity::Error)
     {
-        process::exit(2);
-    } else if violations
-        .iter()
-        .any(|v| v.severity == check::Severity::Warning)
-    {
         process::exit(1);
     }
 }
