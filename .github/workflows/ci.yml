@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: forge
+      - name: Run tests
+        working-directory: forge
+        run: cargo test --all
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: forge
+      - name: Check formatting
+        working-directory: forge
+        run: cargo fmt -- --check
+      - name: Clippy
+        working-directory: forge
+        run: cargo clippy -- -D warnings
+
+  build-example:
+    name: Build Example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: forge
+      - name: Build forge
+        working-directory: forge
+        run: cargo build --release
+      - name: Build payments example
+        working-directory: forge
+        run: |
+          ./target/release/forge build -s examples/payments.forge -o /tmp/forge-ci
+          ./target/release/forge check -s examples/payments.forge --severity info
+          ./target/release/forge generate -s examples/payments.forge -o /tmp/forge-site
+          ./target/release/forge export -s examples/payments.forge -f json > /tmp/forge-ci/model.json
+          echo "Built $(ls /tmp/forge-ci/*.svg | wc -l) SVGs"
+          echo "Generated $(find /tmp/forge-site -name '*.html' | wc -l) HTML pages"

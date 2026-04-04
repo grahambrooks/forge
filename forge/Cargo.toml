@@ -1,17 +1,28 @@
 [package]
-name = "forge"
-version = "0.1.0"
+name = "forge-dsl"
+version = "2026.4.4"
 edition = "2021"
-description = "A unified software modeling DSL — structure + process diagrams from code"
+description = "A unified software modeling DSL — architecture diagrams, documentation sites, and lint from a single file"
+license = "MIT"
+repository = "https://github.com/anthropics/forge"
+homepage = "https://github.com/anthropics/forge"
+readme = "../README.md"
+keywords = ["architecture", "c4-model", "diagram", "documentation", "dsl"]
+categories = ["command-line-utilities", "development-tools", "visualization"]
+exclude = ["examples/", "output/", "_site/", "target/"]
+
+[[bin]]
+name = "forge"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_yml = "0.0.12"
+serde_json = "1"
 walkdir = "2"
 pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
 tower-lsp = "0.20"
 tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util", "time", "sync", "fs"] }
 notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
 gix = { version = "0.72", default-features = false, features = ["max-performance-safe"] }
-serde_json = "1"

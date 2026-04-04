@@ -1,0 +1,83 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-formula:
+    name: Update Formula
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download release checksums
+        run: |
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/checksums.txt -o checksums.txt
+          cat checksums.txt
+
+      - name: Update formula
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"  # strip leading v
+
+          SHA_MACOS_ARM=$(grep 'forge-macos-aarch64' checksums.txt | awk '{print $1}')
+          SHA_MACOS_X86=$(grep 'forge-macos-x86_64' checksums.txt | awk '{print $1}')
+          SHA_LINUX_ARM=$(grep 'forge-linux-aarch64' checksums.txt | awk '{print $1}')
+          SHA_LINUX_X86=$(grep 'forge-linux-x86_64' checksums.txt | awk '{print $1}')
+
+          TAG="${{ github.event.release.tag_name }}"
+
+          cat > Formula/forge.rb << EOF
+          class Forge < Formula
+            desc "Unified software modeling DSL — architecture diagrams, docs, and lint from code"
+            homepage "https://github.com/${{ github.repository }}"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/forge-macos-aarch64"
+                sha256 "${SHA_MACOS_ARM}"
+              else
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/forge-macos-x86_64"
+                sha256 "${SHA_MACOS_X86}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/forge-linux-aarch64"
+                sha256 "${SHA_LINUX_ARM}"
+              else
+                url "https://github.com/${{ github.repository }}/releases/download/${TAG}/forge-linux-x86_64"
+                sha256 "${SHA_LINUX_X86}"
+              end
+            end
+
+            def install
+              binary = Dir["*"].first
+              bin.install binary => "forge"
+            end
+
+            test do
+              assert_match "forge", shell_output("#{bin}/forge --version")
+            end
+          end
+          EOF
+
+          # Fix indentation
+          sed -i 's/^          //' Formula/forge.rb
+
+      - name: Commit updated formula
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/forge.rb
+          git commit -m "Update Homebrew formula for ${{ github.event.release.tag_name }}" || true
+          git push

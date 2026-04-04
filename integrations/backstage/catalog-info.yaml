@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-platform
+  description: Payment processing platform architecture documentation
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: anthropics/forge
+  tags:
+    - architecture
+    - forge
+spec:
+  type: documentation
+  lifecycle: production
+  owner: platform-team

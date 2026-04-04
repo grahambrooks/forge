@@ -1,0 +1,44 @@
+name: TechDocs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.forge'
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'catalog-info.yaml'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Forge
+        run: |
+          curl -L https://github.com/anthropics/forge/releases/latest/download/forge-linux-x86_64 -o /usr/local/bin/forge
+          chmod +x /usr/local/bin/forge
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install MkDocs with Forge plugin
+        run: |
+          pip install mkdocs-techdocs-core
+          pip install ../../integrations/mkdocs  # or from PyPI: pip install mkdocs-forge
+
+      - name: Build TechDocs site
+        run: mkdocs build
+
+      - name: Publish to TechDocs
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TECHDOCS_AWS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TECHDOCS_AWS_SECRET }}
+        run: |
+          npx @techdocs/cli publish \
+            --publisher-type awsS3 \
+            --storage-name ${{ vars.TECHDOCS_BUCKET }} \
+            --entity default/component/payment-platform \
+            --directory site

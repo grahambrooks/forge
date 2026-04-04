@@ -1,0 +1,13 @@
+site_name: Payment Platform Architecture
+site_description: Architecture documentation for the Payment Platform
+
+plugins:
+  - techdocs-core
+  - forge:
+      source: architecture.forge
+      style: filled
+
+nav:
+  - Home: index.md
+  - Containers: containers.md
+  - Pipeline: pipeline.md

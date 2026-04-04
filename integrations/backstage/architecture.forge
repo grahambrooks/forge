@@ -1,0 +1,56 @@
+forge "Payment Platform" {
+  model {
+    customer = person "Customer" {
+      description "End user making payments"
+    }
+    payments = system "Payment Service" {
+      description "Processes card and bank payments"
+      api = container "Payment API" {
+        technology "Rust / Actix"
+        description "REST + gRPC gateway"
+      }
+      processor = container "Payment Processor" {
+        technology "Rust"
+        description "Core payment processing"
+      }
+      db = container "Ledger DB" {
+        technology "PostgreSQL 16"
+        tags "database"
+      }
+      api -> processor "delegates to" "gRPC"
+      processor -> db "reads/writes" "SQL"
+    }
+    customer -> payments.api "makes payments" "HTTPS"
+  }
+
+  process {
+    pipeline "ci" {
+      build = stage "Build & Test" {
+        step "cargo build --release"
+        step "cargo test"
+      }
+      deploy = stage "Deploy" {
+        needs build
+        gate "tests-pass"
+      }
+    }
+  }
+
+  views {
+    systemContext payments "SystemContext" {
+      include *
+      autoLayout lr
+      title "Payment Platform — System Context"
+    }
+    container payments "Containers" {
+      include *
+      autoLayout tb
+      title "Payment Platform — Containers"
+    }
+    pipelineView "ci" "Pipeline" {
+      include *
+      autoLayout lr
+      title "CI/CD Pipeline"
+    }
+  }
+}
