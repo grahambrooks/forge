@@ -1,0 +1,111 @@
+tests/integration/fixtures/full-stack/infra/main.tf
+  8cc59d08928b60e4 1-12
+tests/integration/fixtures/docker-compose/docker-compose.yml
+  8cc59d08928b60e4 1-23
+tests/integration/fixtures/full-stack/frontend/package.json
+  8cc59d08928b60e4 1-9
+tests/integration/fixtures/rust-axum/src/main.rs
+  8cc59d08928b60e4 1-24
+tests/integration/fixtures/python-fastapi/app/main.py
+  8cc59d08928b60e4 1-18
+.github/workflows/ci.yml
+  8cc59d08928b60e4 67-75
+tests/integration/fixtures/full-stack/docker-compose.yml
+  8cc59d08928b60e4 1-13
+tests/integration/Dockerfile
+  75fb3e757a2dcb92 1
+  8cc59d08928b60e4 2-25
+tests/integration/fixtures/k8s-manifests/service.yaml
+  8cc59d08928b60e4 1-12
+tests/integration/fixtures/k8s-manifests/configmap.yaml
+  8cc59d08928b60e4 1-9
+tests/integration/fixtures/full-stack/Cargo.toml
+  8cc59d08928b60e4 1-9
+tests/integration/fixtures/node-express/tsconfig.json
+  8cc59d08928b60e4 1-8
+tests/integration/fixtures/go-gin/main.go
+  8cc59d08928b60e4 1-15
+tests/integration/fixtures/ci-github/.github/workflows/ci.yml
+  8cc59d08928b60e4 1-34
+tests/integration/fixtures/docker-compose/Dockerfile
+  8cc59d08928b60e4 1-7
+tests/integration/fixtures/go-gin/go.mod
+  8cc59d08928b60e4 1-5
+tests/integration/fixtures/k8s-manifests/deployment.yaml
+  8cc59d08928b60e4 1-20
+tests/integration/fixtures/k8s-manifests/ingress.yaml
+  8cc59d08928b60e4 1-17
+tests/integration/fixtures/full-stack/.github/workflows/ci.yml
+  8cc59d08928b60e4 1-21
+tests/integration/fixtures/infra-terraform/main.tf
+  8cc59d08928b60e4 1-28
+tests/integration/fixtures/java-spring/pom.xml
+  8cc59d08928b60e4 1-20
+tests/integration/docker-compose.yml
+  8cc59d08928b60e4 1-5
+.dockerignore
+  8cc59d08928b60e4 1-5
+tests/integration/fixtures/rust-axum/Dockerfile
+  8cc59d08928b60e4 1-9
+tests/integration/run-tests.sh
+  8cc59d08928b60e4 1-181
+tests/integration/fixtures/full-stack/src/main.rs
+  8cc59d08928b60e4 1-22
+Makefile
+  8cc59d08928b60e4 1,59-69
+tests/integration/fixtures/python-fastapi/pyproject.toml
+  8cc59d08928b60e4 1-8
+tests/integration/fixtures/node-express/package.json
+  8cc59d08928b60e4 1-14
+tests/integration/fixtures/full-stack/Dockerfile
+  8cc59d08928b60e4 1-9
+tests/integration/fixtures/full-stack/k8s/deployment.yaml
+  8cc59d08928b60e4 1-17
+tests/integration/fixtures/infra-cloudformation/template.yaml
+  8cc59d08928b60e4 1-28
+tests/integration/fixtures/full-stack/k8s/service.yaml
+  8cc59d08928b60e4 1-11
+tests/integration/fixtures/java-spring/src/main/java/com/acme/PaymentController.java
+  8cc59d08928b60e4 1-23
+tests/integration/fixtures/rust-axum/Cargo.toml
+  8cc59d08928b60e4 1-10
+tests/integration/fixtures/openapi-spec/openapi.yaml
+  8cc59d08928b60e4 1-29
+tests/integration/fixtures/node-express/src/index.ts
+  8cc59d08928b60e4 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "21fc34f07e28a1786aad4003b7356e77706eaf39",
+  "prompts": {
+    "75fb3e757a2dcb92": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59b0c837-de2d-41be-a3e5-f9962895a322",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/76be7dfdbadc8b7368def618bf4103174da29f44c2b86f195f5f08cee4d896a5"
+    },
+    "8cc59d08928b60e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80af3bf8-0d68-449e-a1a3-e15a1d7b9b4a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 750,
+      "total_deletions": 11,
+      "accepted_lines": 739,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/1508a7d5fd5992e0d8985fa6839bbea70b0560d9ecc62a6b58599bc74feb1a0c"
+    }
+  }
+}
