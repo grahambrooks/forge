@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  title: Payment API
+  version: "1.0.0"
+  description: Payment processing API
+paths:
+  /payments:
+    get:
+      summary: List payments
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create payment
+      responses:
+        "201":
+          description: Created
+  /payments/{id}:
+    get:
+      summary: Get payment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK

@@ -1,0 +1,8 @@
+[project]
+name = "order-service"
+version = "0.1.0"
+description = "Order management service"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+]

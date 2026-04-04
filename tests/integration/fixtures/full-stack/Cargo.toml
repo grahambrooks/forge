@@ -1,0 +1,9 @@
+[package]
+name = "fullstack-api"
+version = "0.1.0"
+edition = "2021"
+description = "Full-stack example API"
+
+[dependencies]
+actix-web = "4"
+serde = { version = "1", features = ["derive"] }

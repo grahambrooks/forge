@@ -1,4 +1,4 @@
-.PHONY: build test check lint fmt clean pre-commit update help
+.PHONY: build test check lint fmt clean pre-commit update help integration-test integration-test-local
 
 CARGO := cargo
 SOURCE := forge/examples/payments.forge
@@ -53,6 +53,17 @@ outdated: ## Show outdated dependencies (requires cargo-outdated)
 
 clean: ## Remove build artifacts
 	cd forge && $(CARGO) clean
+
+# ── Convenience ────────────────────────────────────────────────────
+
+# ── Integration Tests ─────────────────────────────────────────────
+
+integration-test: ## Run integration tests in Docker
+	docker compose -f tests/integration/docker-compose.yml up --build --exit-code-from integration-test
+	docker compose -f tests/integration/docker-compose.yml down
+
+integration-test-local: release ## Run integration tests using local binary (no Docker)
+	FORGE=./forge/target/release/forge FIXTURES=./tests/integration/fixtures ./tests/integration/run-tests.sh
 
 # ── Convenience ────────────────────────────────────────────────────
 
