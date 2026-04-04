@@ -17,7 +17,7 @@ jobs:
 
       - name: Install Forge
         run: |
-          curl -L https://github.com/anthropics/forge/releases/latest/download/forge-linux-x86_64 -o /usr/local/bin/forge
+          curl -L https://github.com/grahambrookss/forge/releases/latest/download/forge-linux-x86_64 -o /usr/local/bin/forge
           chmod +x /usr/local/bin/forge
 
       - uses: actions/setup-python@v5

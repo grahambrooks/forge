@@ -5,7 +5,7 @@ metadata:
   description: Payment processing platform architecture documentation
   annotations:
     backstage.io/techdocs-ref: dir:.
-    github.com/project-slug: anthropics/forge
+    github.com/project-slug: grahambrookss/forge
   tags:
     - architecture
     - forge

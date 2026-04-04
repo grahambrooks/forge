@@ -47,26 +47,26 @@ forge analyze ./my-project -o discovered.forge
 
 ### Download a binary
 
-Download the latest release from [GitHub Releases](https://github.com/anthropics/forge/releases):
+Download the latest release from [GitHub Releases](https://github.com/grahambrookss/forge/releases):
 
 ```bash
 # Linux (x86_64)
-curl -L https://github.com/anthropics/forge/releases/latest/download/forge-linux-x86_64 -o forge
+curl -L https://github.com/grahambrookss/forge/releases/latest/download/forge-linux-x86_64 -o forge
 chmod +x forge && sudo mv forge /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -L https://github.com/anthropics/forge/releases/latest/download/forge-macos-aarch64 -o forge
+curl -L https://github.com/grahambrookss/forge/releases/latest/download/forge-macos-aarch64 -o forge
 chmod +x forge && sudo mv forge /usr/local/bin/
 
 # macOS (Intel)
-curl -L https://github.com/anthropics/forge/releases/latest/download/forge-macos-x86_64 -o forge
+curl -L https://github.com/grahambrookss/forge/releases/latest/download/forge-macos-x86_64 -o forge
 chmod +x forge && sudo mv forge /usr/local/bin/
 ```
 
 ### Build from source
 
 ```bash
-git clone https://github.com/anthropics/forge.git
+git clone https://github.com/grahambrookss/forge.git
 cd forge/forge
 cargo install --path .
 ```
