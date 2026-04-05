@@ -47,7 +47,10 @@ forge analyze ./my-project -o discovered.forge
 
 ### Homebrew
 
+The repo is private, so Homebrew needs a GitHub token. If you have the GitHub CLI authenticated:
+
 ```bash
+export HOMEBREW_GITHUB_API_TOKEN=$(gh auth token)
 brew tap grahambrooks/forge https://github.com/grahambrooks/forge
 brew install grahambrooks/forge/forge
 ```

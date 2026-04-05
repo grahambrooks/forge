@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -20,10 +21,10 @@ jobs:
 
       - name: Download release checksums
         run: |
-          curl -fSL "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/checksums.txt" -o checksums.txt
+          gh release download "${RELEASE_TAG}" --pattern checksums.txt
           cat checksums.txt
 
-      - name: Update formula
+      - name: Resolve asset IDs and update formula
         run: |
           VERSION="${RELEASE_TAG#v}"
 
@@ -31,6 +32,13 @@ jobs:
           SHA_MACOS_X86=$(grep 'forge-macos-x86_64' checksums.txt | awk '{print $1}')
           SHA_LINUX_ARM=$(grep 'forge-linux-aarch64' checksums.txt | awk '{print $1}')
           SHA_LINUX_X86=$(grep 'forge-linux-x86_64' checksums.txt | awk '{print $1}')
+
+          # Get asset IDs for private repo API download URLs
+          ASSETS=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '.assets[] | "\(.name) \(.id)"')
+          ID_MACOS_ARM=$(echo "$ASSETS" | grep 'forge-macos-aarch64' | awk '{print $2}')
+          ID_MACOS_X86=$(echo "$ASSETS" | grep 'forge-macos-x86_64' | awk '{print $2}')
+          ID_LINUX_ARM=$(echo "$ASSETS" | grep 'forge-linux-aarch64' | awk '{print $2}')
+          ID_LINUX_X86=$(echo "$ASSETS" | grep 'forge-linux-x86_64' | awk '{print $2}')
 
           cat > Formula/forge.rb << FORMULA
           class Forge < Formula
@@ -41,20 +49,24 @@ jobs:
 
             on_macos do
               if Hardware::CPU.arm?
-                url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/forge-macos-aarch64"
+                url "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/assets/${ID_MACOS_ARM}",
+                    headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
                 sha256 "${SHA_MACOS_ARM}"
               else
-                url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/forge-macos-x86_64"
+                url "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/assets/${ID_MACOS_X86}",
+                    headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
                 sha256 "${SHA_MACOS_X86}"
               end
             end
 
             on_linux do
               if Hardware::CPU.arm?
-                url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/forge-linux-aarch64"
+                url "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/assets/${ID_LINUX_ARM}",
+                    headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
                 sha256 "${SHA_LINUX_ARM}"
               else
-                url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/forge-linux-x86_64"
+                url "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/assets/${ID_LINUX_X86}",
+                    headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
                 sha256 "${SHA_LINUX_X86}"
               end
             end
@@ -65,7 +77,7 @@ jobs:
             end
 
             test do
-              assert_match "${VERSION}", shell_output("#{bin}/forge --version")
+              assert_match version.to_s, shell_output("#{bin}/forge --version")
             end
           end
           FORMULA

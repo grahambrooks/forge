@@ -27,19 +27,18 @@ release-github: pre-commit ## Tag and push a calver release (vYYYY.MM.DD) to tri
 	fi && \
 	echo "Releasing $$TAG (version $$VERSION) ..." && \
 	sed -i '' "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml && \
-	sed -i '' "s/^  version \".*\"/  version \"$$VERSION\"/" Formula/forge.rb && \
-	sed -i '' "s|/download/v[^/]*/|/download/$$TAG/|g" Formula/forge.rb && \
 	cd forge && $(CARGO) build --release --quiet && cd .. && \
 	BUILT_VERSION=$$(./forge/target/release/forge --version 2>&1 | awk '{print $$2}') && \
 	if [ "$$BUILT_VERSION" != "$$VERSION" ]; then \
 		echo "Error: binary reports version '$$BUILT_VERSION' but expected '$$VERSION'"; exit 1; \
 	fi && \
 	echo "Verified: binary version matches $$VERSION" && \
-	git add forge/Cargo.toml forge/Cargo.lock Formula/forge.rb && \
-	git commit -m "Release $$TAG" && \
+	git add forge/Cargo.toml forge/Cargo.lock && \
+	git diff --cached --quiet || git commit -m "Release $$TAG" && \
 	git tag -a "$$TAG" -m "Release $$TAG" && \
 	git push origin main "$$TAG" && \
-	echo "Pushed $$TAG — GitHub Actions will build and publish the release"
+	echo "Pushed $$TAG — GitHub Actions will build and publish the release" && \
+	echo "The homebrew formula will be updated automatically after the release is published"
 
 # ── Test ───────────────────────────────────────────────────────────
 

@@ -6,20 +6,24 @@ class Forge < Formula
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.04.05/forge-macos-aarch64"
+      url "https://api.github.com/repos/grahambrooks/forge/releases/assets/ASSET_ID_MACOS_ARM",
+          headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
       sha256 "PLACEHOLDER_SHA256"
     else
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.04.05/forge-macos-x86_64"
+      url "https://api.github.com/repos/grahambrooks/forge/releases/assets/ASSET_ID_MACOS_X86",
+          headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
       sha256 "PLACEHOLDER_SHA256"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.04.05/forge-linux-aarch64"
+      url "https://api.github.com/repos/grahambrooks/forge/releases/assets/ASSET_ID_LINUX_ARM",
+          headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
       sha256 "PLACEHOLDER_SHA256"
     else
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.04.05/forge-linux-x86_64"
+      url "https://api.github.com/repos/grahambrooks/forge/releases/assets/ASSET_ID_LINUX_X86",
+          headers: ["Authorization: token #{ENV.fetch("HOMEBREW_GITHUB_API_TOKEN")}", "Accept: application/octet-stream"]
       sha256 "PLACEHOLDER_SHA256"
     end
   end
