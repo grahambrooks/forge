@@ -1,0 +1,60 @@
+tests/integration/install/Dockerfile.alpine
+  d954856e2f932707 1-9
+tests/integration/install/Dockerfile.ubuntu
+  d954856e2f932707 1-11
+forge/src/main.rs
+  d954856e2f932707 28,530
+dist/Dockerfile
+  d954856e2f932707 1-22
+tests/integration/install/Dockerfile.cargo
+  d954856e2f932707 1-12
+.dockerignore
+  d954856e2f932707 6
+Makefile
+  d954856e2f932707 1,17-43,83,96-123
+tests/integration/install/run-cargo-test.sh
+  d954856e2f932707 1-127
+tests/integration/install/Dockerfile.debian
+  d954856e2f932707 1-11
+.github/workflows/ci.yml
+  d954856e2f932707 76-91
+tests/integration/install/Dockerfile.homebrew
+  d954856e2f932707 1-31
+Formula/forge.rb
+  d954856e2f932707 33
+tests/integration/install/docker-compose.yml
+  d954856e2f932707 1-33
+.gitignore
+  d954856e2f932707 23-27
+.github/workflows/homebrew.yml
+  d954856e2f932707 68
+forge/build.rs
+  d954856e2f932707 1-16
+tests/integration/install/run-install-tests.sh
+  d954856e2f932707 1-149
+tests/integration/install/Dockerfile.fedora
+  d954856e2f932707 1-9
+tests/integration/install/run-homebrew-test.sh
+  d954856e2f932707 1-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "86badfa899d1e7f4115a8aab2b40475e652d90f8",
+  "prompts": {
+    "d954856e2f932707": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d7c28a7-6233-4751-b73f-7acc25666ab0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 802,
+      "total_deletions": 82,
+      "accepted_lines": 731,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/0bbbe8be270f24c7d7b0f048c1497d1082817f12cf9bb948de386edf96470263"
+    }
+  }
+}
