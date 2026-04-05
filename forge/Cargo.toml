@@ -26,3 +26,4 @@ tower-lsp = "0.20"
 tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util", "time", "sync", "fs"] }
 notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
 gix = { version = "0.72", default-features = false, features = ["max-performance-safe"] }
+ab_glyph = "0.2"

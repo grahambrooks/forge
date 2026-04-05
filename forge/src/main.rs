@@ -14,6 +14,7 @@ mod parser;
 mod preprocess;
 mod render;
 mod serve;
+mod text;
 
 use clap::{Parser, Subcommand};
 use std::fs;

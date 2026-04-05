@@ -11,6 +11,10 @@
 
 use crate::layout::{Layout, LayoutEdge, LayoutNode, Rect};
 use crate::model::ElementKind;
+use crate::text::*;
+use std::sync::LazyLock;
+
+static TM: LazyLock<TextMeasurer> = LazyLock::new(TextMeasurer::new);
 
 // ─── Canonical C4 colour palette ───
 
@@ -40,7 +44,7 @@ fn default_css() -> String {
     format!(
         r#"
     .forge-diagram {{
-      font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
       --svg-bg: #ffffff; --svg-fg: #333; --svg-fg-muted: #555; --svg-fg-faint: #888;
       --svg-surface: #fff; --svg-surface-alt: #f8f9fa; --svg-border: #ccc;
       --svg-rel-line: {rel_line}; --svg-pipe-line: {pipe_line};
@@ -142,10 +146,10 @@ fn default_css() -> String {
     .forge-entity-box {{ fill: var(--svg-surface, #fff); stroke: {container_bg}; stroke-width: 1.5; rx: 4; ry: 4; }}
     .forge-entity-header {{ fill: {container_bg}; }}
     .forge-entity-header-text {{ fill: #fff; }}
-    .forge-entity-sub {{ fill: #c0d8ec; }}
+    .forge-entity-sub {{ fill: #c0d8ec; text-anchor: end; }}
     .forge-entity-sep {{ stroke: var(--svg-border, #e2e6ea); stroke-width: 0.5; }}
-    .forge-entity-field {{ fill: var(--svg-fg, #333); font-size: 11px; font-weight: 600; }}
-    .forge-entity-type {{ fill: var(--svg-fg-faint, #888); font-size: 10px; }}
+    .forge-entity-field {{ fill: var(--svg-fg, #333); font-size: 11px; font-weight: 600; text-anchor: start; }}
+    .forge-entity-type {{ fill: var(--svg-fg-faint, #888); font-size: 10px; text-anchor: end; }}
 "#,
         person_bg = Colors::PERSON_BG,
         person_stroke = Colors::PERSON_STROKE,
@@ -166,7 +170,7 @@ fn default_css() -> String {
 
 const OUTLINE_CSS: &str = r#"
     .forge-diagram {
-      font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
       --svg-bg: #ffffff; --svg-fg: #333; --svg-fg-muted: #555; --svg-fg-faint: #888;
       --svg-surface: #fff; --svg-border: #ccc;
       --svg-rel-line: #707070; --svg-pipe-line: #9E9E9E;
@@ -264,10 +268,10 @@ const OUTLINE_CSS: &str = r#"
     .forge-entity-box { fill: var(--svg-surface, #fff); stroke: #438DD5; stroke-width: 1.5; rx: 4; ry: 4; }
     .forge-entity-header { fill: #438DD5; }
     .forge-entity-header-text { fill: #fff; }
-    .forge-entity-sub { fill: #c0d8ec; }
+    .forge-entity-sub { fill: #c0d8ec; text-anchor: end; }
     .forge-entity-sep { stroke: var(--svg-border, #e2e6ea); stroke-width: 0.5; }
-    .forge-entity-field { fill: var(--svg-fg, #333); font-size: 11px; font-weight: 600; }
-    .forge-entity-type { fill: var(--svg-fg-faint, #888); font-size: 10px; }
+    .forge-entity-field { fill: var(--svg-fg, #333); font-size: 11px; font-weight: 600; text-anchor: start; }
+    .forge-entity-type { fill: var(--svg-fg-faint, #888); font-size: 10px; text-anchor: end; }
 "#;
 
 pub fn render_svg(layout: &Layout, style: &str) -> String {
@@ -386,7 +390,7 @@ fn render_person(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
     let shoulder_y = head_cy + head_r + 2.0;
     let shoulder_w = 36.0;
     let box_y = shoulder_y + 18.0;
-    let box_h = r.y + r.h - box_y;
+    let box_h = (r.y + r.h - box_y).max(30.0);
 
     if style == "outline" {
         let stroke = Colors::PERSON_STROKE;
@@ -433,26 +437,35 @@ fn render_person(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
 
     // Text
     let ty = box_y + 20.0;
-    o.push(format!(
-        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name">{}</text>"#,
-        cx,
-        ty,
-        esc(&n.label)
-    ));
-    o.push(format!(
-        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--kind">[Person]</text>"#,
-        cx,
-        ty + 16.0
-    ));
+    let max_text_w = r.w - 20.0;
+    let name_w = TM.measure(&n.label, &FONT_NAME);
+    if name_w > max_text_w {
+        o.push(format!(
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+            cx, ty, max_text_w, esc(&n.label)
+        ));
+    } else {
+        o.push(format!(
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name">{}</text>"#,
+            cx, ty, esc(&n.label)
+        ));
+    }
+    if ty + 16.0 < r.y + r.h - 4.0 {
+        o.push(format!(
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--kind">[Person]</text>"#,
+            cx,
+            ty + 16.0
+        ));
+    }
     if let Some(ref desc) = n.description {
-        render_wrapped_text(o, cx, ty + 32.0, r.w - 20.0, desc, "forge-label--desc");
+        render_wrapped_text(o, cx, ty + 32.0, max_text_w, desc, "forge-label--desc");
     }
 }
 
 fn render_box(o: &mut Vec<String>, n: &LayoutNode) {
     let r = &n.rect;
     let cx = r.x + r.w / 2.0;
-    let max_text_w = r.w - 24.0;
+    let max_text_w = r.w - 40.0; // must match BOX_PAD_X * 2.0 in layout
 
     o.push(format!(
         r#"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" class="forge-shadow" />"#,
@@ -465,69 +478,68 @@ fn render_box(o: &mut Vec<String>, n: &LayoutNode) {
         text: String,
     }
     let mut lines: Vec<TextLine> = Vec::new();
+    // Max lines that fit vertically (each line ~16px, with padding)
+    let max_lines = ((r.h - 8.0) / FONT_NAME.line_height).floor() as usize;
+
     lines.push(TextLine {
         cls: "name",
         text: n.label.clone(),
     });
-    if let Some(kl) = kind_label(n.kind) {
-        lines.push(TextLine {
-            cls: "kind",
-            text: format!("[{}]", kl),
-        });
-    }
-    if let Some(ref desc) = n.description {
-        // Wrap description to fit box width
-        let wrapped = wrap_text_render(desc, max_text_w, 6.0);
-        for line in wrapped.into_iter().take(3) {
+    if lines.len() < max_lines {
+        if let Some(kl) = kind_label(n.kind) {
             lines.push(TextLine {
-                cls: "desc",
-                text: line,
+                cls: "kind",
+                text: format!("[{}]", kl),
             });
         }
     }
-    if let Some(ref sub) = n.sublabel {
-        lines.push(TextLine {
-            cls: "tech",
-            text: sub.clone(),
-        });
+    if lines.len() < max_lines {
+        if let Some(ref desc) = n.description {
+            let wrapped = TM.wrap(desc, max_text_w, &FONT_DESC);
+            let take = (max_lines - lines.len()).min(3);
+            for line in wrapped.into_iter().take(take) {
+                lines.push(TextLine {
+                    cls: "desc",
+                    text: line,
+                });
+            }
+        }
+    }
+    if lines.len() < max_lines {
+        if let Some(ref sub) = n.sublabel {
+            lines.push(TextLine {
+                cls: "tech",
+                text: sub.clone(),
+            });
+        }
     }
 
-    let total_h = lines.len() as f64 * 16.0;
+    let total_h = lines.len() as f64 * FONT_NAME.line_height;
     let mut ty = r.y + (r.h - total_h) / 2.0 + 14.0;
 
     for line in &lines {
-        o.push(format!(
-            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
-            cx,
-            ty,
-            line.cls,
-            esc(&line.text)
-        ));
-        ty += 16.0;
-    }
-}
-
-/// Word-wrap text for rendering. Returns lines that fit within max_w.
-fn wrap_text_render(text: &str, max_w: f64, char_w: f64) -> Vec<String> {
-    let words: Vec<&str> = text.split_whitespace().collect();
-    let mut lines = Vec::new();
-    let mut line: Vec<&str> = Vec::new();
-    let mut est_w = 0.0;
-    for w in &words {
-        let w_est = w.len() as f64 * char_w;
-        if est_w + w_est > max_w && !line.is_empty() {
-            lines.push(line.join(" "));
-            line = vec![w];
-            est_w = w_est;
+        let spec = match line.cls {
+            "name" => &FONT_NAME,
+            "desc" => &FONT_DESC,
+            "tech" => &FONT_TECH,
+            "kind" => &FONT_KIND,
+            _ => &FONT_DESC,
+        };
+        let text_w = TM.measure(&line.text, spec);
+        if text_w > max_text_w {
+            // Constrain text to fit within box using SVG textLength
+            o.push(format!(
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+                cx, ty, line.cls, max_text_w, esc(&line.text)
+            ));
         } else {
-            line.push(w);
-            est_w += w_est + char_w * 0.6;
+            o.push(format!(
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
+                cx, ty, line.cls, esc(&line.text)
+            ));
         }
+        ty += FONT_NAME.line_height;
     }
-    if !line.is_empty() {
-        lines.push(line.join(" "));
-    }
-    lines
 }
 
 fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
@@ -544,7 +556,7 @@ fn render_stage(o: &mut Vec<String>, n: &LayoutNode) {
         lines.push(("tech", format!("[{}]", sub)));
     }
 
-    let total_h = lines.len() as f64 * 16.0;
+    let total_h = lines.len() as f64 * FONT_NAME.line_height;
     let mut ty = r.y + (r.h - total_h) / 2.0 + 14.0;
 
     for (cls, text) in &lines {
@@ -741,18 +753,35 @@ fn render_deployment_node(o: &mut Vec<String>, n: &LayoutNode) {
         r#"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" />"#,
         r.x, r.y, r.w, r.h
     ));
-    // Header label (top-left)
+    // Header label (top-left, constrained to box width)
     let lx = r.x + 10.0;
     let ly = r.y + 18.0;
-    o.push(format!(
-        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start">{}</text>"#,
-        lx, ly, esc(&n.label)
-    ));
-    if let Some(ref sub) = n.sublabel {
+    let max_label_w = r.w - 20.0;
+    let name_w = TM.measure(&n.label, &FONT_DEPLOY_NAME);
+    if name_w > max_label_w {
         o.push(format!(
-            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="start">{}</text>"#,
-            lx, ly + 14.0, esc(sub)
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+            lx, ly, max_label_w, esc(&n.label)
         ));
+    } else {
+        o.push(format!(
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start">{}</text>"#,
+            lx, ly, esc(&n.label)
+        ));
+    }
+    if let Some(ref sub) = n.sublabel {
+        let sub_w = TM.measure(sub, &FONT_DEPLOY_TECH);
+        if sub_w > max_label_w {
+            o.push(format!(
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="start" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+                lx, ly + 14.0, max_label_w, esc(sub)
+            ));
+        } else {
+            o.push(format!(
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="start">{}</text>"#,
+                lx, ly + 14.0, esc(sub)
+            ));
+        }
     }
 }
 
@@ -842,26 +871,36 @@ fn render_cylinder(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         ));
     }
 
-    let ty = r.y + r.h / 2.0 - 4.0;
-    o.push(format!(
-        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name">{}</text>"#,
-        cx,
-        ty,
-        esc(&n.label)
-    ));
+    // Center text vertically, only render lines that fit
+    let mut text_lines: Vec<(&str, String)> = vec![("name", n.label.clone())];
     if let Some(ref sub) = n.sublabel {
-        o.push(format!(
-            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech">{}</text>"#,
-            cx,
-            ty + 16.0,
-            esc(sub)
-        ));
+        text_lines.push(("tech", sub.clone()));
     }
-    o.push(format!(
-        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--kind">[Database]</text>"#,
-        cx,
-        ty + 32.0
-    ));
+    text_lines.push(("kind", "[Database]".into()));
+
+    let total_h = text_lines.len() as f64 * FONT_NAME.line_height;
+    let usable_h = r.h - 24.0; // account for top/bottom ellipses
+    let mut ty = r.y + (r.h - total_h.min(usable_h)) / 2.0 + 12.0;
+    let max_text_w = r.w - 20.0;
+
+    for (cls, text) in &text_lines {
+        if ty > r.y + r.h - 8.0 {
+            break;
+        }
+        let text_w = TM.measure(text, &FONT_NAME);
+        if text_w > max_text_w {
+            o.push(format!(
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+                cx, ty, cls, max_text_w, esc(text)
+            ));
+        } else {
+            o.push(format!(
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
+                cx, ty, cls, esc(text)
+            ));
+        }
+        ty += FONT_NAME.line_height;
+    }
 }
 
 // ─── Edge Rendering ──────────────────────────────────────────────
@@ -1006,10 +1045,9 @@ fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
         };
 
         let pill_w = f64::max(
-            label_text.len() as f64,
-            tech_text.as_ref().map_or(0.0, |t| t.len() as f64),
-        ) * 6.5
-            + 16.0;
+            TM.measure(label_text, &FONT_REL),
+            tech_text.as_ref().map_or(0.0, |t| TM.measure(t, &FONT_REL_TECH)),
+        ) + 16.0;
         let pill_h = if tech_text.is_some() { 34.0 } else { 20.0 };
         let pill_x = mx - pill_w / 2.0;
         let pill_y = label_y - 12.0;
@@ -1147,24 +1185,7 @@ fn render_wrapped_text(
     text: &str,
     cls: &str,
 ) {
-    let words: Vec<&str> = text.split_whitespace().collect();
-    let mut lines: Vec<String> = Vec::new();
-    let mut line: Vec<&str> = Vec::new();
-    let mut est_w = 0.0;
-    for w in &words {
-        let w_est = w.len() as f64 * 6.5;
-        if est_w + w_est > max_w && !line.is_empty() {
-            lines.push(line.join(" "));
-            line = vec![w];
-            est_w = w_est;
-        } else {
-            line.push(w);
-            est_w += w_est + 4.0;
-        }
-    }
-    if !line.is_empty() {
-        lines.push(line.join(" "));
-    }
+    let lines = TM.wrap(text, max_w, &FONT_DESC);
     for l in lines.iter().take(3) {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="{}">{}</text>"#,
@@ -1173,7 +1194,7 @@ fn render_wrapped_text(
             cls,
             esc(l)
         ));
-        y += 14.0;
+        y += FONT_DESC.line_height;
     }
 }
 

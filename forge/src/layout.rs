@@ -67,72 +67,49 @@ pub struct Layout {
 }
 
 pub fn compute_layout(model: &Model, view: &View) -> Layout {
+    let tm = TextMeasurer::new();
+    compute_layout_with(model, view, &tm)
+}
+
+pub fn compute_layout_with(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     match view.kind {
-        ViewKind::SystemContext => layout_system_context(model, view),
-        ViewKind::Container => layout_container(model, view),
-        ViewKind::PipelineView => layout_pipeline(model, view),
-        ViewKind::Deployment => layout_deployment(model, view),
-        ViewKind::TechStack => layout_tech_stack(model, view),
-        ViewKind::Branching => layout_branching(model, view),
-        ViewKind::Component => layout_component(model, view),
-        ViewKind::DataModel => layout_data_model(model, view),
-        ViewKind::TrustBoundaryView => layout_trust_boundary(model, view),
-        ViewKind::TeamMap => layout_team_map(model, view),
-        ViewKind::ApiCatalogView => layout_api_catalog(model, view),
-        ViewKind::EventFlowView => layout_event_flow(model, view),
+        ViewKind::SystemContext => layout_system_context(model, view, tm),
+        ViewKind::Container => layout_container(model, view, tm),
+        ViewKind::PipelineView => layout_pipeline(model, view, tm),
+        ViewKind::Deployment => layout_deployment(model, view, tm),
+        ViewKind::TechStack => layout_tech_stack(model, view, tm),
+        ViewKind::Branching => layout_branching(model, view, tm),
+        ViewKind::Component => layout_component(model, view, tm),
+        ViewKind::DataModel => layout_data_model(model, view, tm),
+        ViewKind::TrustBoundaryView => layout_trust_boundary(model, view, tm),
+        ViewKind::TeamMap => layout_team_map(model, view, tm),
+        ViewKind::ApiCatalogView => layout_api_catalog(model, view, tm),
+        ViewKind::EventFlowView => layout_event_flow(model, view, tm),
     }
 }
 
 // ─── Text Measurement ────────────────────────────────────────────
 
-const CHAR_W_NAME: f64 = 7.7; // 14px bold
-const CHAR_W_SMALL: f64 = 6.0; // 11px / 10px
-const LINE_H: f64 = 16.0;
+use crate::text::*;
+
 const BOX_PAD_X: f64 = 20.0;
 const BOX_PAD_Y: f64 = 14.0;
 const MIN_NODE_W: f64 = 160.0;
 const MIN_NODE_H: f64 = 60.0;
 
-fn estimate_text_w(text: &str, char_w: f64) -> f64 {
-    text.len() as f64 * char_w
-}
-
-/// Wrap text into lines fitting within max_w, return the lines.
-fn wrap_text(text: &str, max_w: f64, char_w: f64) -> Vec<String> {
-    let words: Vec<&str> = text.split_whitespace().collect();
-    let mut lines = Vec::new();
-    let mut line: Vec<&str> = Vec::new();
-    let mut est_w = 0.0;
-    for w in &words {
-        let w_est = w.len() as f64 * char_w;
-        if est_w + w_est > max_w && !line.is_empty() {
-            lines.push(line.join(" "));
-            line = vec![w];
-            est_w = w_est;
-        } else {
-            line.push(w);
-            est_w += w_est + char_w * 0.6;
-        }
-    }
-    if !line.is_empty() {
-        lines.push(line.join(" "));
-    }
-    lines
-}
-
 /// Measure the required (width, height) for a structural element.
-fn measure_element(el: &Element) -> (f64, f64) {
+fn measure_element(el: &Element, tm: &TextMeasurer) -> (f64, f64) {
     let sub = el.technology.as_ref().map(|t| format!("[{}]", t));
 
     // Compute minimum width from the widest text line
-    let name_w = estimate_text_w(&el.name, CHAR_W_NAME);
+    let name_w = tm.measure(&el.name, &FONT_NAME);
     let kind_label = kind_label_for(el.kind);
     let kind_w = kind_label
-        .map(|k| estimate_text_w(&format!("[{}]", k), CHAR_W_SMALL))
+        .map(|k| tm.measure(&format!("[{}]", k), &FONT_KIND))
         .unwrap_or(0.0);
     let tech_w = sub
         .as_ref()
-        .map(|s| estimate_text_w(s, CHAR_W_SMALL))
+        .map(|s| tm.measure(s, &FONT_TECH))
         .unwrap_or(0.0);
 
     // For description, we'll wrap it — but need a target width first
@@ -146,14 +123,14 @@ fn measure_element(el: &Element) -> (f64, f64) {
         line_count += 1;
     }
     if let Some(ref desc) = el.description {
-        let wrapped = wrap_text(desc, desc_max_w, CHAR_W_SMALL);
+        let wrapped = tm.wrap(desc, desc_max_w, &FONT_DESC);
         line_count += wrapped.len().min(3); // max 3 lines of description
     }
     if sub.is_some() {
         line_count += 1;
     }
 
-    let content_h = line_count as f64 * LINE_H;
+    let content_h = line_count as f64 * FONT_NAME.line_height;
     let h = (content_h + BOX_PAD_Y * 2.0).max(MIN_NODE_H);
 
     // For person elements, add head+shoulders space
@@ -178,12 +155,12 @@ fn kind_label_for(kind: ElementKind) -> Option<&'static str> {
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
-fn dims_for(el: &Element) -> (f64, f64) {
-    measure_element(el)
+fn dims_for(el: &Element, tm: &TextMeasurer) -> (f64, f64) {
+    measure_element(el, tm)
 }
 
-fn make_node(el: &Element, x: f64, y: f64) -> LayoutNode {
-    let (w, h) = dims_for(el);
+fn make_node(el: &Element, x: f64, y: f64, tm: &TextMeasurer) -> LayoutNode {
+    let (w, h) = dims_for(el, tm);
     let sub = el.technology.as_ref().map(|t| format!("[{}]", t));
     LayoutNode {
         id: el.id.clone(),
@@ -200,7 +177,7 @@ fn make_node(el: &Element, x: f64, y: f64) -> LayoutNode {
 
 // ─── System Context ──────────────────────────────────────────────
 
-fn layout_system_context(model: &Model, view: &View) -> Layout {
+fn layout_system_context(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     let scope_id = view.scope.as_deref().unwrap_or("");
     let system = model.elements.get(scope_id);
 
@@ -234,8 +211,8 @@ fn layout_system_context(model: &Model, view: &View) -> Layout {
     let mut y_cursor = TITLE_H;
     for aid in &actor_ids {
         if let Some(actor) = model.elements.get(aid) {
-            nodes.push(make_node(actor, PAD, y_cursor));
-            y_cursor += dims_for(actor).1 + V_GAP;
+            nodes.push(make_node(actor, PAD, y_cursor, tm));
+            y_cursor += dims_for(actor, tm).1 + V_GAP;
         }
     }
     let actor_col_h = y_cursor - V_GAP + PAD;
@@ -304,7 +281,7 @@ fn layout_system_context(model: &Model, view: &View) -> Layout {
 
 // ─── Container View ──────────────────────────────────────────────
 
-fn layout_container(model: &Model, view: &View) -> Layout {
+fn layout_container(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     let scope_id = view.scope.as_deref().unwrap_or("");
     let system = model.elements.get(scope_id);
 
@@ -334,7 +311,7 @@ fn layout_container(model: &Model, view: &View) -> Layout {
     let mut nodes = Vec::new();
 
     // Externals on top row (centered)
-    let ext_total_w: f64 = externals.iter().map(|e| dims_for(e).0).sum::<f64>()
+    let ext_total_w: f64 = externals.iter().map(|e| dims_for(e, tm).0).sum::<f64>()
         + H_GAP * (externals.len().saturating_sub(1) as f64);
     let cols: usize = 3;
     let grid_w = cols as f64 * NODE_W + (cols as f64 - 1.0) * H_GAP;
@@ -342,8 +319,8 @@ fn layout_container(model: &Model, view: &View) -> Layout {
     let mut ext_x = (canvas_w - ext_total_w) / 2.0;
 
     for ext in &externals {
-        let (ew, _) = dims_for(ext);
-        nodes.push(make_node(ext, ext_x, TITLE_H));
+        let (ew, _) = dims_for(ext, tm);
+        nodes.push(make_node(ext, ext_x, TITLE_H, tm));
         ext_x += ew + H_GAP;
     }
 
@@ -361,7 +338,7 @@ fn layout_container(model: &Model, view: &View) -> Layout {
         let row = i / cols;
         let x = grid_start_x + col as f64 * (NODE_W + H_GAP);
         let y = y_start + row as f64 * (NODE_H + V_GAP);
-        nodes.push(make_node(cont, x, y));
+        nodes.push(make_node(cont, x, y, tm));
     }
 
     let all_ids: HashSet<String> = nodes.iter().map(|n| n.id.clone()).collect();
@@ -403,7 +380,7 @@ fn layout_container(model: &Model, view: &View) -> Layout {
 
 // ─── Pipeline View ───────────────────────────────────────────────
 
-fn layout_pipeline(model: &Model, view: &View) -> Layout {
+fn layout_pipeline(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     let pipeline_id = view.scope.as_deref().unwrap_or("");
     let pipeline = model.elements.get(pipeline_id);
 
@@ -423,13 +400,13 @@ fn layout_pipeline(model: &Model, view: &View) -> Layout {
     for stage in &ordered {
         // Auto-size stage based on name + optional environment sublabel
         let env_sub = stage.properties.get("environment");
-        let name_w = estimate_text_w(&stage.name, CHAR_W_NAME);
+        let name_w = tm.measure(&stage.name, &FONT_NAME);
         let sub_w = env_sub
-            .map(|s| estimate_text_w(&format!("[{}]", s), CHAR_W_SMALL))
+            .map(|s| tm.measure(&format!("[{}]", s), &FONT_TECH))
             .unwrap_or(0.0);
         let sw = name_w.max(sub_w).max(STAGE_W - BOX_PAD_X * 2.0) + BOX_PAD_X * 2.0;
         let line_count = if env_sub.is_some() { 2 } else { 1 };
-        let sh = (line_count as f64 * LINE_H + BOX_PAD_Y * 2.0).max(STAGE_H);
+        let sh = (line_count as f64 * FONT_NAME.line_height + BOX_PAD_Y * 2.0).max(STAGE_H);
 
         nodes.push(LayoutNode {
             id: stage.id.clone(),
@@ -456,7 +433,7 @@ fn layout_pipeline(model: &Model, view: &View) -> Layout {
             .filter(|e| e.kind == ElementKind::Gate && e.parent.as_deref() == Some(&stage.id))
             .collect();
         for g in gates {
-            let gate_text_w = estimate_text_w(&g.name, CHAR_W_SMALL);
+            let gate_text_w = tm.measure(&g.name, &FONT_GATE);
             let gw = (gate_text_w + 30.0).max(GATE_W);
             let gh = gw; // keep diamond square
             let gx = x - H_GAP / 2.0 - gw / 2.0;
@@ -544,7 +521,7 @@ const DEPLOY_INSTANCE_W: f64 = 200.0;
 const DEPLOY_INSTANCE_H: f64 = 70.0;
 const DEPLOY_GAP: f64 = 16.0;
 
-fn layout_deployment(model: &Model, view: &View) -> Layout {
+fn layout_deployment(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let env_id = view.scope.as_deref().unwrap_or("");
 
     // Find top-level deployment nodes for this environment
@@ -750,7 +727,7 @@ const TECH_CAT_PAD: f64 = 16.0;
 const TECH_CAT_HEADER: f64 = 32.0;
 const TECH_COLS: usize = 4;
 
-fn layout_tech_stack(model: &Model, view: &View) -> Layout {
+fn layout_tech_stack(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut y = TITLE_H + 10.0;
 
@@ -844,7 +821,7 @@ const BRANCH_LABEL_W: f64 = 120.0; // space reserved for branch name labels
 const COMMIT_SPACING: f64 = 60.0; // horizontal distance between commit dots
 const COMMIT_R: f64 = 8.0; // commit dot radius
 
-fn layout_branching(model: &Model, view: &View) -> Layout {
+fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let strategy_id = view.scope.as_deref().unwrap_or("");
 
     let branches: Vec<&Element> = model
@@ -960,7 +937,7 @@ fn layout_branching(model: &Model, view: &View) -> Layout {
 
 // ─── Component View ──────────────────────────────────────────────
 
-fn layout_component(model: &Model, view: &View) -> Layout {
+fn layout_component(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     // Same approach as container view, but scoped to components within a container
     let scope_id = view.scope.as_deref().unwrap_or("");
     let container = model.elements.get(scope_id);
@@ -992,7 +969,7 @@ fn layout_component(model: &Model, view: &View) -> Layout {
     let mut nodes = Vec::new();
 
     // External elements on top row
-    let ext_total_w: f64 = externals.iter().map(|e| dims_for(e).0).sum::<f64>()
+    let ext_total_w: f64 = externals.iter().map(|e| dims_for(e, tm).0).sum::<f64>()
         + H_GAP * (externals.len().saturating_sub(1) as f64);
     let cols: usize = 3;
     let grid_w = cols as f64 * NODE_W + (cols as f64 - 1.0) * H_GAP;
@@ -1000,8 +977,8 @@ fn layout_component(model: &Model, view: &View) -> Layout {
     let mut ext_x = (canvas_w - ext_total_w) / 2.0;
 
     for ext in &externals {
-        let (ew, _) = dims_for(ext);
-        nodes.push(make_node(ext, ext_x, TITLE_H));
+        let (ew, _) = dims_for(ext, tm);
+        nodes.push(make_node(ext, ext_x, TITLE_H, tm));
         ext_x += ew + H_GAP;
     }
 
@@ -1019,7 +996,7 @@ fn layout_component(model: &Model, view: &View) -> Layout {
         let row = i / cols;
         let x = grid_start_x + col as f64 * (NODE_W + H_GAP);
         let y = y_start + row as f64 * (NODE_H + V_GAP);
-        nodes.push(make_node(comp, x, y));
+        nodes.push(make_node(comp, x, y, tm));
     }
 
     let all_ids: std::collections::HashSet<String> = nodes.iter().map(|n| n.id.clone()).collect();
@@ -1068,7 +1045,7 @@ const ENTITY_PAD: f64 = 10.0;
 const ENTITY_GAP: f64 = 60.0;
 const ENTITY_COLS: usize = 3;
 
-fn layout_data_model(model: &Model, view: &View) -> Layout {
+fn layout_data_model(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
 
@@ -1090,17 +1067,37 @@ fn layout_data_model(model: &Model, view: &View) -> Layout {
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
-            // Measure required width from widest field
-            let name_w = estimate_text_w(&entity.name, CHAR_W_NAME);
+            // Measure width using actual font metrics
+            let entity_name_w = tm.measure(&entity.name, &FONT_NAME);
+            let owner_w = entity
+                .owner
+                .as_ref()
+                .map(|o| {
+                    let oname = model.elements.get(o).map(|e| e.name.as_str()).unwrap_or(o);
+                    tm.measure(&format!("Owner: {}", oname), &FONT_ENTITY_SUB)
+                })
+                .unwrap_or(0.0);
+            let header_w = entity_name_w + owner_w + 30.0;
             let max_field_w = entity
                 .fields
                 .iter()
                 .map(|f| {
-                    let line = format!("{}: {}", f.name, f.field_type);
-                    estimate_text_w(&line, CHAR_W_SMALL)
+                    let fname_w = tm.measure(&f.name, &FONT_ENTITY_FIELD);
+                    let constraints = if f.constraints.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" ({})", f.constraints.join(", "))
+                    };
+                    let ftype_w =
+                        tm.measure(&format!("{}{}", f.field_type, constraints), &FONT_ENTITY_TYPE);
+                    fname_w + ftype_w + 40.0
                 })
                 .fold(0.0_f64, f64::max);
-            let w = name_w.max(max_field_w).max(ENTITY_W - 30.0) + 30.0;
+            let w = entity_name_w
+                .max(header_w)
+                .max(max_field_w)
+                .max(ENTITY_W - 30.0)
+                + 30.0;
             let h =
                 ENTITY_HEADER_H + entity.fields.len() as f64 * ENTITY_FIELD_H + ENTITY_PAD * 2.0;
             (entity.name.clone(), fields_desc, w, h)
@@ -1189,7 +1186,7 @@ const BOUNDARY_MEMBER_W: f64 = 180.0;
 const BOUNDARY_MEMBER_H: f64 = 60.0;
 const BOUNDARY_MEMBER_GAP: f64 = 16.0;
 
-fn layout_trust_boundary(model: &Model, view: &View) -> Layout {
+fn layout_trust_boundary(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut y = TITLE_H + 10.0;
 
@@ -1205,7 +1202,23 @@ fn layout_trust_boundary(model: &Model, view: &View) -> Layout {
         .max(400.0);
 
     for boundary in &model.trust_boundaries {
-        let zone_h = BOUNDARY_HEADER + BOUNDARY_MEMBER_H + BOUNDARY_PAD * 2.0;
+        let max_member_h = boundary
+            .members
+            .iter()
+            .map(|id| {
+                let kind = model
+                    .elements
+                    .get(id)
+                    .map(|e| e.kind)
+                    .unwrap_or(ElementKind::Container);
+                if kind == ElementKind::Person {
+                    BOUNDARY_MEMBER_H + 62.0
+                } else {
+                    BOUNDARY_MEMBER_H
+                }
+            })
+            .fold(BOUNDARY_MEMBER_H, f64::max);
+        let zone_h = BOUNDARY_HEADER + max_member_h + BOUNDARY_PAD * 2.0;
         let mut tags = vec!["trust-zone".into()];
         tags.push(format!("trust-{}", boundary.level));
 
@@ -1235,6 +1248,13 @@ fn layout_trust_boundary(model: &Model, view: &View) -> Layout {
             let kind = member.map(|e| e.kind).unwrap_or(ElementKind::Container);
             let member_tags = member.map(|e| e.tags.clone()).unwrap_or_default();
 
+            // Person elements need more height for head+shoulders silhouette
+            let member_h = if kind == ElementKind::Person {
+                BOUNDARY_MEMBER_H + 62.0
+            } else {
+                BOUNDARY_MEMBER_H
+            };
+
             nodes.push(LayoutNode {
                 id: format!(
                     "_zone_{}._m_{}",
@@ -1249,7 +1269,7 @@ fn layout_trust_boundary(model: &Model, view: &View) -> Layout {
                     x: mx,
                     y: my,
                     w: BOUNDARY_MEMBER_W,
-                    h: BOUNDARY_MEMBER_H,
+                    h: member_h,
                 },
                 description: None,
                 depth: 1,
@@ -1283,7 +1303,7 @@ const TEAM_HEADER_H: f64 = 36.0;
 const TEAM_MEMBER_H: f64 = 28.0;
 const TEAM_PAD: f64 = 14.0;
 
-fn layout_team_map(model: &Model, view: &View) -> Layout {
+fn layout_team_map(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut y = TITLE_H + 10.0;
 
@@ -1370,7 +1390,7 @@ fn layout_team_map(model: &Model, view: &View) -> Layout {
 
 // ─── API Catalog View (stub) ────────────────────────────────────
 
-fn layout_api_catalog(model: &Model, view: &View) -> Layout {
+fn layout_api_catalog(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut y = TITLE_H + 10.0;
     let card_w = 400.0;
@@ -1450,7 +1470,7 @@ fn layout_api_catalog(model: &Model, view: &View) -> Layout {
 
 // ─── Event Flow View ─────────────────────────────────────────────
 
-fn layout_event_flow(model: &Model, view: &View) -> Layout {
+fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
     let topic_w = 200.0;
