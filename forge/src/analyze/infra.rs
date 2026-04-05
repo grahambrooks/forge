@@ -44,13 +44,13 @@ fn scan_cloudformation(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
 }
 
 fn parse_cft(model: &mut Model, text: &str) {
-    let doc: serde_yml::Value = match serde_yml::from_str(text) {
+    let doc: serde_yaml_ng::Value = match serde_yaml_ng::from_str(text) {
         Ok(v) => v,
         Err(_) => {
             // Try as JSON
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(text) {
-                let yaml_str = serde_yml::to_string(&v).unwrap_or_default();
-                match serde_yml::from_str(&yaml_str) {
+                let yaml_str = serde_yaml_ng::to_string(&v).unwrap_or_default();
+                match serde_yaml_ng::from_str(&yaml_str) {
                     Ok(v) => v,
                     Err(_) => return,
                 }
@@ -357,14 +357,14 @@ fn scan_openapi(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
 }
 
 fn parse_openapi(model: &mut Model, text: &str, _path: &Path, _root: &Path) {
-    let doc: serde_yml::Value = match serde_yml::from_str(text) {
+    let doc: serde_yaml_ng::Value = match serde_yaml_ng::from_str(text) {
         Ok(v) => v,
         Err(_) => {
             // Try JSON
             match serde_json::from_str::<serde_json::Value>(text) {
                 Ok(v) => {
-                    let yaml = serde_yml::to_string(&v).unwrap_or_default();
-                    match serde_yml::from_str(&yaml) {
+                    let yaml = serde_yaml_ng::to_string(&v).unwrap_or_default();
+                    match serde_yaml_ng::from_str(&yaml) {
                         Ok(v) => v,
                         Err(_) => return,
                     }

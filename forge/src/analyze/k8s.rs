@@ -40,7 +40,7 @@ fn parse_k8s_manifest(model: &mut Model, text: &str) {
         if doc.is_empty() {
             continue;
         }
-        let parsed: serde_yml::Value = match serde_yml::from_str(doc) {
+        let parsed: serde_yaml_ng::Value = match serde_yaml_ng::from_str(doc) {
             Ok(v) => v,
             Err(_) => continue,
         };
@@ -81,7 +81,7 @@ fn parse_k8s_manifest(model: &mut Model, text: &str) {
 
 fn parse_k8s_workload(
     model: &mut Model,
-    doc: &serde_yml::Value,
+    doc: &serde_yaml_ng::Value,
     name: &str,
     namespace: &str,
     kind: &str,
@@ -122,7 +122,7 @@ fn parse_k8s_workload(
     model.add_element(el);
 }
 
-fn parse_k8s_service(model: &mut Model, doc: &serde_yml::Value, name: &str, namespace: &str) {
+fn parse_k8s_service(model: &mut Model, doc: &serde_yaml_ng::Value, name: &str, namespace: &str) {
     // Services create relationships to the pods they select
     let _selector = doc
         .get("spec")
@@ -161,7 +161,7 @@ fn parse_k8s_service(model: &mut Model, doc: &serde_yml::Value, name: &str, name
     }
 }
 
-fn parse_k8s_ingress(model: &mut Model, doc: &serde_yml::Value, _name: &str, namespace: &str) {
+fn parse_k8s_ingress(model: &mut Model, doc: &serde_yaml_ng::Value, _name: &str, namespace: &str) {
     let rules = doc
         .get("spec")
         .and_then(|s| s.get("rules"))
@@ -218,7 +218,7 @@ fn parse_k8s_ingress(model: &mut Model, doc: &serde_yml::Value, _name: &str, nam
     }
 }
 
-fn parse_k8s_configmap(model: &mut Model, doc: &serde_yml::Value, name: &str, namespace: &str) {
+fn parse_k8s_configmap(model: &mut Model, doc: &serde_yaml_ng::Value, name: &str, namespace: &str) {
     let data = doc.get("data").and_then(|d| d.as_mapping());
     if let Some(data) = data {
         let entries: Vec<ConfigEntry> = data

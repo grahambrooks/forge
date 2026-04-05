@@ -149,7 +149,7 @@ fn scan_compose(model: &mut Model, root: &Path) {
 }
 
 fn parse_compose(model: &mut Model, text: &str) {
-    let doc: serde_yml::Value = match serde_yml::from_str(text) {
+    let doc: serde_yaml_ng::Value = match serde_yaml_ng::from_str(text) {
         Ok(v) => v,
         Err(_) => return,
     };
@@ -230,11 +230,11 @@ fn parse_compose(model: &mut Model, text: &str) {
         // Parse depends_on as relationships
         if let Some(deps) = svc_val.get("depends_on") {
             let dep_names: Vec<String> = match deps {
-                serde_yml::Value::Sequence(seq) => seq
+                serde_yaml_ng::Value::Sequence(seq) => seq
                     .iter()
                     .filter_map(|v| v.as_str().map(String::from))
                     .collect(),
-                serde_yml::Value::Mapping(map) => map
+                serde_yaml_ng::Value::Mapping(map) => map
                     .keys()
                     .filter_map(|k| k.as_str().map(String::from))
                     .collect(),

@@ -38,7 +38,7 @@ fn scan_github_actions(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
 }
 
 fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
-    let doc: serde_yml::Value = match serde_yml::from_str(text) {
+    let doc: serde_yaml_ng::Value = match serde_yaml_ng::from_str(text) {
         Ok(v) => v,
         Err(_) => return,
     };
@@ -63,8 +63,8 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
     // Extract trigger info
     // YAML parses bare `on:` as boolean true, so check both string and bool keys
     let on_value = doc.get("on").or_else(|| {
-        if let serde_yml::Value::Mapping(ref map) = doc {
-            map.get(serde_yml::Value::Bool(true))
+        if let serde_yaml_ng::Value::Mapping(ref map) = doc {
+            map.get(serde_yaml_ng::Value::Bool(true))
         } else {
             None
         }
@@ -122,8 +122,8 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
         // Parse "needs" as stage links
         if let Some(needs) = job_val.get("needs") {
             let deps = match needs {
-                serde_yml::Value::String(s) => vec![s.clone()],
-                serde_yml::Value::Sequence(seq) => seq
+                serde_yaml_ng::Value::String(s) => vec![s.clone()],
+                serde_yaml_ng::Value::Sequence(seq) => seq
                     .iter()
                     .filter_map(|v| v.as_str().map(String::from))
                     .collect(),
@@ -163,15 +163,15 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
     }
 }
 
-fn describe_triggers(on: &serde_yml::Value) -> String {
+fn describe_triggers(on: &serde_yaml_ng::Value) -> String {
     match on {
-        serde_yml::Value::String(s) => s.clone(),
-        serde_yml::Value::Sequence(seq) => seq
+        serde_yaml_ng::Value::String(s) => s.clone(),
+        serde_yaml_ng::Value::Sequence(seq) => seq
             .iter()
             .filter_map(|v| v.as_str())
             .collect::<Vec<_>>()
             .join(", "),
-        serde_yml::Value::Mapping(map) => map
+        serde_yaml_ng::Value::Mapping(map) => map
             .keys()
             .filter_map(|k| k.as_str())
             .collect::<Vec<_>>()

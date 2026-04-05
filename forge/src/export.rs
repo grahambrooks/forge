@@ -85,7 +85,7 @@ pub fn to_yaml(model: &Model) -> String {
     // Convert via JSON value then to YAML
     let json_str = to_json(model);
     let value: serde_json::Value = serde_json::from_str(&json_str).unwrap_or_default();
-    serde_yml::to_string(&value).unwrap_or(json_str)
+    serde_yaml_ng::to_string(&value).unwrap_or(json_str)
 }
 
 #[cfg(test)]
