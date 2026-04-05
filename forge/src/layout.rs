@@ -1088,8 +1088,10 @@ fn layout_data_model(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
                     } else {
                         format!(" ({})", f.constraints.join(", "))
                     };
-                    let ftype_w =
-                        tm.measure(&format!("{}{}", f.field_type, constraints), &FONT_ENTITY_TYPE);
+                    let ftype_w = tm.measure(
+                        &format!("{}{}", f.field_type, constraints),
+                        &FONT_ENTITY_TYPE,
+                    );
                     fname_w + ftype_w + 40.0
                 })
                 .fold(0.0_f64, f64::max);

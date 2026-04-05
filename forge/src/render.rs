@@ -447,7 +447,9 @@ fn render_person(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
     } else {
         o.push(format!(
             r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name">{}</text>"#,
-            cx, ty, esc(&n.label)
+            cx,
+            ty,
+            esc(&n.label)
         ));
     }
     if ty + 16.0 < r.y + r.h - 4.0 {
@@ -535,7 +537,10 @@ fn render_box(o: &mut Vec<String>, n: &LayoutNode) {
         } else {
             o.push(format!(
                 r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
-                cx, ty, line.cls, esc(&line.text)
+                cx,
+                ty,
+                line.cls,
+                esc(&line.text)
             ));
         }
         ty += FONT_NAME.line_height;
@@ -896,7 +901,10 @@ fn render_cylinder(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         } else {
             o.push(format!(
                 r#"      <text x="{:.0}" y="{:.0}" class="forge-label--{}">{}</text>"#,
-                cx, ty, cls, esc(text)
+                cx,
+                ty,
+                cls,
+                esc(text)
             ));
         }
         ty += FONT_NAME.line_height;
@@ -955,7 +963,8 @@ fn render_gitgraph_edge(
         // mergesInto: feature → trunk (merge point)
         // Curved path from last commit on feature up to a commit on trunk
         let (frm_commits, _, _, _) = parse_gitgraph_params(&frm.sublabel);
-        let merge_from_x = frm_timeline_x + commit_spacing + (frm_commits as f64 - 1.0) * commit_spacing;
+        let merge_from_x =
+            frm_timeline_x + commit_spacing + (frm_commits as f64 - 1.0) * commit_spacing;
         let merge_to_x = to_timeline_x + (to_commits as f64 - 2.0) * commit_spacing;
         let start_y = frm_y;
         let end_y = to_y;
@@ -1046,7 +1055,9 @@ fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
 
         let pill_w = f64::max(
             TM.measure(label_text, &FONT_REL),
-            tech_text.as_ref().map_or(0.0, |t| TM.measure(t, &FONT_REL_TECH)),
+            tech_text
+                .as_ref()
+                .map_or(0.0, |t| TM.measure(t, &FONT_REL_TECH)),
         ) + 16.0;
         let pill_h = if tech_text.is_some() { 34.0 } else { 20.0 };
         let pill_x = mx - pill_w / 2.0;

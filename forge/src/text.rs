@@ -202,7 +202,12 @@ mod tests {
     #[test]
     fn wrap_forces_break() {
         let tm = TextMeasurer::new();
-        let lines = tm.wrap_text("this is a longer description that should wrap", 60.0, 11.0, false);
+        let lines = tm.wrap_text(
+            "this is a longer description that should wrap",
+            60.0,
+            11.0,
+            false,
+        );
         assert!(lines.len() > 1, "should wrap into multiple lines");
     }
 
