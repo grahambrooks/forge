@@ -51,7 +51,7 @@ echo "  Binary reports version: $EXPECTED_VERSION"
 cat > "$TAP_DIR/Formula/forge.rb" << FORMULA
 class Forge < Formula
   desc "Unified software modeling DSL"
-  homepage "https://github.com/grahambrookss/forge"
+  homepage "https://github.com/grahambrooks/forge"
   version "${EXPECTED_VERSION}"
   license "MIT"
 
