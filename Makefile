@@ -22,9 +22,6 @@ release-github: pre-commit ## Tag and push a calver release (vYYYY.MM.DD) to tri
 	@VERSION=$$(date +%Y.%m.%d) && \
 	CARGO_VERSION=$$(date +%Y.%-m.%-d) && \
 	TAG="v$$VERSION" && \
-	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
-		echo "Error: tag $$TAG already exists"; exit 1; \
-	fi && \
 	echo "Releasing $$TAG (version $$VERSION) ..." && \
 	sed -i '' "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml && \
 	cd forge && $(CARGO) build --release --quiet && cd .. && \
@@ -35,6 +32,12 @@ release-github: pre-commit ## Tag and push a calver release (vYYYY.MM.DD) to tri
 	echo "Verified: binary version matches $$VERSION" && \
 	git add forge/Cargo.toml forge/Cargo.lock && \
 	git diff --cached --quiet || git commit -m "Release $$TAG" && \
+	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
+		echo "Updating existing tag $$TAG ..." && \
+		gh release delete "$$TAG" --yes 2>/dev/null || true && \
+		git tag -d "$$TAG" && \
+		git push origin ":refs/tags/$$TAG" && \
+	fi && \
 	git tag -a "$$TAG" -m "Release $$TAG" && \
 	git push origin main "$$TAG" && \
 	echo "Pushed $$TAG — GitHub Actions will build and publish the release" && \
