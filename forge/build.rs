@@ -5,10 +5,7 @@ fn main() {
     let version = std::env::var("CARGO_PKG_VERSION").unwrap();
     let parts: Vec<&str> = version.split('.').collect();
     if parts.len() == 3 {
-        let formatted = format!(
-            "{}.{:0>2}.{:0>2}",
-            parts[0], parts[1], parts[2]
-        );
+        let formatted = format!("{}.{:0>2}.{:0>2}", parts[0], parts[1], parts[2]);
         println!("cargo:rustc-env=FORGE_VERSION={formatted}");
     } else {
         println!("cargo:rustc-env=FORGE_VERSION={version}");
