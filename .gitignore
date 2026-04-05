@@ -21,3 +21,7 @@ __pycache__/
 # Generated output
 forge/output/
 .site/
+
+# Release binaries
+dist/forge-gnu
+dist/forge-musl

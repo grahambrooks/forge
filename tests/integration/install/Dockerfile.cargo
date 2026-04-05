@@ -1,0 +1,12 @@
+FROM rust:1.86-bookworm
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends file && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY forge/ /build/forge/
+COPY tests/integration/install/run-cargo-test.sh /run-cargo-test.sh
+COPY forge/examples/payments.forge /fixtures/payments.forge
+RUN chmod +x /run-cargo-test.sh
+
+CMD ["/run-cargo-test.sh"]

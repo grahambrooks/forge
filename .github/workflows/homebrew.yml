@@ -65,7 +65,7 @@ jobs:
             end
 
             test do
-              assert_match "forge", shell_output("#{bin}/forge --version")
+              assert_match "${VERSION}", shell_output("#{bin}/forge --version")
             end
           end
           FORMULA

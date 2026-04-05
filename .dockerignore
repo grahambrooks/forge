@@ -3,3 +3,4 @@ output/
 _site/
 .git/
 *.svg
+# Keep dist/ — pre-built binaries used by install tests

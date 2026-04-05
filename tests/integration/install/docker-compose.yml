@@ -1,0 +1,33 @@
+services:
+  # ── Binary install (pre-built binary copied into container) ─────
+  install-test-debian:
+    build:
+      context: ../../..
+      dockerfile: tests/integration/install/Dockerfile.debian
+
+  install-test-ubuntu:
+    build:
+      context: ../../..
+      dockerfile: tests/integration/install/Dockerfile.ubuntu
+
+  install-test-fedora:
+    build:
+      context: ../../..
+      dockerfile: tests/integration/install/Dockerfile.fedora
+
+  install-test-alpine:
+    build:
+      context: ../../..
+      dockerfile: tests/integration/install/Dockerfile.alpine
+
+  # ── Homebrew install (Linuxbrew + local tap) ────────────────────
+  install-test-homebrew:
+    build:
+      context: ../../..
+      dockerfile: tests/integration/install/Dockerfile.homebrew
+
+  # ── cargo install (build from source) ──────────────────────────
+  install-test-cargo:
+    build:
+      context: ../../..
+      dockerfile: tests/integration/install/Dockerfile.cargo

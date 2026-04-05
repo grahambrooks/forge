@@ -30,6 +30,6 @@ class Forge < Formula
   end
 
   test do
-    assert_match "forge", shell_output("#{bin}/forge --version")
+    assert_match version.to_s, shell_output("#{bin}/forge --version")
   end
 end

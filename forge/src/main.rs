@@ -25,7 +25,7 @@ use std::process;
 #[derive(Parser)]
 #[command(
     name = "forge",
-    version,
+    version = env!("FORGE_VERSION"),
     about = "A unified software modeling tool — structure, process, and deployment from a single DSL"
 )]
 struct Cli {
@@ -527,7 +527,7 @@ fn print_sarif(violations: &[check::Violation], source: &Path) {
             "tool": {
                 "driver": {
                     "name": "forge",
-                    "version": env!("CARGO_PKG_VERSION"),
+                    "version": env!("FORGE_VERSION"),
                     "rules": violations.iter().map(|v| json!({
                         "id": v.rule, "shortDescription": { "text": v.rule },
                     })).collect::<Vec<_>>(),

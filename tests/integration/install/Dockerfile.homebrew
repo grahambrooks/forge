@@ -1,0 +1,31 @@
+FROM ubuntu:24.04
+
+# Homebrew requires a non-root user with sudo
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential curl file git ca-certificates procps sudo && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -m -s /bin/bash brewuser && \
+    echo "brewuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    mkdir -p /home/linuxbrew/.linuxbrew && \
+    chown -R brewuser:brewuser /home/linuxbrew
+
+USER brewuser
+WORKDIR /home/brewuser
+
+# Install Homebrew (Linuxbrew)
+RUN NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+ENV HOMEBREW_NO_AUTO_UPDATE=1
+ENV HOMEBREW_NO_INSTALL_CLEANUP=1
+ENV HOMEBREW_NO_ANALYTICS=1
+
+# Copy the pre-built binary and formula into the container
+COPY --chown=brewuser:brewuser dist/forge-gnu /tmp/forge-binary
+COPY --chown=brewuser:brewuser Formula/forge.rb /tmp/forge.rb
+COPY --chown=brewuser:brewuser forge/examples/payments.forge /fixtures/payments.forge
+COPY --chown=brewuser:brewuser tests/integration/install/run-homebrew-test.sh /home/brewuser/run-homebrew-test.sh
+RUN chmod +x /home/brewuser/run-homebrew-test.sh /tmp/forge-binary
+
+CMD ["/home/brewuser/run-homebrew-test.sh"]
