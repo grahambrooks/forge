@@ -88,4 +88,4 @@ jobs:
         if: matrix.method != 'cargo'
         run: docker build -f dist/Dockerfile --output type=local,dest=dist .
       - name: "Install test: ${{ matrix.method }}"
-        run: docker compose -f tests/integration/install/docker-compose.yml up --build --exit-code-from "install-test-${{ matrix.method }}"
+        run: docker compose -f tests/integration/install/docker-compose.yml up --build --exit-code-from "install-test-${{ matrix.method }}" "install-test-${{ matrix.method }}"
