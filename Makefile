@@ -19,29 +19,32 @@ release-docker: ## Build Linux release binaries (glibc + musl) in Docker → dis
 	@echo "Built: dist/forge-gnu (glibc), dist/forge-musl (static musl)"
 
 release-github: pre-commit ## Tag and push a calver release (vYYYY.MM.DD) to trigger GitHub Actions release
-	@VERSION=$$(date +%Y.%m.%d) && \
-	CARGO_VERSION=$$(date +%Y.%-m.%-d) && \
-	TAG="v$$VERSION" && \
-	echo "Releasing $$TAG (version $$VERSION) ..." && \
-	sed -i '' "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml && \
-	cd forge && $(CARGO) build --release --quiet && cd .. && \
-	BUILT_VERSION=$$(./forge/target/release/forge --version 2>&1 | awk '{print $$2}') && \
+	@bash -ec '\
+	VERSION=$$(date +%Y.%m.%d); \
+	CARGO_VERSION=$$(date +%Y.%-m.%-d); \
+	TAG="v$$VERSION"; \
+	echo "Releasing $$TAG (version $$VERSION) ..."; \
+	sed -i "" "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml; \
+	cd forge && cargo build --release --quiet && cd ..; \
+	BUILT_VERSION=$$(./forge/target/release/forge --version 2>&1 | awk "{print \$$2}"); \
 	if [ "$$BUILT_VERSION" != "$$VERSION" ]; then \
-		echo "Error: binary reports version '$$BUILT_VERSION' but expected '$$VERSION'"; exit 1; \
-	fi && \
-	echo "Verified: binary version matches $$VERSION" && \
-	git add forge/Cargo.toml forge/Cargo.lock && \
-	git diff --cached --quiet || git commit -m "Release $$TAG" && \
+		echo "Error: binary reports version $$BUILT_VERSION but expected $$VERSION"; \
+		exit 1; \
+	fi; \
+	echo "Verified: binary version matches $$VERSION"; \
+	git add forge/Cargo.toml forge/Cargo.lock; \
+	git diff --cached --quiet || git commit -m "Release $$TAG"; \
 	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
-		echo "Updating existing tag $$TAG ..." && \
-		gh release delete "$$TAG" --yes 2>/dev/null || true && \
-		git tag -d "$$TAG" && \
-		git push origin ":refs/tags/$$TAG" && \
-	fi && \
-	git tag -a "$$TAG" -m "Release $$TAG" && \
-	git push origin main "$$TAG" && \
-	echo "Pushed $$TAG — GitHub Actions will build and publish the release" && \
-	echo "The homebrew formula will be updated automatically after the release is published"
+		echo "Updating existing tag $$TAG ..."; \
+		gh release delete "$$TAG" --yes 2>/dev/null || true; \
+		git tag -d "$$TAG"; \
+		git push origin ":refs/tags/$$TAG"; \
+	fi; \
+	git tag -a "$$TAG" -m "Release $$TAG"; \
+	git push origin main "$$TAG"; \
+	echo "Pushed $$TAG — GitHub Actions will build and publish the release"; \
+	echo "The homebrew formula will be updated automatically after the release is published"; \
+	'
 
 # ── Test ───────────────────────────────────────────────────────────
 
