@@ -1,0 +1,30 @@
+README.md
+  d954856e2f932707 50-51,53
+.github/workflows/homebrew.yml
+  d954856e2f932707 16,24,27,36-42,52-53,56-57,64-65,68-69,80
+Formula/forge.rb
+  d954856e2f932707 9-10,13-14,21-22,25-26
+Makefile
+  d954856e2f932707 36-37,40-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "405b41d734fd760705fbe1f304f421798255d7c9",
+  "prompts": {
+    "d954856e2f932707": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d7c28a7-6233-4751-b73f-7acc25666ab0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 36,
+      "total_deletions": 18,
+      "accepted_lines": 34,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/7ee1e8ab2be12fe1fc3bfc5ab0d1809e910e53f07c47e64dc2060e9efac13019"
+    }
+  }
+}
