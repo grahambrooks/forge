@@ -1,0 +1,24 @@
+forge/build.rs
+  d954856e2f932707 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "095eeb83810acb86a94a96bbc9be01a58ea8949a",
+  "prompts": {
+    "d954856e2f932707": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d7c28a7-6233-4751-b73f-7acc25666ab0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 4,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/63e4662c1585ac4289ff9bca802b6111d4add7291d920c8ea10fc55311e879f1"
+    }
+  }
+}
