@@ -834,9 +834,15 @@ fn layout_tech_stack(model: &Model, view: &View) -> Layout {
 
 // ─── Branching Strategy View ─────────────────────────────────────
 
-const BRANCH_W: f64 = 500.0;
-const BRANCH_H: f64 = 60.0;
-const BRANCH_GAP: f64 = 30.0;
+// ─── Branching (gitgraph-style) ─────────────────────────────────
+// Renders a left-to-right timeline with parallel branch lines,
+// commit dots, and curved branch/merge connections — similar to
+// Mermaid's gitgraph diagrams.
+
+const BRANCH_LANE_GAP: f64 = 40.0; // vertical spacing between branch lanes
+const BRANCH_LABEL_W: f64 = 120.0; // space reserved for branch name labels
+const COMMIT_SPACING: f64 = 60.0; // horizontal distance between commit dots
+const COMMIT_R: f64 = 8.0; // commit dot radius
 
 fn layout_branching(model: &Model, view: &View) -> Layout {
     let strategy_id = view.scope.as_deref().unwrap_or("");
@@ -854,53 +860,49 @@ fn layout_branching(model: &Model, view: &View) -> Layout {
     let mut sorted = branches.clone();
     sorted.sort_by_key(|b| {
         if b.properties.contains_key("protection") {
-            0 // trunk branches have protection rules
+            0
         } else {
             1
         }
     });
 
+    // Assign each branch a lane index (row) and a color index
+    let num_branches = sorted.len();
+    // Commits per branch: trunk gets more (it's the long-lived line),
+    // feature branches get fewer (short-lived)
+    let trunk_commits = 7usize;
+    let feature_commits = 3usize;
+
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
-    let mut y = TITLE_H + 10.0;
 
-    for branch in &sorted {
-        let protection = branch.properties.get("protection");
-        let is_trunk = protection.is_some();
+    let timeline_x = PAD + BRANCH_LABEL_W;
+    let top_y = TITLE_H + 20.0;
 
-        // Branch lane: a wide rounded rect
-        let sublabel = if is_trunk {
-            protection.map(|p| format!("Protected: {}", p))
+    for (lane, branch) in sorted.iter().enumerate() {
+        let is_trunk = branch.properties.contains_key("protection");
+        let num_commits = if is_trunk {
+            trunk_commits
         } else {
-            let mut parts = Vec::new();
-            if let Some(from) = branch.properties.get("branchesFrom") {
-                let from_name = model
-                    .elements
-                    .get(from)
-                    .map(|e| e.name.as_str())
-                    .unwrap_or(from);
-                parts.push(format!("branches from {}", from_name));
-            }
-            if let Some(into) = branch.properties.get("mergesInto") {
-                let into_name = model
-                    .elements
-                    .get(into)
-                    .map(|e| e.name.as_str())
-                    .unwrap_or(into);
-                parts.push(format!("merges into {}", into_name));
-            }
-            if parts.is_empty() {
-                None
-            } else {
-                Some(parts.join(" → "))
-            }
+            feature_commits
         };
+        let lane_y = top_y + lane as f64 * BRANCH_LANE_GAP;
 
         let mut tags = branch.tags.clone();
         if is_trunk {
             tags.push("trunk".into());
         }
+        // Encode the lane index and color for the renderer
+        tags.push(format!("gitgraph-lane-{}", lane));
 
+        // Sublabel encodes commit count and lane_y for the renderer
+        let sublabel = Some(format!(
+            "commits={};lane_y={:.0};timeline_x={:.0};is_trunk={}",
+            num_commits, lane_y, timeline_x, is_trunk
+        ));
+
+        // The node rect spans the full timeline width
+        let timeline_w = (trunk_commits as f64) * COMMIT_SPACING;
         nodes.push(LayoutNode {
             id: branch.id.clone(),
             label: branch.name.clone(),
@@ -909,25 +911,23 @@ fn layout_branching(model: &Model, view: &View) -> Layout {
             tags,
             rect: Rect {
                 x: PAD,
-                y,
-                w: BRANCH_W,
-                h: BRANCH_H,
+                y: lane_y - COMMIT_R,
+                w: BRANCH_LABEL_W + timeline_w + PAD,
+                h: COMMIT_R * 2.0,
             },
             description: branch.description.clone(),
             depth: 0,
             children_ids: Vec::new(),
         });
-
-        y += BRANCH_H + BRANCH_GAP;
     }
 
-    // Add edges for branchesFrom / mergesInto
+    // Edges for branchesFrom / mergesInto (renderer draws curves)
     for branch in &sorted {
         if let Some(from) = branch.properties.get("branchesFrom") {
             edges.push(LayoutEdge {
                 frm: from.clone(),
                 to: branch.id.clone(),
-                label: "branches from".into(),
+                label: String::new(),
                 technology: None,
             });
         }
@@ -935,14 +935,15 @@ fn layout_branching(model: &Model, view: &View) -> Layout {
             edges.push(LayoutEdge {
                 frm: branch.id.clone(),
                 to: into.clone(),
-                label: "merges into".into(),
+                label: String::new(),
                 technology: None,
             });
         }
     }
 
-    let canvas_w = BRANCH_W + PAD * 2.0;
-    let canvas_h = y + PAD;
+    let timeline_w = (trunk_commits as f64) * COMMIT_SPACING;
+    let canvas_w = PAD + BRANCH_LABEL_W + timeline_w + PAD * 2.0;
+    let canvas_h = top_y + (num_branches as f64) * BRANCH_LANE_GAP + PAD;
     let title = view
         .title
         .clone()
