@@ -1,0 +1,38 @@
+forge/src/analyze/fixture_tests.rs
+  907b25380dc0ddb6 136-181
+forge/src/analyze/semantic.rs
+  907b25380dc0ddb6 124-129,307-425
+forge/tests/fixtures/analyze/env-correlated/Cargo.toml
+  907b25380dc0ddb6 1-7
+forge/src/analyze/docker.rs
+  907b25380dc0ddb6 109-143,210-211,216-228,277-285
+forge/src/analyze/correlate.rs
+  907b25380dc0ddb6 1-130,132-205
+forge/src/analyze/mod.rs
+  907b25380dc0ddb6 10,132-136
+forge/tests/fixtures/analyze/env-correlated/docker-compose.yml
+  907b25380dc0ddb6 1-20
+forge/tests/fixtures/analyze/env-correlated/src/main.rs
+  907b25380dc0ddb6 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "7069a1589ac47280f8b056d431a3c72687194c88",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 526,
+      "total_deletions": 43,
+      "accepted_lines": 543,
+      "overriden_lines": 1,
+      "messages_url": "https://usegitai.com/cas/a64102cc01e5ce3c8f144a4562e29a348acb3781021d25818f209e8322026fe8"
+    }
+  }
+}
