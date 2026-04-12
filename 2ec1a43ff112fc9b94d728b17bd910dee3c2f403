@@ -1,0 +1,34 @@
+forge/src/analyze/k8s.rs
+  907b25380dc0ddb6 98-99,105-107,112-128,141-144,147-177,179-223,410-479
+forge/tests/fixtures/analyze/k8s-correlated/Cargo.toml
+  907b25380dc0ddb6 1-7
+forge/examples/ci/analyze.yml
+  907b25380dc0ddb6 1-99
+forge/src/analyze/fixture_tests.rs
+  907b25380dc0ddb6 177-211
+forge/tests/fixtures/analyze/k8s-correlated/deploy/orders.yaml
+  907b25380dc0ddb6 1-25
+forge/tests/fixtures/analyze/k8s-correlated/src/main.rs
+  907b25380dc0ddb6 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "2ec1a43ff112fc9b94d728b17bd910dee3c2f403",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 375,
+      "total_deletions": 7,
+      "accepted_lines": 437,
+      "overriden_lines": 1,
+      "messages_url": "https://usegitai.com/cas/c44cb726e2c1a59f5c355c99efbd23bff7de6f54a46ec5a2e7bd59cdb9c81900"
+    }
+  }
+}
