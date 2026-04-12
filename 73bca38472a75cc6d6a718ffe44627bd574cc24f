@@ -1,0 +1,32 @@
+forge/src/analyze/merge.rs
+  907b25380dc0ddb6 1-220
+.gitignore
+  907b25380dc0ddb6 27-30
+forge/src/main.rs
+  907b25380dc0ddb6 87-88,98-103,240-241,354,367-387
+forge/src/analyze/fixture_tests.rs
+  907b25380dc0ddb6 15,18,134-207
+forge/src/analyze/mod.rs
+  907b25380dc0ddb6 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "73bca38472a75cc6d6a718ffe44627bd574cc24f",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 1325,
+      "total_deletions": 1203,
+      "accepted_lines": 393,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/8500b3c707742e372c700551f80cca3391e16114e20b9da1f1325c88a77cce84"
+    }
+  }
+}
