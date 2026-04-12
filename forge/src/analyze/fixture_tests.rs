@@ -133,6 +133,47 @@ fn cargo_monorepo_fixture() {
 }
 
 #[test]
+fn codeowners_attributes_containers_to_teams() {
+    let m = run("codeowners");
+
+    // All three containers were discovered by the code scanner.
+    assert!(m.elements.contains_key("payments"));
+    assert!(m.elements.contains_key("notifications"));
+    assert!(m.elements.contains_key("release-cli"));
+
+    // Teams are populated with the correct container ids.
+    let payments_team = m
+        .teams
+        .iter()
+        .find(|t| t.name == "payments-team")
+        .expect("payments-team");
+    assert!(payments_team.owns.contains(&"payments".to_string()));
+
+    let notif_team = m
+        .teams
+        .iter()
+        .find(|t| t.name == "notifications-team")
+        .expect("notifications-team");
+    assert!(notif_team.owns.contains(&"notifications".to_string()));
+
+    let release_eng = m
+        .teams
+        .iter()
+        .find(|t| t.name == "release-eng")
+        .expect("release-eng");
+    assert!(release_eng.owns.contains(&"release-cli".to_string()));
+
+    // `platform` is the default fallback; it should NOT also own a service
+    // that a more specific rule claims, because last-matching-rule wins.
+    let platform = m.teams.iter().find(|t| t.name == "platform");
+    if let Some(p) = platform {
+        assert!(!p.owns.contains(&"payments".to_string()));
+        assert!(!p.owns.contains(&"notifications".to_string()));
+        assert!(!p.owns.contains(&"release-cli".to_string()));
+    }
+}
+
+#[test]
 fn env_correlation_links_reader_to_docker_provider() {
     let m = run("env-correlated");
 

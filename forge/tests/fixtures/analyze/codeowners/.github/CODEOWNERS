@@ -1,0 +1,9 @@
+# Default: everything unclaimed goes to the platform team.
+*                          @acme/platform
+
+# Service ownership
+/services/payments/        @acme/payments-team
+/services/notifications/   @acme/notifications-team
+
+# Tooling is shared between the release engineers and platform.
+/tools/                    @acme/release-eng
