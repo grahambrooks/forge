@@ -41,6 +41,12 @@ parser accepts.
 - [Correlations](reference/correlations.md) — the cross-scanner passes
 - [Linter rules](reference/linter-rules.md) — the eight built-in architectural checks
 
+## Project status
+
+- [Roadmap](roadmap.md) — prioritized list of remaining features from
+  `DESIGN.md`, with per-item design sketches and effort estimates. Read
+  this to see what's on deck and what was recently shipped.
+
 ## Elsewhere in the repo
 
 - [`DESIGN.md`](../DESIGN.md) — the source-of-truth design spec. Richer and

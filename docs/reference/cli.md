@@ -181,9 +181,9 @@ forge mcp [--source FILE]
 | --- | --- | --- |
 | `-s`, `--source` | `forge.forge` | Model to serve |
 
-Tool names exposed by the MCP server: `forge_search_elements`,
-`forge_get_element`, `forge_list_views`, `forge_render_view`,
-`forge_check`, `forge_relationships`.
+Tool names exposed by the MCP server: `forge_query`, `forge_render`,
+`forge_check`, `forge_element_detail`, `forge_search`,
+`forge_validate`.
 
 ## `forge lsp`
 
