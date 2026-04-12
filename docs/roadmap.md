@@ -37,6 +37,7 @@ so nobody picks them up twice.
 | [`3ce0e6c`](../forge/src/analyze/git.rs) | CODEOWNERS → team ownership with last-rule-wins semantics; owner name normalisation; contributor fallback when no CODEOWNERS file exists |
 | [`2ec1a43`](../forge/examples/ci/analyze.yml) | K8s env providers for Deployment / StatefulSet / DaemonSet (direct `env:`, `valueFrom`, `envFrom`); reference CI workflow template |
 | [`610ab3c`](../forge/src/analyze/correlate.rs) | Connection-string fallback (DATABASE_URL → postgres-tagged container) and pipeline-env correlation (CI stage → synthetic Environment → k8s namespace deployment) |
+| _pending_ | [Item 7](#7-data-classification-tags--visual-indicators): `dataClass` DSL keyword, shield badges on containers (pii/financial/secret/public/internal colouring), `data-class-boundary` linter rule |
 
 ### Features `DESIGN.md §10` still lists as "Remaining" but are actually done
 
@@ -99,7 +100,7 @@ Effort estimates:
 | [4](#4-dynamic-view-type--numbered-relationship-ordering) | P1 | M | `dynamic` view type | Numbered-step flow views |
 | [5](#5-composite-view-type--grid-of-views) | P1 | M | `composite` view type | Grid of views on one canvas |
 | [6](#6-write-capable-mcp-tools) | P1 | M | Write-capable MCP tools | `forge_analyze`, `forge_diff`, `forge_suggest_fix` |
-| [7](#7-data-classification-tags--visual-indicators) | P1 | S | Data classification tags | PII / financial / secret shields on containers |
+| ~~[7](#7-data-classification-tags--visual-indicators)~~ | ~~P1~~ | ~~S~~ | ~~Data classification tags~~ | **Shipped** — see [Recently shipped](#recently-shipped) |
 | [8](#8-flowview--runbook-element-kind) | P1 | L | `flowView` + `runbook` kind | Runbooks as first-class model content |
 | [9](#9-smil-animation-output-mode) | P2 | S | SMIL animation mode | JS-free animated SVG output |
 | [10](#10-extends--override-workspace-inheritance) | P2 | S | `!extends` / `!override` directives | Workspace inheritance for per-env overrides |
@@ -702,6 +703,10 @@ fn tool_suggest_fix(&self, args: &Value) -> String { /* ... */ }
 ---
 
 ### 7. Data classification tags + visual indicators
+
+> **Status: shipped.** `dataClass` DSL keyword, shield badge
+> rendering, and the `data-class-boundary` linter rule are on `main`.
+> The design notes below are retained for historical reference.
 
 **Priority:** P1 &nbsp; **Effort:** S &nbsp; **Depends on:** none
 

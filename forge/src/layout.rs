@@ -47,6 +47,7 @@ pub struct LayoutNode {
     pub description: Option<String>,
     pub depth: usize,
     pub children_ids: Vec<String>,
+    pub data_classes: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -172,6 +173,7 @@ fn make_node(el: &Element, x: f64, y: f64, tm: &TextMeasurer) -> LayoutNode {
         description: el.description.clone(),
         depth: 0,
         children_ids: Vec::new(),
+        data_classes: el.data_classes.clone(),
     }
 }
 
@@ -236,6 +238,7 @@ fn layout_system_context(model: &Model, view: &View, tm: &TextMeasurer) -> Layou
             description: sys.description.clone(),
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: sys.data_classes.clone(),
         });
     }
 
@@ -423,6 +426,7 @@ fn layout_pipeline(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
             description: None,
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
         x += sw + H_GAP;
 
@@ -453,6 +457,7 @@ fn layout_pipeline(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
                 description: None,
                 depth: 0,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
         }
     }
@@ -663,6 +668,7 @@ fn layout_deploy_node(
         description: el.description.clone(),
         depth,
         children_ids: child_ids,
+        data_classes: el.data_classes.clone(),
     });
 
     // Place child nodes horizontally
@@ -697,6 +703,9 @@ fn layout_deploy_node(
         let inst_sub = container.and_then(|c| c.technology.as_ref().map(|t| format!("[{}]", t)));
         let inst_kind = container.map(|c| c.kind).unwrap_or(ElementKind::Container);
         let inst_tags = container.map(|c| c.tags.clone()).unwrap_or_default();
+        let inst_dc = container
+            .map(|c| c.data_classes.clone())
+            .unwrap_or_default();
 
         nodes.push(LayoutNode {
             id: format!("{}._inst_{}", el.id, inst_ref),
@@ -713,6 +722,7 @@ fn layout_deploy_node(
             description: None,
             depth: depth + 1,
             children_ids: Vec::new(),
+            data_classes: inst_dc,
         });
         ix += DEPLOY_INSTANCE_W + DEPLOY_GAP;
     }
@@ -753,6 +763,7 @@ fn layout_tech_stack(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
             description: None,
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
 
         // Tech entry cards
@@ -787,6 +798,7 @@ fn layout_tech_stack(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 description: entry.purpose.clone(),
                 depth: 1,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
         }
 
@@ -895,6 +907,7 @@ fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
             description: branch.description.clone(),
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
     }
 
@@ -1138,6 +1151,7 @@ fn layout_data_model(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
             description: Some(fields_desc.clone()),
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
     }
 
@@ -1239,6 +1253,7 @@ fn layout_trust_boundary(model: &Model, view: &View, _tm: &TextMeasurer) -> Layo
             description: None,
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
 
         let mut mx = PAD + BOUNDARY_PAD;
@@ -1276,6 +1291,7 @@ fn layout_trust_boundary(model: &Model, view: &View, _tm: &TextMeasurer) -> Layo
                 description: None,
                 depth: 1,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
             mx += BOUNDARY_MEMBER_W + BOUNDARY_MEMBER_GAP;
         }
@@ -1340,6 +1356,7 @@ fn layout_team_map(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
             description: Some(owns_desc),
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
 
         let mut oy = y + TEAM_HEADER_H;
@@ -1368,6 +1385,7 @@ fn layout_team_map(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 description: None,
                 depth: 1,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
             oy += TEAM_MEMBER_H;
         }
@@ -1424,6 +1442,7 @@ fn layout_api_catalog(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout 
             description: None,
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
 
         // Endpoint cards
@@ -1449,6 +1468,7 @@ fn layout_api_catalog(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout 
                 description: None,
                 depth: 1,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
             ey += card_h;
         }
@@ -1504,6 +1524,7 @@ fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
             description: None,
             depth: 0,
             children_ids: Vec::new(),
+            data_classes: Vec::new(),
         });
 
         // Publishers (left)
@@ -1530,6 +1551,7 @@ fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 description: None,
                 depth: 0,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
             edges.push(LayoutEdge {
                 frm: pid,
@@ -1565,6 +1587,7 @@ fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 description: None,
                 depth: 0,
                 children_ids: Vec::new(),
+                data_classes: Vec::new(),
             });
             edges.push(LayoutEdge {
                 frm: topic_id.clone(),

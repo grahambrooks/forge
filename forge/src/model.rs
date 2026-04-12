@@ -53,6 +53,11 @@ pub struct Element {
     pub parent: Option<String>,
     pub properties: HashMap<String, String>,
     pub children: Vec<String>,
+    /// Data classification levels for this element (e.g. "pii", "financial",
+    /// "public", "secret", "internal"). Rendered as coloured shield badges
+    /// on container diagrams and consulted by the `data-class-boundary`
+    /// linter rule.
+    pub data_classes: Vec<String>,
 }
 
 impl Element {
@@ -67,6 +72,7 @@ impl Element {
             parent: None,
             properties: HashMap::new(),
             children: Vec::new(),
+            data_classes: Vec::new(),
         }
     }
 }

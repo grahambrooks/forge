@@ -1,6 +1,6 @@
 //! Forge architectural linter — built-in rules for model validation.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::model::*;
 
@@ -62,6 +62,7 @@ pub fn check(model: &Model, min_severity: Severity) -> Vec<Violation> {
     check_chatty_coupling(model, &mut violations);
     check_gate_coverage(model, &mut violations);
     check_empty_views(model, &mut violations);
+    check_data_class_boundary(model, &mut violations);
 
     violations.retain(|v| v.severity >= min_severity);
     violations.sort_by(|a, b| b.severity.cmp(&a.severity).then(a.rule.cmp(b.rule)));
@@ -394,6 +395,82 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
     }
 }
 
+// ── data-class-boundary ──────────────────────────────────────────
+
+/// Warn when a container carrying the `pii` data class is reachable from a
+/// `person` without passing through a container tagged `gateway` or
+/// `encryption`. Protected intermediates act as BFS stops — paths that
+/// cross them are considered safe. The rule also fires when the first
+/// unprotected target happens to be a component (not just a container),
+/// so wrapping a PII store in a `pii-proxy` component you forgot to tag
+/// still gets caught.
+fn check_data_class_boundary(model: &Model, violations: &mut Vec<Violation>) {
+    let pii_targets: HashSet<&str> = model
+        .elements
+        .values()
+        .filter(|e| e.data_classes.iter().any(|c| c.eq_ignore_ascii_case("pii")))
+        .map(|e| e.id.as_str())
+        .collect();
+    if pii_targets.is_empty() {
+        return;
+    }
+
+    // Forward adjacency for relationship graph traversal.
+    let mut adj: HashMap<&str, Vec<&str>> = HashMap::new();
+    for r in &model.relationships {
+        adj.entry(r.frm.as_str()).or_default().push(r.to.as_str());
+    }
+
+    let is_protected = |id: &str| -> bool {
+        model
+            .elements
+            .get(id)
+            .map(|el| el.tags.iter().any(|t| t == "gateway" || t == "encryption"))
+            .unwrap_or(false)
+    };
+
+    for person in model
+        .elements
+        .values()
+        .filter(|e| e.kind == ElementKind::Person)
+    {
+        let mut visited: HashSet<&str> = HashSet::new();
+        let mut queue: VecDeque<&str> = VecDeque::new();
+        queue.push_back(person.id.as_str());
+        visited.insert(person.id.as_str());
+
+        while let Some(cur) = queue.pop_front() {
+            let Some(nexts) = adj.get(cur) else { continue };
+            for &nxt in nexts {
+                if !visited.insert(nxt) {
+                    continue;
+                }
+                if pii_targets.contains(nxt) {
+                    let target_name = model
+                        .elements
+                        .get(nxt)
+                        .map(|e| e.name.as_str())
+                        .unwrap_or(nxt);
+                    violations.push(Violation {
+                        rule: "data-class-boundary",
+                        severity: Severity::Warning,
+                        message: format!(
+                            "Person '{}' can reach PII-classified container '{}' without crossing a gateway or encryption boundary",
+                            person.name, target_name
+                        ),
+                        element_id: Some(nxt.to_string()),
+                    });
+                    continue;
+                }
+                if is_protected(nxt) {
+                    continue;
+                }
+                queue.push_back(nxt);
+            }
+        }
+    }
+}
+
 // ── Utilities ────────────────────────────────────────────────────
 
 fn kind_name(kind: ElementKind) -> &'static str {
@@ -558,6 +635,111 @@ mod tests {
         assert!(violations
             .iter()
             .any(|v| v.rule == "database-direct-access"));
+    }
+
+    #[test]
+    fn detects_data_class_boundary_unprotected() {
+        // customer -> api -> db where db has pii and api has no
+        // gateway/encryption tag. Should fire.
+        let mut model = Model::default();
+        model.add_element(Element::new("customer", ElementKind::Person, "Customer"));
+        model.add_element(Element::new("api", ElementKind::Container, "API"));
+        let mut db = Element::new("db", ElementKind::Container, "Ledger DB");
+        db.data_classes.push("pii".into());
+        model.add_element(db);
+        model.add_relationship(Relationship {
+            frm: "customer".into(),
+            to: "api".into(),
+            label: "uses".into(),
+            technology: None,
+        });
+        model.add_relationship(Relationship {
+            frm: "api".into(),
+            to: "db".into(),
+            label: "reads".into(),
+            technology: None,
+        });
+        let violations = check(&model, Severity::Warning);
+        assert!(
+            violations.iter().any(|v| v.rule == "data-class-boundary"),
+            "expected data-class-boundary violation, got {:?}",
+            violations.iter().map(|v| v.rule).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn data_class_boundary_respects_gateway() {
+        // Same as above but api is tagged `gateway`. The rule should not
+        // fire because the protected intermediate blocks the BFS.
+        let mut model = Model::default();
+        model.add_element(Element::new("customer", ElementKind::Person, "Customer"));
+        let mut api = Element::new("api", ElementKind::Container, "API");
+        api.tags.push("gateway".into());
+        model.add_element(api);
+        let mut db = Element::new("db", ElementKind::Container, "Ledger DB");
+        db.data_classes.push("pii".into());
+        model.add_element(db);
+        model.add_relationship(Relationship {
+            frm: "customer".into(),
+            to: "api".into(),
+            label: "uses".into(),
+            technology: None,
+        });
+        model.add_relationship(Relationship {
+            frm: "api".into(),
+            to: "db".into(),
+            label: "reads".into(),
+            technology: None,
+        });
+        let violations = check(&model, Severity::Warning);
+        assert!(
+            !violations.iter().any(|v| v.rule == "data-class-boundary"),
+            "gateway intermediate should suppress data-class-boundary"
+        );
+    }
+
+    #[test]
+    fn data_class_boundary_direct_access_fires() {
+        // Person -> pii-db directly. Clear violation.
+        let mut model = Model::default();
+        model.add_element(Element::new("p", ElementKind::Person, "User"));
+        let mut db = Element::new("db", ElementKind::Container, "DB");
+        db.data_classes.push("pii".into());
+        model.add_element(db);
+        model.add_relationship(Relationship {
+            frm: "p".into(),
+            to: "db".into(),
+            label: "uses".into(),
+            technology: None,
+        });
+        let violations = check(&model, Severity::Warning);
+        assert!(violations.iter().any(|v| v.rule == "data-class-boundary"));
+    }
+
+    #[test]
+    fn data_class_boundary_encryption_tag_also_protects() {
+        let mut model = Model::default();
+        model.add_element(Element::new("u", ElementKind::Person, "User"));
+        let mut api = Element::new("api", ElementKind::Container, "API");
+        api.tags.push("encryption".into());
+        model.add_element(api);
+        let mut db = Element::new("db", ElementKind::Container, "DB");
+        db.data_classes.push("pii".into());
+        model.add_element(db);
+        model.add_relationship(Relationship {
+            frm: "u".into(),
+            to: "api".into(),
+            label: "uses".into(),
+            technology: None,
+        });
+        model.add_relationship(Relationship {
+            frm: "api".into(),
+            to: "db".into(),
+            label: "reads".into(),
+            technology: None,
+        });
+        let violations = check(&model, Severity::Warning);
+        assert!(!violations.iter().any(|v| v.rule == "data-class-boundary"));
     }
 
     #[test]

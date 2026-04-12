@@ -378,7 +378,85 @@ fn render_node(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         render_box(o, n);
     }
 
+    // Data classification shields overlay the top-right corner of any
+    // element with non-empty data_classes. Rendered last so they sit on
+    // top of the shape — databases, boxes, cylinders, and deployment
+    // nodes all get the same treatment.
+    if !n.data_classes.is_empty() {
+        render_data_class_shields(o, n);
+    }
+
     o.push("    </g>".into());
+}
+
+/// Render a horizontal row of shield badges for each data class at the
+/// element's top-right corner. Colours are curated for well-known classes
+/// (pii, financial, secret, public, internal); unknown values fall back to
+/// a neutral grey badge.
+fn render_data_class_shields(o: &mut Vec<String>, n: &LayoutNode) {
+    const SHIELD_W: f64 = 18.0;
+    const SHIELD_H: f64 = 22.0;
+    const SHIELD_GAP: f64 = 4.0;
+
+    let r = &n.rect;
+    // Anchor: top-right corner, shields stack leftward. Each shield's
+    // bottom-center sits a few pixels below the element's top edge so
+    // the shield overlaps the border slightly.
+    let top_y = r.y - SHIELD_H / 3.0;
+    let mut right_x = r.x + r.w - 6.0;
+
+    for class in &n.data_classes {
+        let (color, letter) = data_class_style(class);
+        let left_x = right_x - SHIELD_W;
+        let shield_cx = left_x + SHIELD_W / 2.0;
+        let text_y = top_y + SHIELD_H * 0.68;
+
+        // Shield path: rectangle that tapers to a rounded point at the
+        // bottom. `M left top L right top L right mid Q right bot cx bot Q
+        // left bot left mid Z`.
+        let left = left_x;
+        let right = left_x + SHIELD_W;
+        let top = top_y;
+        let mid = top_y + SHIELD_H * 0.55;
+        let bot = top_y + SHIELD_H;
+        let slug = data_class_slug(class);
+        let title = esc(class);
+        o.push(format!(
+            r##"      <path d="M {left:.1} {top:.1} L {right:.1} {top:.1} L {right:.1} {mid:.1} Q {right:.1} {bot:.1} {shield_cx:.1} {bot:.1} Q {left:.1} {bot:.1} {left:.1} {mid:.1} Z" fill="{color}" stroke="#1f2937" stroke-width="1" class="forge-dataclass forge-dataclass--{slug}"><title>{title}</title></path>"##
+        ));
+        o.push(format!(
+            r##"      <text x="{shield_cx:.1}" y="{text_y:.1}" class="forge-dataclass-label" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">{letter}</text>"##
+        ));
+
+        right_x = left_x - SHIELD_GAP;
+    }
+}
+
+/// Well-known data class → (fill colour, single-letter badge).
+fn data_class_style(class: &str) -> (&'static str, &'static str) {
+    match class.to_ascii_lowercase().as_str() {
+        "pii" => ("#8b5cf6", "P"),       // purple
+        "financial" => ("#d97706", "F"), // gold
+        "public" => ("#16a34a", "P"),    // green
+        "secret" => ("#dc2626", "S"),    // red
+        "internal" => ("#6b7280", "I"),  // grey
+        _ => ("#6b7280", "?"),           // unknown → neutral grey
+    }
+}
+
+/// CSS-friendly slug for the data class so users can override styles per
+/// class via `.forge-dataclass--pii { ... }` rules.
+fn data_class_slug(class: &str) -> String {
+    class
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect()
 }
 
 fn render_person(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
@@ -1321,6 +1399,73 @@ mod tests {
     fn svg_contains_relationship_labels() {
         let svg = render_view("SystemContext", "filled");
         assert!(svg.contains("forge-label--rel"));
+    }
+
+    #[test]
+    fn data_class_shields_rendered_on_container() {
+        let src = r#"
+forge "t" {
+  model {
+    sys = system "Sys" {
+      db = container "Ledger" {
+        technology "PostgreSQL"
+        tags "database"
+        dataClass "pii" "financial"
+      }
+    }
+  }
+  views {
+    container sys "C" {
+      include *
+      autoLayout tb
+    }
+  }
+}
+"#;
+        let model = parser::parse(src).unwrap();
+        let view = model.views.first().unwrap();
+        let lo = layout::compute_layout(&model, view);
+        let svg = render_svg(&lo, "filled");
+
+        // Both shields present
+        assert!(
+            svg.contains("forge-dataclass--pii"),
+            "expected PII shield CSS class, got:\n{svg}"
+        );
+        assert!(
+            svg.contains("forge-dataclass--financial"),
+            "expected financial shield CSS class"
+        );
+        // Known fill colours landed
+        assert!(svg.contains("#8b5cf6")); // pii purple
+        assert!(svg.contains("#d97706")); // financial gold
+                                          // Tooltip present
+        assert!(svg.contains("<title>pii</title>"));
+        assert!(svg.contains("<title>financial</title>"));
+    }
+
+    #[test]
+    fn data_class_unknown_falls_back_to_grey() {
+        let src = r#"
+forge "t" {
+  model {
+    sys = system "Sys" {
+      box = container "Box" {
+        dataClass "custom-level"
+      }
+    }
+  }
+  views {
+    container sys "C" { include * autoLayout tb }
+  }
+}
+"#;
+        let model = parser::parse(src).unwrap();
+        let view = model.views.first().unwrap();
+        let lo = layout::compute_layout(&model, view);
+        let svg = render_svg(&lo, "filled");
+        assert!(svg.contains("forge-dataclass--custom-level"));
+        assert!(svg.contains("#6b7280")); // grey fallback
     }
 
     #[test]

@@ -160,6 +160,7 @@ fn emit_element(o: &mut String, model: &Model, el: &Element, indent: usize) {
     let has_body = el.description.is_some()
         || el.technology.is_some()
         || !el.tags.is_empty()
+        || !el.data_classes.is_empty()
         || !el.children.is_empty();
 
     if has_body {
@@ -181,6 +182,14 @@ fn emit_element(o: &mut String, model: &Model, el: &Element, indent: usize) {
         if !visible_tags.is_empty() {
             let tags_str: Vec<String> = visible_tags.iter().map(|t| format!("\"{}\"", t)).collect();
             o.push_str(&format!("{}tags {}\n", inner, tags_str.join(" ")));
+        }
+        if !el.data_classes.is_empty() {
+            let classes: Vec<String> = el
+                .data_classes
+                .iter()
+                .map(|c| format!("\"{}\"", escape(c)))
+                .collect();
+            o.push_str(&format!("{}dataClass {}\n", inner, classes.join(" ")));
         }
 
         // Emit children
@@ -423,6 +432,31 @@ mod tests {
             .count();
         assert_eq!(structural1, structural2);
         assert_eq!(model1.views.len(), model2.views.len());
+    }
+
+    #[test]
+    fn roundtrip_data_classes() {
+        let mut model = Model::default();
+        model.name = "Classified".into();
+        let mut db = Element::new("db", ElementKind::Container, "Ledger DB");
+        db.technology = Some("PostgreSQL".into());
+        db.tags.push("database".into());
+        db.data_classes.push("pii".into());
+        db.data_classes.push("financial".into());
+        model.add_element(db);
+
+        let emitted = emit(&model);
+        assert!(
+            emitted.contains("dataClass \"pii\" \"financial\""),
+            "expected dataClass in emitted output, got:\n{emitted}"
+        );
+
+        let reparsed = parser::parse(&emitted).unwrap();
+        let db2 = reparsed.elements.get("db").unwrap();
+        assert_eq!(
+            db2.data_classes,
+            vec!["pii".to_string(), "financial".to_string()]
+        );
     }
 
     #[test]

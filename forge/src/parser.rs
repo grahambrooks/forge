@@ -337,6 +337,11 @@ impl Parser {
                                 el.tags.push(self.parse_string()?);
                             }
                         }
+                        "dataClass" => {
+                            while self.peek_after_ws() == Some('"') {
+                                el.data_classes.push(self.parse_string()?);
+                            }
+                        }
                         _ => {
                             if self.peek() == Some('=') {
                                 // Child element
@@ -1855,6 +1860,38 @@ mod tests {
         let db = m.elements.get("payments.db").expect("db container");
         assert!(db.tags.contains(&"database".to_string()));
         assert_eq!(db.technology.as_deref(), Some("PostgreSQL 16"));
+    }
+
+    #[test]
+    fn parse_data_class_keyword() {
+        let src = r#"
+forge "t" {
+  model {
+    sys = system "Sys" {
+      db = container "Ledger" {
+        technology "PostgreSQL"
+        tags "database"
+        dataClass "pii" "financial"
+      }
+    }
+  }
+}
+"#;
+        let m = parse(src).unwrap();
+        let db = m.elements.get("sys.db").expect("db container");
+        assert_eq!(
+            db.data_classes,
+            vec!["pii".to_string(), "financial".to_string()]
+        );
+        // dataClass doesn't pollute tags
+        assert!(!db.tags.contains(&"pii".to_string()));
+    }
+
+    #[test]
+    fn parse_data_class_empty_by_default() {
+        let m = payments_model();
+        let api = m.elements.get("payments.api").unwrap();
+        assert!(api.data_classes.is_empty());
     }
 
     #[test]
