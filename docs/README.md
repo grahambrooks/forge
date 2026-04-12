@@ -17,6 +17,7 @@ trying to do.
 | Point `forge analyze` at an existing repo and see what it finds | [User guide → Analyzing a codebase](user-guide/analyzing-a-codebase.md) |
 | Re-run analyze in CI without losing my hand-authored content | [User guide → Merge mode](user-guide/merge-mode.md) |
 | Preview diagrams while I edit the model | [User guide → Live preview](user-guide/live-preview.md) |
+| Get hover, completion, and diagnostics in my editor | [User guide → Editor integration (LSP)](user-guide/lsp.md) |
 | Lint the model in CI and fail builds on architectural violations | [User guide → Linting](user-guide/linting.md) |
 | Publish a static documentation site | [User guide → Generating docs](user-guide/generating-docs.md) |
 
