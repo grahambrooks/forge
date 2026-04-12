@@ -121,6 +121,12 @@ fn scan_file(
 
     // 3) Infrastructure pattern detection
     scan_infra_patterns(model, text, container_id);
+
+    // 4) Env var reads — record on the owning container so the correlate
+    //    pass can link consumers to providers by shared env var name.
+    if let Some(cid) = container_id {
+        record_env_reads(model, cid, text, ext);
+    }
 }
 
 /// Best-effort resolution: if an import path (e.g. "../shared-utils" or
@@ -296,6 +302,125 @@ fn extract_python_route(line: &str) -> Option<ApiEndpoint> {
         return Some(ep("GET".into(), path));
     }
     None
+}
+
+// ── Env var read detection ──────────────────────────────────────────
+
+/// Scan source text for environment-variable reads and record them on
+/// `container_id` under the `forge:env_reads` property (comma-separated,
+/// deduped). The correlate pass consumes this later.
+fn record_env_reads(model: &mut Model, container_id: &str, text: &str, ext: &str) {
+    let mut hits: Vec<String> = Vec::new();
+    for line in text.lines() {
+        extract_env_reads(line, ext, &mut hits);
+    }
+    if hits.is_empty() {
+        return;
+    }
+    let el = match model.elements.get_mut(container_id) {
+        Some(el) => el,
+        None => return,
+    };
+    let mut existing: Vec<String> = el
+        .properties
+        .get("forge:env_reads")
+        .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
+        .unwrap_or_default();
+    for h in hits {
+        if !existing.iter().any(|e| e == &h) {
+            existing.push(h);
+        }
+    }
+    el.properties
+        .insert("forge:env_reads".into(), existing.join(","));
+}
+
+fn extract_env_reads(line: &str, ext: &str, out: &mut Vec<String>) {
+    // Language-specific patterns. All look for an identifier-like token or a
+    // quoted string and record the resulting env var name.
+    match ext {
+        "ts" | "tsx" | "js" | "jsx" | "mjs" => {
+            // process.env.FOO   process.env["FOO"]   process.env['FOO']
+            if let Some(rest) = line.split_once("process.env") {
+                let after = rest.1;
+                if let Some(name) = after.strip_prefix('.') {
+                    push_ident(name, out);
+                } else if let Some(name) = after.strip_prefix('[') {
+                    if let Some(q) = extract_quoted_string(name) {
+                        push_name(&q, out);
+                    }
+                }
+            }
+        }
+        "py" => {
+            // os.getenv("FOO")   os.environ["FOO"]   os.environ.get("FOO")
+            for needle in ["os.getenv(", "os.environ[", "os.environ.get("] {
+                let mut cursor = line;
+                while let Some(idx) = cursor.find(needle) {
+                    let after = &cursor[idx + needle.len()..];
+                    if let Some(q) = extract_quoted_string(after) {
+                        push_name(&q, out);
+                    }
+                    cursor = &cursor[idx + needle.len()..];
+                }
+            }
+        }
+        "rs" => {
+            // std::env::var("FOO")   env::var("FOO")
+            for needle in ["std::env::var(", "env::var("] {
+                let mut cursor = line;
+                while let Some(idx) = cursor.find(needle) {
+                    let after = &cursor[idx + needle.len()..];
+                    if let Some(q) = extract_quoted_string(after) {
+                        push_name(&q, out);
+                    }
+                    cursor = &cursor[idx + needle.len()..];
+                }
+            }
+        }
+        "go" => {
+            // os.Getenv("FOO")   os.LookupEnv("FOO")
+            for needle in ["os.Getenv(", "os.LookupEnv("] {
+                if let Some(idx) = line.find(needle) {
+                    let after = &line[idx + needle.len()..];
+                    if let Some(q) = extract_quoted_string(after) {
+                        push_name(&q, out);
+                    }
+                }
+            }
+        }
+        "java" | "kt" => {
+            // System.getenv("FOO")
+            if let Some(idx) = line.find("System.getenv(") {
+                let after = &line[idx + "System.getenv(".len()..];
+                if let Some(q) = extract_quoted_string(after) {
+                    push_name(&q, out);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn push_ident(s: &str, out: &mut Vec<String>) {
+    let name: String = s
+        .chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '_')
+        .collect();
+    push_name(&name, out);
+}
+
+fn push_name(name: &str, out: &mut Vec<String>) {
+    if !name.is_empty()
+        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+        && name
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_uppercase() || c == '_')
+        && !out.iter().any(|e| e == name)
+    {
+        out.push(name.to_string());
+    }
 }
 
 // ── Infra pattern detection ─────────────────────────────────────────

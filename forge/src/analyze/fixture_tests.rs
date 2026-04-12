@@ -133,6 +133,53 @@ fn cargo_monorepo_fixture() {
 }
 
 #[test]
+fn env_correlation_links_reader_to_docker_provider() {
+    let m = run("env-correlated");
+
+    // The `ledger` container was discovered by the code scanner from
+    // Cargo.toml; docker-compose enriched it with DATABASE_URL/REDIS_URL
+    // from its `environment:` block. Meanwhile the same source file reads
+    // both vars via std::env::var.
+    //
+    // The correlate pass should notice that `ledger` *provides* DATABASE_URL
+    // to itself and should NOT emit a self-edge; but it should link `db` and
+    // `cache` to `ledger`… wait: in this fixture `ledger` is the consumer.
+    // The semantic scanner records ledger's reads; docker records db+cache
+    // provides. Correlate emits ledger -> db and ledger -> cache.
+    assert!(m.elements.contains_key("ledger"));
+    assert!(m.elements.contains_key("db"));
+    assert!(m.elements.contains_key("cache"));
+
+    let has_ledger_db = m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "ledger" && r.to == "db" && r.label.contains("DATABASE_URL"));
+    let has_ledger_cache = m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "ledger" && r.to == "cache" && r.label.contains("REDIS_URL"));
+    assert!(has_ledger_db, "expected ledger -> db correlation");
+    assert!(has_ledger_cache, "expected ledger -> cache correlation");
+
+    // The concrete db edge should supersede any `_inferred_postgresql`
+    // relationship the semantic scanner may have emitted from literal
+    // strings. The fixture source has no postgres:// literal, but this
+    // invariant still holds: the only edge from ledger to a database-tagged
+    // container should be the correlated one.
+    let db_edges: Vec<&str> = m
+        .relationships
+        .iter()
+        .filter(|r| r.frm == "ledger" && r.to.starts_with("_inferred_"))
+        .map(|r| r.to.as_str())
+        .collect();
+    assert!(
+        db_edges.is_empty(),
+        "expected no stale _inferred_* edges, got {:?}",
+        db_edges
+    );
+}
+
+#[test]
 fn merge_preserves_user_content_and_refreshes_inferred() {
     // Start from a hand-authored .forge that mixes a user-owned system with
     // one stale inferred container (left over from a previous analyze run).

@@ -1,0 +1,20 @@
+services:
+  ledger:
+    build: .
+    environment:
+      DATABASE_URL: "postgres://db:5432/ledger"
+      REDIS_URL: "redis://cache:6379"
+    depends_on:
+      - db
+      - cache
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_PASSWORD=secret
+      - DATABASE_URL=postgres://db:5432/ledger
+
+  cache:
+    image: redis:7
+    environment:
+      - REDIS_URL=redis://cache:6379

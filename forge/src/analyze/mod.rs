@@ -7,6 +7,7 @@
 pub mod ci;
 pub mod code;
 pub mod container_index;
+pub mod correlate;
 pub mod docker;
 pub mod emit;
 pub mod git;
@@ -127,6 +128,11 @@ pub fn analyze(config: &AnalyzeConfig) -> Model {
             }
         }
     }
+
+    // Cross-scanner post-pass: drain scanner-local facts (env var reads and
+    // provides, etc.) into proper relationships now that every scanner has
+    // had a chance to populate the model.
+    correlate::run(&mut model);
 
     model
 }

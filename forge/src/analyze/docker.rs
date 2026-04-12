@@ -106,6 +106,41 @@ fn parse_dockerfile(model: &mut Model, path: &Path, text: &str, root: &Path) {
     model.add_element(el);
 }
 
+/// Collect environment variable *names* from a docker-compose service node.
+/// Supports both the list form (`- FOO=bar`, `- BAR`) and the map form
+/// (`FOO: bar`).
+fn collect_compose_env_names(svc_val: &serde_yaml_ng::Value) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let env = match svc_val.get("environment") {
+        Some(v) => v,
+        None => return out,
+    };
+    match env {
+        serde_yaml_ng::Value::Sequence(seq) => {
+            for item in seq {
+                if let Some(s) = item.as_str() {
+                    let name = s.split('=').next().unwrap_or(s).trim().to_string();
+                    if !name.is_empty() && !out.contains(&name) {
+                        out.push(name);
+                    }
+                }
+            }
+        }
+        serde_yaml_ng::Value::Mapping(map) => {
+            for (k, _) in map {
+                if let Some(s) = k.as_str() {
+                    let name = s.trim().to_string();
+                    if !name.is_empty() && !out.contains(&name) {
+                        out.push(name);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+    out
+}
+
 fn image_to_technology(image: &str) -> Option<&str> {
     let base = image.split('/').next_back().unwrap_or(image);
     let name = base.split(':').next().unwrap_or(base);
@@ -172,10 +207,25 @@ fn parse_compose(model: &mut Model, text: &str) {
         let has_build = svc_val.get("build").is_some();
 
         if model.elements.contains_key(&svc_id) {
-            // Enrich existing element
+            // Enrich existing element (likely created by the code scanner).
+            let env_names = collect_compose_env_names(svc_val);
             if let Some(el) = model.elements.get_mut(&svc_id) {
                 if let Some(img) = image {
                     el.properties.insert("image".into(), img.into());
+                }
+                if !env_names.is_empty() {
+                    let mut merged: Vec<String> = el
+                        .properties
+                        .get("forge:env_provides")
+                        .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
+                        .unwrap_or_default();
+                    for n in env_names {
+                        if !merged.iter().any(|m| m == &n) {
+                            merged.push(n);
+                        }
+                    }
+                    el.properties
+                        .insert("forge:env_provides".into(), merged.join(","));
                 }
             }
         } else {
@@ -222,6 +272,15 @@ fn parse_compose(model: &mut Model, text: &str) {
                 if !port_strs.is_empty() {
                     el.properties.insert("ports".into(), port_strs.join(", "));
                 }
+            }
+
+            // Extract environment variable names declared on the service.
+            // The correlate pass uses these to link consumers back to this
+            // provider when the consumer reads the same var in source.
+            let env_names = collect_compose_env_names(svc_val);
+            if !env_names.is_empty() {
+                el.properties
+                    .insert("forge:env_provides".into(), env_names.join(","));
             }
 
             model.add_element(el);
