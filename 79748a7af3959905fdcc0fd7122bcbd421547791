@@ -1,0 +1,28 @@
+tests/integration/install/Dockerfile.cargo
+  907b25380dc0ddb6 1
+tests/integration/Dockerfile
+  907b25380dc0ddb6 1
+dist/Dockerfile
+  907b25380dc0ddb6 1-9,17-19,27-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "79748a7af3959905fdcc0fd7122bcbd421547791",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 65,
+      "total_deletions": 5,
+      "accepted_lines": 169,
+      "overriden_lines": 2,
+      "messages_url": "https://usegitai.com/cas/482e0a3b23e524f9ded3120761385f1db6bcafd9db5bd0bea88c175a7841bad5"
+    }
+  }
+}
