@@ -1,0 +1,30 @@
+docs/reference/cli.md
+  907b25380dc0ddb6 184-186
+docs/roadmap.md
+  907b25380dc0ddb6 1-1405
+docs/reference/languages-and-tools.md
+  907b25380dc0ddb6 115-116
+docs/README.md
+  907b25380dc0ddb6 44-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "e5ce4e05101e8a0a2eb5ee5f2c763127678e2865",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 1416,
+      "total_deletions": 6,
+      "accepted_lines": 1521,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/2f2c61624043049123e3baebb96b823c4ec76e465acb72396f1a1fb29ba7fab7"
+    }
+  }
+}
