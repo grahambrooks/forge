@@ -95,17 +95,37 @@ fn parse_k8s_workload(
         .and_then(|v| v.as_u64())
         .unwrap_or(1);
 
-    // Extract container image
-    let image = doc
+    // Extract the first container spec — we use it for image and env vars.
+    let first_container = doc
         .get("spec")
         .and_then(|s| s.get("template"))
         .and_then(|t| t.get("spec"))
         .and_then(|s| s.get("containers"))
         .and_then(|c| c.as_sequence())
-        .and_then(|seq| seq.first())
+        .and_then(|seq| seq.first());
+
+    let image = first_container
         .and_then(|c| c.get("image"))
         .and_then(|v| v.as_str())
         .unwrap_or("");
+
+    // Extract env var names declared on the pod. Supports:
+    //   env:
+    //     - name: FOO
+    //       value: "bar"
+    //     - name: BAR
+    //       valueFrom:
+    //         configMapKeyRef: { name: app-config, key: BAR }
+    //     - name: BAZ
+    //       valueFrom:
+    //         secretKeyRef: { name: app-secrets, key: BAZ }
+    //   envFrom:
+    //     - configMapRef: { name: shared-config }
+    //
+    // envFrom references are recorded as the ConfigMap's own key names when
+    // the ConfigMap was parsed earlier in the same scan; otherwise they're
+    // dropped (we don't know the keys).
+    let env_names = extract_k8s_env_names(first_container, model);
 
     let mut el = Element::new(&node_id, ElementKind::DeploymentNode, name);
     el.technology = Some(format!("{} ({} replicas)", kind, replicas));
@@ -118,8 +138,89 @@ fn parse_k8s_workload(
         el.properties.insert("image".into(), image.into());
         el.description = Some(format!("Image: {}", image));
     }
+    if !env_names.is_empty() {
+        el.properties
+            .insert("forge:env_provides".into(), env_names.join(","));
+    }
 
     model.add_element(el);
+
+    // Also attach env_provides to the Container element with the same
+    // slugified name (if one exists), so `correlate` can link code-level
+    // consumers to the same service the deployment runs. This mirrors how
+    // `docker.rs` enriches containers the code scanner already discovered.
+    if !env_names.is_empty() {
+        let container_id = slugify(name);
+        if container_id != node_id {
+            if let Some(container) = model.elements.get_mut(&container_id) {
+                if container.kind == ElementKind::Container {
+                    let mut merged: Vec<String> = container
+                        .properties
+                        .get("forge:env_provides")
+                        .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
+                        .unwrap_or_default();
+                    for n in &env_names {
+                        if !merged.iter().any(|m| m == n) {
+                            merged.push(n.clone());
+                        }
+                    }
+                    container
+                        .properties
+                        .insert("forge:env_provides".into(), merged.join(","));
+                }
+            }
+        }
+    }
+}
+
+/// Collect every env var *name* a pod's first container declares, including
+/// those resolved via `valueFrom` and `envFrom`.
+fn extract_k8s_env_names(container: Option<&serde_yaml_ng::Value>, model: &Model) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    let container = match container {
+        Some(c) => c,
+        None => return names,
+    };
+
+    // Direct `env:` entries.
+    if let Some(env) = container.get("env").and_then(|v| v.as_sequence()) {
+        for item in env {
+            if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
+                if !name.is_empty() && !names.iter().any(|n| n == name) {
+                    names.push(name.to_string());
+                }
+            }
+        }
+    }
+
+    // `envFrom:` — pulls every key from a referenced ConfigMap (and, less
+    // usefully for correlation, from Secrets where we only know the names).
+    // Look up configMapRef.name in model.env_configs (populated earlier by
+    // parse_k8s_configmap) and inline each key.
+    if let Some(env_from) = container.get("envFrom").and_then(|v| v.as_sequence()) {
+        for item in env_from {
+            if let Some(cm_name) = item
+                .get("configMapRef")
+                .and_then(|r| r.get("name"))
+                .and_then(|v| v.as_str())
+            {
+                for cfg in &model.env_configs {
+                    // env_configs are keyed "<namespace>/<name>"; match the
+                    // trailing segment so we don't have to reconstruct the
+                    // namespace here.
+                    if cfg.name == cm_name || cfg.name.ends_with(&format!("/{cm_name}")) {
+                        for entry in &cfg.entries {
+                            if !names.iter().any(|n| n == &entry.key) {
+                                names.push(entry.key.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    names
 }
 
 fn parse_k8s_service(model: &mut Model, doc: &serde_yaml_ng::Value, name: &str, namespace: &str) {
@@ -303,6 +404,77 @@ spec:
             el.properties.get("service_type").map(|s| s.as_str()),
             Some("LoadBalancer")
         );
+    }
+
+    #[test]
+    fn deployment_records_env_provides() {
+        let yaml = r#"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: prod
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: api
+          image: api:latest
+          env:
+            - name: DATABASE_URL
+              value: "postgres://db/app"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: jwt
+"#;
+        let mut model = Model::default();
+        parse_k8s_manifest(&mut model, yaml);
+        let el = model.elements.get("k8s.prod.api").expect("deployment");
+        let provides = el
+            .properties
+            .get("forge:env_provides")
+            .expect("env_provides set");
+        assert!(provides.contains("DATABASE_URL"));
+        assert!(provides.contains("JWT_SECRET"));
+    }
+
+    #[test]
+    fn envfrom_expands_configmap_keys() {
+        // ConfigMap first, then a Deployment that envFroms it.
+        let yaml = r#"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared
+  namespace: prod
+data:
+  DATABASE_URL: postgres://db/app
+  REDIS_URL: redis://cache:6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: prod
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: worker:latest
+          envFrom:
+            - configMapRef:
+                name: shared
+"#;
+        let mut model = Model::default();
+        parse_k8s_manifest(&mut model, yaml);
+        let el = model.elements.get("k8s.prod.worker").expect("deployment");
+        let provides = el.properties.get("forge:env_provides").unwrap();
+        assert!(provides.contains("DATABASE_URL"));
+        assert!(provides.contains("REDIS_URL"));
     }
 
     #[test]

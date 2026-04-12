@@ -174,6 +174,42 @@ fn codeowners_attributes_containers_to_teams() {
 }
 
 #[test]
+fn k8s_deployment_env_reaches_container_and_correlate() {
+    let m = run("k8s-correlated");
+
+    // The Rust service becomes a Container via the code scanner, and
+    // k8s.rs attaches env_provides from the Deployment's env: block.
+    let orders = m.elements.get("orders").expect("orders container");
+    let provides = orders
+        .properties
+        .get("forge:env_provides")
+        .expect("env_provides mirrored onto orders container");
+    assert!(provides.contains("DATABASE_URL"));
+    assert!(provides.contains("REDIS_URL"));
+
+    // The DeploymentNode also records its own env_provides, for
+    // deployment-view dashboards that want the runtime-scoped truth.
+    let node = m
+        .elements
+        .get("k8s.prod.orders")
+        .expect("orders deployment node");
+    let node_provides = node
+        .properties
+        .get("forge:env_provides")
+        .expect("deployment node env_provides");
+    assert!(node_provides.contains("DATABASE_URL"));
+    assert!(node_provides.contains("REDIS_URL"));
+
+    // Correlate should NOT emit a self-edge (orders reads and provides the
+    // same vars), and without a separate provider the orders container has
+    // no `uses (...)` edge to anywhere.
+    assert!(!m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "orders" && r.to == "orders"));
+}
+
+#[test]
 fn env_correlation_links_reader_to_docker_provider() {
     let m = run("env-correlated");
 

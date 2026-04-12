@@ -1,0 +1,99 @@
+# Reference workflow for keeping a committed forge model in sync with the
+# codebase. Copy this file to .github/workflows/analyze.yml in your own repo
+# and adjust the paths/filenames to taste.
+#
+# What it does:
+#   1. On every push to main, runs `forge analyze --merge architecture.forge`
+#      against the whole repo.
+#   2. The `--merge` flag preserves hand-authored content in
+#      architecture.forge and only refreshes elements tagged `inferred`, so
+#      descriptions, relationships, and diagram layout you added by hand are
+#      never trampled.
+#   3. If the merge produced any diff, the workflow opens a pull request with
+#      the refreshed model. If nothing changed, it exits cleanly.
+#
+# Prerequisites:
+#   - An initial architecture.forge at the repo root. Bootstrap it with
+#     `forge analyze --out architecture.forge` locally and commit once.
+#   - The repository has "Allow GitHub Actions to create and approve pull
+#     requests" enabled (Settings → Actions → General → Workflow permissions).
+
+name: Analyze architecture
+
+on:
+  push:
+    branches: [main]
+  # Manual trigger for ad-hoc re-runs (useful after merging a big refactor).
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  analyze:
+    name: Refresh architecture.forge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Fetch enough history so the git scanner can infer branching
+          # strategy and contributors if CODEOWNERS is absent.
+          fetch-depth: 50
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo artefacts
+        uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc # v2.9.1
+        with:
+          shared-key: forge-analyze
+
+      - name: Install forge
+        run: cargo install --locked forge-dsl
+
+      - name: Run forge analyze --merge
+        run: |
+          if [ ! -f architecture.forge ]; then
+            echo "::error::architecture.forge not found. Bootstrap it locally with 'forge analyze --out architecture.forge' and commit it first."
+            exit 1
+          fi
+          forge analyze \
+            --merge architecture.forge \
+            --out architecture.forge \
+            .
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet architecture.forge; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Detected drift in architecture.forge:"
+            git diff --stat architecture.forge
+          fi
+
+      - name: Open pull request with refreshed model
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
+        with:
+          commit-message: "chore: refresh architecture.forge"
+          title: "Refresh architecture.forge"
+          body: |
+            `forge analyze --merge` detected drift between the committed
+            architecture model and the current codebase. This PR refreshes
+            every element tagged `inferred` while preserving hand-authored
+            content.
+
+            Review the diff and merge if the changes look right. If something
+            looks wrong, the likely cause is either:
+
+            - a scanner heuristic that needs tuning (file a forge issue with
+              the diff), or
+            - a hand-authored element that's missing its `inferred` tag, so
+              it got overwritten when it shouldn't have been.
+          branch: forge/refresh-architecture
+          delete-branch: true
+          labels: architecture, automated
