@@ -1,0 +1,56 @@
+docs/user-guide/install.md
+  907b25380dc0ddb6 1-76
+docs/user-guide/analyzing-a-codebase.md
+  907b25380dc0ddb6 1-147
+docs/reference/cli.md
+  907b25380dc0ddb6 1-209
+docs/README.md
+  907b25380dc0ddb6 1-55
+docs/reference/correlations.md
+  907b25380dc0ddb6 1-178
+docs/user-guide/first-model.md
+  907b25380dc0ddb6 1-143
+docs/user-guide/live-preview.md
+  907b25380dc0ddb6 1-75
+docs/reference/scanners.md
+  907b25380dc0ddb6 1-306
+docs/reference/linter-rules.md
+  907b25380dc0ddb6 1-273
+docs/user-guide/generating-docs.md
+  907b25380dc0ddb6 1-135
+docs/user-guide/linting.md
+  907b25380dc0ddb6 1-144
+docs/workflows/brownfield.md
+  907b25380dc0ddb6 1-155
+docs/reference/dsl-quickref.md
+  907b25380dc0ddb6 1-471
+docs/workflows/ci-integration.md
+  907b25380dc0ddb6 1-203
+docs/workflows/greenfield.md
+  907b25380dc0ddb6 1-194
+docs/reference/languages-and-tools.md
+  907b25380dc0ddb6 1-159
+docs/user-guide/merge-mode.md
+  907b25380dc0ddb6 1-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "ee9b01fdb4a3ae11764c7cf23a96124273a0cafb",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 3068,
+      "total_deletions": 0,
+      "accepted_lines": 3166,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/4727a4cb365781b0ce9b3c9b12dfdb6d2f4f240b413a07e471140d7baa0e8121"
+    }
+  }
+}
