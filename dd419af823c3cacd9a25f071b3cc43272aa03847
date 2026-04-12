@@ -1,0 +1,26 @@
+docs/README.md
+  907b25380dc0ddb6 20
+docs/user-guide/lsp.md
+  907b25380dc0ddb6 1-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "dd419af823c3cacd9a25f071b3cc43272aa03847",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 293,
+      "total_deletions": 0,
+      "accepted_lines": 398,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/b52607c9cb62619106ee3813d01bad9fdb4f0ad1ae49c36d400062e87cec5653"
+    }
+  }
+}
