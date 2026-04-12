@@ -84,8 +84,8 @@ enum Commands {
         #[arg(short, long, default_value = "forge.forge")]
         out: PathBuf,
 
-        /// Comma-separated scanner list (code,source,ci,docker,git,k8s,infra)
-        #[arg(long, default_value = "code,source,ci,docker,git,k8s,infra")]
+        /// Comma-separated scanner list (code,semantic,ci,docker,git,k8s,infra)
+        #[arg(long, default_value = "code,semantic,ci,docker,git,k8s,infra")]
         scanners: String,
 
         /// Exclude directory names (repeatable)
@@ -95,6 +95,12 @@ enum Commands {
         /// Print output to stdout without writing file
         #[arg(long)]
         dry_run: bool,
+
+        /// Merge fresh analysis into an existing .forge, preserving user
+        /// content. Only elements tagged `inferred` are refreshed. Safe to
+        /// re-run in CI over a hand-authored model.
+        #[arg(long)]
+        merge: Option<PathBuf>,
     },
 
     /// Generate a static documentation website
@@ -231,7 +237,8 @@ fn main() {
             scanners,
             exclude,
             dry_run,
-        } => cmd_analyze(paths, &out, &scanners, exclude, dry_run),
+            merge,
+        } => cmd_analyze(paths, &out, &scanners, exclude, dry_run, merge.as_deref()),
         Commands::Generate {
             source,
             out,
@@ -344,6 +351,7 @@ fn cmd_analyze(
     scanners: &str,
     exclude: Vec<String>,
     dry_run: bool,
+    merge_into: Option<&Path>,
 ) {
     let scanner_list: Vec<String> = scanners.split(',').map(|s| s.trim().to_string()).collect();
     let mut config = analyze::AnalyzeConfig {
@@ -356,9 +364,27 @@ fn cmd_analyze(
     config.exclude.extend(exclude);
 
     eprintln!("Scanning...");
-    let model = analyze::analyze(&config);
-    eprintln!("  Elements: {}", model.elements.len());
-    eprintln!("  Relationships: {}", model.relationships.len());
+    let fresh = analyze::analyze(&config);
+    eprintln!("  Elements: {}", fresh.elements.len());
+    eprintln!("  Relationships: {}", fresh.relationships.len());
+
+    let model = if let Some(existing_path) = merge_into {
+        eprintln!("Merging into {}...", existing_path.display());
+        let mut existing = load_model(existing_path);
+        let before_elements = existing.elements.len();
+        let before_rels = existing.relationships.len();
+        analyze::merge::merge(&mut existing, fresh);
+        eprintln!(
+            "  Merged: {} elements ({} before), {} relationships ({} before)",
+            existing.elements.len(),
+            before_elements,
+            existing.relationships.len(),
+            before_rels
+        );
+        existing
+    } else {
+        fresh
+    };
 
     let forge_text = analyze::emit::emit(&model);
     if dry_run {

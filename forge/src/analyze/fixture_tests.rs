@@ -12,8 +12,10 @@
 
 use std::path::PathBuf;
 
+use super::merge;
 use super::{analyze, AnalyzeConfig};
 use crate::model::ElementKind;
+use crate::parser;
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -128,4 +130,78 @@ fn cargo_monorepo_fixture() {
         .relationships
         .iter()
         .any(|r| r.frm == "api" && r.to == "_inferred_redis"));
+}
+
+#[test]
+fn merge_preserves_user_content_and_refreshes_inferred() {
+    // Start from a hand-authored .forge that mixes a user-owned system with
+    // one stale inferred container (left over from a previous analyze run).
+    // Running `analyze --merge` should preserve the user system plus its
+    // relationship, drop the stale inferred container, and repopulate fresh
+    // inferred entries from the cargo-monorepo fixture.
+    let existing_src = r#"
+forge "monorepo" {
+  model {
+    user = person "User"
+
+    billing = system "Billing System" {
+      description "Hand-authored upstream that analyze must never touch"
+    }
+
+    api = container "api" {
+      description "User overrides for the api container"
+      technology "Rust / Custom"
+      tags "inferred" "inferred:code"
+    }
+
+    stale = container "Stale Service" {
+      technology "PostgreSQL"
+      tags "inferred" "inferred:code"
+    }
+
+    user -> billing "uses"
+    billing -> stale "reads"
+  }
+}
+"#;
+
+    let mut existing = parser::parse(existing_src).expect("parse existing model");
+    assert!(existing.elements.contains_key("stale"));
+
+    let cfg = AnalyzeConfig {
+        paths: vec![fixture("cargo-monorepo")],
+        ..AnalyzeConfig::default()
+    };
+    let fresh = analyze(&cfg);
+    merge::merge(&mut existing, fresh);
+
+    // User-owned elements survive untouched.
+    let billing = existing.elements.get("billing").expect("billing survives");
+    assert_eq!(billing.name, "Billing System");
+    assert_eq!(
+        billing.description.as_deref(),
+        Some("Hand-authored upstream that analyze must never touch")
+    );
+    assert!(existing.elements.contains_key("user"));
+
+    // User relationship to a user element survives.
+    assert!(existing
+        .relationships
+        .iter()
+        .any(|r| r.frm == "user" && r.to == "billing"));
+
+    // The stale inferred container is gone, along with the relationship
+    // that pointed at it.
+    assert!(!existing.elements.contains_key("stale"));
+    assert!(!existing.relationships.iter().any(|r| r.to == "stale"));
+
+    // Fresh inferred elements from the fixture are present.
+    assert!(existing.elements.contains_key("worker"));
+    assert!(existing.elements.contains_key("_inferred_redis"));
+
+    // Id collision rule: the `api` container in the existing model was
+    // tagged inferred, so the fresh analyzer's `api` replaces it. The fresh
+    // entry has technology "Rust / Axum" from the fixture's Cargo.toml.
+    let api = existing.elements.get("api").expect("api container");
+    assert_eq!(api.technology.as_deref(), Some("Rust / Axum"));
 }

@@ -12,6 +12,7 @@ pub mod emit;
 pub mod git;
 pub mod infra;
 pub mod k8s;
+pub mod merge;
 pub mod provenance;
 pub mod semantic;
 
