@@ -1,0 +1,27 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cargo test
+
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: ./deploy.sh staging
+
+  deploy-prod:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: https://billing.example.com
+    steps:
+      - run: ./deploy.sh prod

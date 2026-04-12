@@ -174,6 +174,53 @@ fn codeowners_attributes_containers_to_teams() {
 }
 
 #[test]
+fn pipeline_env_fixture_links_stages_k8s_and_db() {
+    let m = run("pipeline-env");
+
+    // 1. Connection-string fallback: `billing` reads DATABASE_URL but the
+    //    postgres service (`db`) only declares POSTGRES_PASSWORD. The
+    //    fallback should still emit a `billing -> db` uses edge because db
+    //    is tagged `database` with postgres technology.
+    assert!(
+        m.relationships
+            .iter()
+            .any(|r| r.frm == "billing" && r.to == "db" && r.label == "uses (DATABASE_URL)"),
+        "expected DATABASE_URL fallback to link billing → db"
+    );
+
+    // And the stale _inferred_postgresql edge semantic.rs would otherwise
+    // produce should be gone, since the reader now has a concrete target.
+    assert!(!m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "billing" && r.to.starts_with("_inferred_")));
+
+    // 2. Pipeline-env correlation: the deploy workflow has `staging` and
+    //    `prod` stages. Each becomes an Environment element and gets a
+    //    `deploys to` edge. The `prod` env is hosted on the k8s deployment
+    //    in namespace `prod`.
+    assert!(m.elements.contains_key("env.staging"));
+    assert!(m.elements.contains_key("env.prod"));
+
+    assert!(m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "deploy.deploy-staging"
+            && r.to == "env.staging"
+            && r.label == "deploys to"));
+    assert!(m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "deploy.deploy-prod" && r.to == "env.prod" && r.label == "deploys to"));
+
+    // env.prod hosts k8s.prod.billing (namespace match).
+    assert!(m
+        .relationships
+        .iter()
+        .any(|r| r.frm == "env.prod" && r.to == "k8s.prod.billing" && r.label == "hosts"));
+}
+
+#[test]
 fn k8s_deployment_env_reaches_container_and_correlate() {
     let m = run("k8s-correlated");
 
