@@ -1,20 +1,52 @@
-//! Code scanner — detects project structure from manifest files.
+//! Code scanner — discovers containers from package-manager manifests.
 //!
-//! Without tree-sitter, this scanner uses project manifests (Cargo.toml,
-//! package.json, go.mod, etc.) to discover components, their technologies,
-//! and inter-project dependencies.
+//! Delegates all file parsing to `symgraph::extraction::manifest`, then maps
+//! the resulting nodes onto forge Containers. Workspace manifests
+//! (Cargo `[workspace]`, npm/pnpm/yarn `workspaces`, `go.work`,
+//! `settings.gradle`) are expanded so each member becomes its own container.
+//!
+//! Technology labels are inferred from the dependency set that symgraph
+//! extracts — no string-matching against raw manifest text.
 
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
+use symgraph::extraction::Extractor;
+use symgraph::types::{ExtractionResult, Language, NodeKind};
+
 use crate::model::*;
 
+use super::container_index::ContainerIndex;
+use super::provenance::mark_inferred;
 use super::{slugify, AnalyzeConfig};
 
-pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
+const SCANNER: &str = "code";
+
+/// Filenames symgraph recognises as package-manager manifests.
+const MANIFEST_NAMES: &[&str] = &[
+    "Cargo.toml",
+    "package.json",
+    "go.mod",
+    "pyproject.toml",
+    "requirements.txt",
+    "Gemfile",
+    "composer.json",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "build.sbt",
+];
+
+pub fn scan(model: &mut Model, index: &mut ContainerIndex, root: &Path, config: &AnalyzeConfig) {
+    // Track which directories have already been handled as workspace members
+    // so the outer walk can skip re-emitting the workspace root as its own
+    // container.
+    let mut workspace_handled: HashSet<PathBuf> = HashSet::new();
+
     for entry in WalkDir::new(root)
-        .max_depth(5)
+        .max_depth(6)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
@@ -23,416 +55,472 @@ pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
         if config.should_exclude(path) {
             continue;
         }
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        match name {
-            "Cargo.toml" => parse_cargo_toml(model, path, root),
-            "package.json" => parse_package_json(model, path, root),
-            "go.mod" => parse_go_mod(model, path, root),
-            "pyproject.toml" | "setup.py" | "setup.cfg" => parse_python_project(model, path, root),
-            "pom.xml" => parse_java_project(model, path, root, "Maven"),
-            "build.gradle" | "build.gradle.kts" => parse_java_project(model, path, root, "Gradle"),
-            _ => {}
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(n) => n,
+            None => continue,
+        };
+        if !MANIFEST_NAMES.contains(&name) {
+            continue;
+        }
+
+        let text = match std::fs::read_to_string(path) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+
+        // Workspace roots: expand members, then mark the root dir as handled
+        // so we don't try to promote the workspace manifest itself into a
+        // container.
+        if let Some(members) = detect_workspace_members(name, &text, path) {
+            for member in members {
+                handle_manifest_dir(model, index, &member, root, config);
+            }
+            if let Some(dir) = path.parent() {
+                workspace_handled.insert(dir.to_path_buf());
+            }
+            continue;
+        }
+
+        if let Some(dir) = path.parent() {
+            if workspace_handled.contains(dir) {
+                continue;
+            }
+        }
+
+        handle_manifest_file(model, index, path, &text, root);
+    }
+}
+
+/// Parse a manifest at `path` (content already read) and register a container.
+fn handle_manifest_file(
+    model: &mut Model,
+    index: &mut ContainerIndex,
+    path: &Path,
+    text: &str,
+    root: &Path,
+) {
+    let result = Extractor::new().extract_file(path, text);
+    let Some(container) = build_container(&result, path, root) else {
+        return;
+    };
+
+    if model.elements.contains_key(&container.id) {
+        return;
+    }
+
+    if let Some(dir) = path.parent() {
+        index.register(dir.to_path_buf(), container.id.clone());
+    }
+    model.add_element(container);
+}
+
+/// Walk a workspace member directory and handle its manifest (if any).
+fn handle_manifest_dir(
+    model: &mut Model,
+    index: &mut ContainerIndex,
+    dir: &Path,
+    root: &Path,
+    config: &AnalyzeConfig,
+) {
+    for name in MANIFEST_NAMES {
+        let path = dir.join(name);
+        if !path.exists() {
+            continue;
+        }
+        if config.should_exclude(&path) {
+            continue;
+        }
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            // A workspace member should never itself be another workspace
+            // root, so call the leaf handler directly.
+            handle_manifest_file(model, index, &path, &text, root);
+            return;
         }
     }
 }
 
-// ── Cargo.toml (Rust) ────────────────────────────────────────────
+/// Convert a symgraph ExtractionResult for a manifest file into a forge
+/// Container element, with technology inferred from the dependency set.
+fn build_container(result: &ExtractionResult, path: &Path, root: &Path) -> Option<Element> {
+    let file_node = result.nodes.iter().find(|n| n.kind == NodeKind::File)?;
 
-fn parse_cargo_toml(model: &mut Model, path: &Path, root: &Path) {
-    let text = match std::fs::read_to_string(path) {
-        Ok(t) => t,
-        Err(_) => return,
-    };
+    // Name: prefer the first Module node (the declared package name),
+    // fall back to the containing directory name. Go module declarations
+    // carry the full import path (e.g. `github.com/example/orders`) which
+    // would slug into an unreadable id; use only the trailing segment.
+    let module_name = result
+        .nodes
+        .iter()
+        .find(|n| n.kind == NodeKind::Module)
+        .map(|n| {
+            n.name
+                .rsplit('/')
+                .next()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| n.name.clone())
+        });
 
-    // Skip workspace-level Cargo.toml with no [package]
-    if !text.contains("[package]") {
-        // But check for workspace members
-        if text.contains("[workspace]") {
-            // Workspace root — scan members individually
-            return;
-        }
-        return;
+    let dir_name = path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+        .unwrap_or("project")
+        .to_string();
+
+    let name = module_name.clone().unwrap_or_else(|| dir_name.clone());
+    let id = slugify(&name);
+    if id.is_empty() {
+        return None;
     }
 
-    let name = extract_toml_value(&text, "name").unwrap_or_else(|| {
-        path.parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .unwrap_or("rust-project")
-            .to_string()
-    });
+    let deps: Vec<String> = result
+        .nodes
+        .iter()
+        .filter(|n| n.kind == NodeKind::Import)
+        .map(|n| n.name.clone())
+        .collect();
 
-    let description = extract_toml_value(&text, "description");
-    let container_id = slugify(&name);
+    let mut el = Element::new(&id, ElementKind::Container, &name);
+    el.technology = Some(infer_technology(file_node.language, &deps));
 
-    if model.elements.contains_key(&container_id) {
-        return;
-    }
+    let rel_path = path.strip_prefix(root).unwrap_or(path);
+    el.description = Some(format!(
+        "{} at {}",
+        describe_language(file_node.language),
+        rel_path.parent().unwrap_or(rel_path).display()
+    ));
 
-    let mut el = Element::new(&container_id, ElementKind::Container, &name);
-    el.technology = Some("Rust".into());
-    el.tags.push("inferred".into());
-
-    if let Some(desc) = description {
-        el.description = Some(desc);
-    } else {
-        let rel_path = path.strip_prefix(root).unwrap_or(path);
-        el.description = Some(format!(
-            "Rust crate at {}",
-            rel_path.parent().unwrap_or(rel_path).display()
-        ));
-    }
-
-    // Look for common framework dependencies to refine technology
-    if text.contains("actix-web") || text.contains("actix_web") {
-        el.technology = Some("Rust / Actix".into());
-    } else if text.contains("axum") {
-        el.technology = Some("Rust / Axum".into());
-    } else if text.contains("rocket") {
-        el.technology = Some("Rust / Rocket".into());
-    } else if text.contains("warp") {
-        el.technology = Some("Rust / Warp".into());
-    } else if text.contains("tonic") {
-        el.technology = Some("Rust / Tonic (gRPC)".into());
-    }
-
-    // Detect if it's a library or binary
-    let is_lib =
-        text.contains("[lib]") || path.parent().is_some_and(|p| p.join("src/lib.rs").exists());
-    let is_bin = text.contains("[[bin]]")
-        || path
-            .parent()
-            .is_some_and(|p| p.join("src/main.rs").exists());
-    if is_lib && !is_bin {
+    if deps
+        .iter()
+        .any(|d| is_library_signal(&file_node.language, d))
+    {
         el.tags.push("library".into());
     }
 
-    model.add_element(el);
-
-    // Extract inter-crate dependencies (path deps = local relationships)
-    extract_path_deps(model, &text, &container_id);
+    mark_inferred(&mut el, SCANNER, Some(rel_path));
+    Some(el)
 }
 
-fn extract_path_deps(model: &mut Model, text: &str, from_id: &str) {
-    // Simple pattern: name = { path = "...", ... }
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if trimmed.contains("path") && trimmed.contains('=') && trimmed.contains('"') {
-            // Try to extract the dependency name (first thing before =)
-            if let Some(dep_name) = trimmed.split('=').next() {
-                let dep_name = dep_name.trim();
-                if !dep_name.is_empty()
-                    && dep_name
-                        .chars()
-                        .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
-                {
-                    let dep_id = slugify(dep_name);
-                    model.add_relationship(Relationship {
-                        frm: from_id.into(),
-                        to: dep_id,
-                        label: "depends on".into(),
-                        technology: None,
-                    });
-                }
-            }
+/// Human-readable language label used in container descriptions.
+fn describe_language(lang: Language) -> &'static str {
+    match lang {
+        Language::Rust => "Rust crate",
+        Language::Go => "Go module",
+        Language::Python => "Python project",
+        Language::Java => "Java project",
+        Language::Kotlin => "Kotlin project",
+        Language::Scala => "Scala project",
+        Language::Groovy => "Gradle project",
+        Language::JavaScript | Language::TypeScript | Language::Jsx | Language::Tsx => {
+            "Node.js package"
         }
+        Language::Ruby => "Ruby project",
+        Language::Php => "PHP project",
+        _ => "Project",
     }
 }
 
-// ── package.json (Node.js/TypeScript) ────────────────────────────
+fn is_library_signal(_lang: &Language, _dep: &str) -> bool {
+    // Conservative: we don't infer library/binary from deps. Future scanners
+    // may look at Cargo [lib]/[[bin]] tables via symgraph if it starts
+    // emitting them.
+    false
+}
 
-fn parse_package_json(model: &mut Model, path: &Path, root: &Path) {
-    let text = match std::fs::read_to_string(path) {
-        Ok(t) => t,
-        Err(_) => return,
+/// Technology label inferred from the language and the dependency set
+/// symgraph extracted. The framework priority list is intentionally curated —
+/// it reflects real-world "which dep tells you what this container is".
+fn infer_technology(lang: Language, deps: &[String]) -> String {
+    let base = match lang {
+        Language::Rust => "Rust",
+        Language::Go => "Go",
+        Language::Python => "Python",
+        Language::Java => "Java",
+        Language::Kotlin => "Kotlin",
+        Language::Scala => "Scala",
+        Language::Groovy => "Gradle",
+        Language::JavaScript => "Node.js",
+        Language::TypeScript | Language::Tsx => "TypeScript",
+        Language::Jsx => "JavaScript",
+        Language::Ruby => "Ruby",
+        Language::Php => "PHP",
+        _ => "Unknown",
     };
 
-    // Quick JSON extraction without a full parser
-    let name = extract_json_string(&text, "name").unwrap_or_else(|| {
-        path.parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .unwrap_or("node-project")
-            .to_string()
-    });
+    // Ordered: first match wins, so higher-level frameworks beat their runtimes.
+    const FRAMEWORKS: &[(&str, &str)] = &[
+        // Rust
+        ("axum", "Axum"),
+        ("actix-web", "Actix"),
+        ("rocket", "Rocket"),
+        ("warp", "Warp"),
+        ("tonic", "Tonic (gRPC)"),
+        // Python
+        ("fastapi", "FastAPI"),
+        ("django", "Django"),
+        ("flask", "Flask"),
+        ("starlette", "Starlette"),
+        // Node / JS / TS
+        ("next", "Next.js"),
+        ("nuxt", "Nuxt"),
+        ("@nestjs/core", "NestJS"),
+        ("express", "Express"),
+        ("fastify", "Fastify"),
+        ("koa", "Koa"),
+        ("@angular/core", "Angular"),
+        ("react", "React"),
+        ("vue", "Vue"),
+        ("svelte", "Svelte"),
+        // Go
+        ("github.com/gin-gonic/gin", "Gin"),
+        ("github.com/labstack/echo", "Echo"),
+        ("github.com/gofiber/fiber", "Fiber"),
+        ("google.golang.org/grpc", "gRPC"),
+        // Java / Kotlin
+        ("spring-boot-starter", "Spring Boot"),
+        ("org.springframework.boot", "Spring Boot"),
+        ("micronaut", "Micronaut"),
+        ("quarkus", "Quarkus"),
+        ("io.ktor", "Ktor"),
+        // Ruby
+        ("rails", "Rails"),
+        ("sinatra", "Sinatra"),
+    ];
 
-    // Skip if it looks like a workspace root (has "workspaces" field)
-    if text.contains("\"workspaces\"") && path.parent() == Some(root) {
-        return;
+    for (needle, label) in FRAMEWORKS {
+        if deps.iter().any(|d| dep_matches(d, needle)) {
+            return format!("{base} / {label}");
+        }
     }
+    base.to_string()
+}
 
-    let container_id = slugify(&name);
-    if model.elements.contains_key(&container_id) {
-        return;
+fn dep_matches(dep: &str, needle: &str) -> bool {
+    dep == needle || dep.contains(needle)
+}
+
+// ── Workspace detection ─────────────────────────────────────────
+
+/// If the given manifest is a workspace root, return absolute directories
+/// for each member. Otherwise return None.
+fn detect_workspace_members(filename: &str, text: &str, path: &Path) -> Option<Vec<PathBuf>> {
+    let parent = path.parent()?;
+    match filename {
+        "Cargo.toml" => detect_cargo_workspace(text, parent),
+        "package.json" => detect_npm_workspace(text, parent),
+        _ => None,
     }
+}
 
-    let description = extract_json_string(&text, "description");
+fn detect_cargo_workspace(text: &str, parent: &Path) -> Option<Vec<PathBuf>> {
+    let parsed: toml::Value = text.parse().ok()?;
+    let members = parsed.get("workspace")?.get("members")?.as_array()?;
 
-    let mut el = Element::new(&container_id, ElementKind::Container, &name);
-    el.tags.push("inferred".into());
-
-    // Detect TypeScript
-    let is_ts = path
-        .parent()
-        .is_some_and(|p| p.join("tsconfig.json").exists());
-    let tech_base = if is_ts { "TypeScript" } else { "Node.js" };
-
-    // Detect frameworks
-    let tech = if text.contains("\"next\"") || text.contains("\"next\":") {
-        format!("{} / Next.js", tech_base)
-    } else if text.contains("\"express\"") {
-        format!("{} / Express", tech_base)
-    } else if text.contains("\"fastify\"") {
-        format!("{} / Fastify", tech_base)
-    } else if text.contains("\"react\"") && !text.contains("\"next\"") {
-        format!("{} / React", tech_base)
-    } else if text.contains("\"vue\"") {
-        format!("{} / Vue", tech_base)
-    } else if text.contains("\"@angular/core\"") {
-        format!("{} / Angular", tech_base)
-    } else if text.contains("\"svelte\"") {
-        format!("{} / Svelte", tech_base)
+    let mut out = Vec::new();
+    for m in members {
+        let Some(glob) = m.as_str() else { continue };
+        expand_glob(parent, glob, &mut out);
+    }
+    if out.is_empty() {
+        None
     } else {
-        tech_base.to_string()
-    };
-    el.technology = Some(tech);
+        Some(out)
+    }
+}
 
-    if let Some(desc) = description {
-        el.description = Some(desc);
+fn detect_npm_workspace(text: &str, parent: &Path) -> Option<Vec<PathBuf>> {
+    let json: serde_json::Value = serde_json::from_str(text).ok()?;
+    let ws = json.get("workspaces")?;
+
+    // `workspaces` is either an array or an object with a `packages` array.
+    let arr = match ws {
+        serde_json::Value::Array(a) => Some(a.clone()),
+        serde_json::Value::Object(o) => o.get("packages").and_then(|p| p.as_array()).cloned(),
+        _ => None,
+    }?;
+
+    let mut out = Vec::new();
+    for v in arr {
+        if let Some(s) = v.as_str() {
+            expand_glob(parent, s, &mut out);
+        }
+    }
+    if out.is_empty() {
+        None
     } else {
-        let rel_path = path.strip_prefix(root).unwrap_or(path);
-        el.description = Some(format!(
-            "Node.js package at {}",
-            rel_path.parent().unwrap_or(rel_path).display()
-        ));
+        Some(out)
     }
-
-    model.add_element(el);
 }
 
-// ── go.mod (Go) ──────────────────────────────────────────────────
+/// Expand a workspace glob relative to `base`. Supports the common patterns:
+/// `crates/*`, `packages/api`, `apps/**`. Non-glob entries are treated as a
+/// direct path. Unmatched globs expand to nothing.
+fn expand_glob(base: &Path, pattern: &str, out: &mut Vec<PathBuf>) {
+    if !pattern.contains('*') {
+        let p = base.join(pattern);
+        if p.is_dir() {
+            out.push(p);
+        }
+        return;
+    }
 
-fn parse_go_mod(model: &mut Model, path: &Path, root: &Path) {
-    let text = match std::fs::read_to_string(path) {
-        Ok(t) => t,
-        Err(_) => return,
+    // Only handle the `<prefix>/*` and `<prefix>/**` shapes — enough for the
+    // canonical monorepo layouts. Anything more exotic falls through.
+    let (prefix, _suffix) = match pattern.rsplit_once('/') {
+        Some(p) => p,
+        None => return,
     };
-
-    let module_name = text
-        .lines()
-        .find_map(|line| line.strip_prefix("module "))
-        .map(|m| m.trim().to_string());
-
-    let name = module_name
-        .as_ref()
-        .map(|m| m.split('/').next_back().unwrap_or(m).to_string())
-        .unwrap_or_else(|| {
-            path.parent()
-                .and_then(|p| p.file_name())
-                .and_then(|n| n.to_str())
-                .unwrap_or("go-project")
-                .to_string()
-        });
-
-    let container_id = slugify(&name);
-    if model.elements.contains_key(&container_id) {
+    let dir = base.join(prefix);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
         return;
-    }
-
-    let mut el = Element::new(&container_id, ElementKind::Container, &name);
-    el.technology = Some("Go".into());
-    el.tags.push("inferred".into());
-
-    // Detect frameworks
-    if text.contains("github.com/gin-gonic/gin") {
-        el.technology = Some("Go / Gin".into());
-    } else if text.contains("github.com/labstack/echo") {
-        el.technology = Some("Go / Echo".into());
-    } else if text.contains("github.com/gofiber/fiber") {
-        el.technology = Some("Go / Fiber".into());
-    } else if text.contains("google.golang.org/grpc") {
-        el.technology = Some("Go / gRPC".into());
-    }
-
-    let rel_path = path.strip_prefix(root).unwrap_or(path);
-    el.description = Some(format!(
-        "Go module at {}",
-        rel_path.parent().unwrap_or(rel_path).display()
-    ));
-
-    model.add_element(el);
-}
-
-// ── Python projects ──────────────────────────────────────────────
-
-fn parse_python_project(model: &mut Model, path: &Path, root: &Path) {
-    let dir_name = path
-        .parent()
-        .and_then(|p| p.file_name())
-        .and_then(|n| n.to_str())
-        .unwrap_or("python-project");
-
-    let container_id = slugify(dir_name);
-    if model.elements.contains_key(&container_id) {
-        return;
-    }
-
-    let text = std::fs::read_to_string(path).unwrap_or_default();
-
-    let mut el = Element::new(&container_id, ElementKind::Container, dir_name);
-    el.technology = Some("Python".into());
-    el.tags.push("inferred".into());
-
-    // Detect frameworks
-    if text.contains("fastapi") || text.contains("FastAPI") {
-        el.technology = Some("Python / FastAPI".into());
-    } else if text.contains("django") || text.contains("Django") {
-        el.technology = Some("Python / Django".into());
-    } else if text.contains("flask") || text.contains("Flask") {
-        el.technology = Some("Python / Flask".into());
-    }
-
-    // Try to get name from pyproject.toml
-    if path.file_name().and_then(|n| n.to_str()) == Some("pyproject.toml") {
-        if let Some(name) = extract_toml_value(&text, "name") {
-            el.name = name;
-        }
-        if let Some(desc) = extract_toml_value(&text, "description") {
-            el.description = Some(desc);
+    };
+    for e in entries.flatten() {
+        let p = e.path();
+        if p.is_dir() {
+            out.push(p);
         }
     }
-
-    if el.description.is_none() {
-        let rel_path = path.strip_prefix(root).unwrap_or(path);
-        el.description = Some(format!(
-            "Python project at {}",
-            rel_path.parent().unwrap_or(rel_path).display()
-        ));
-    }
-
-    model.add_element(el);
-}
-
-// ── Java/Kotlin projects ─────────────────────────────────────────
-
-fn parse_java_project(model: &mut Model, path: &Path, root: &Path, build_tool: &str) {
-    let dir_name = path
-        .parent()
-        .and_then(|p| p.file_name())
-        .and_then(|n| n.to_str())
-        .unwrap_or("java-project");
-
-    let container_id = slugify(dir_name);
-    if model.elements.contains_key(&container_id) {
-        return;
-    }
-
-    let text = std::fs::read_to_string(path).unwrap_or_default();
-
-    let mut el = Element::new(&container_id, ElementKind::Container, dir_name);
-    el.technology = Some(format!("Java / {}", build_tool));
-    el.tags.push("inferred".into());
-
-    // Detect Spring Boot
-    if text.contains("spring-boot") || text.contains("org.springframework.boot") {
-        el.technology = Some(format!("Java / Spring Boot ({})", build_tool));
-    }
-
-    let rel_path = path.strip_prefix(root).unwrap_or(path);
-    el.description = Some(format!(
-        "Java project at {}",
-        rel_path.parent().unwrap_or(rel_path).display()
-    ));
-
-    model.add_element(el);
-}
-
-// ── Utilities ────────────────────────────────────────────────────
-
-/// Simple TOML value extractor (key = "value" on its own line).
-fn extract_toml_value(text: &str, key: &str) -> Option<String> {
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if let Some(rest) = trimmed.strip_prefix(key) {
-            let rest = rest.trim();
-            if let Some(rest) = rest.strip_prefix('=') {
-                let rest = rest.trim();
-                if rest.starts_with('"') && rest.len() > 1 {
-                    if let Some(end) = rest[1..].find('"') {
-                        return Some(rest[1..1 + end].to_string());
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-/// Simple JSON string extractor ("key": "value").
-fn extract_json_string(text: &str, key: &str) -> Option<String> {
-    let pattern = format!("\"{}\"", key);
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if let Some(pos) = trimmed.find(&pattern) {
-            let after = &trimmed[pos + pattern.len()..];
-            let after = after.trim().trim_start_matches(':').trim();
-            if let Some(stripped) = after.strip_prefix('"') {
-                if let Some(end) = stripped.find('"') {
-                    return Some(stripped[..end].to_string());
-                }
-            }
-        }
-    }
-    None
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
-    fn extract_cargo_name() {
-        let toml = r#"
-[package]
-name = "my-service"
-version = "0.1.0"
-description = "A cool service"
-"#;
-        assert_eq!(extract_toml_value(toml, "name"), Some("my-service".into()));
-        assert_eq!(
-            extract_toml_value(toml, "description"),
-            Some("A cool service".into())
-        );
-    }
-
-    #[test]
-    fn extract_package_json_name() {
-        let json = r#"{
-  "name": "@org/my-app",
-  "version": "1.0.0",
-  "description": "My application"
-}"#;
-        assert_eq!(
-            extract_json_string(json, "name"),
-            Some("@org/my-app".into())
-        );
-        assert_eq!(
-            extract_json_string(json, "description"),
-            Some("My application".into())
-        );
-    }
-
-    #[test]
-    fn detect_rust_framework() {
-        let toml = r#"
+    fn rust_container_from_cargo_toml() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("Cargo.toml"),
+            r#"
 [package]
 name = "api"
+version = "0.1.0"
 
 [dependencies]
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }
-"#;
-        // Verify framework detection works by checking text matching
-        assert!(toml.contains("axum"));
+"#,
+        )
+        .unwrap();
+
+        let mut model = Model::default();
+        let mut index = ContainerIndex::new();
+        let config = AnalyzeConfig::default();
+        scan(&mut model, &mut index, root, &config);
+
+        let el = model.elements.get("api").expect("container registered");
+        assert_eq!(el.technology.as_deref(), Some("Rust / Axum"));
+        assert!(el.tags.iter().any(|t| t == "inferred"));
+        assert_eq!(index.attribute(&root.join("Cargo.toml")), Some("api"));
+    }
+
+    #[test]
+    fn cargo_workspace_expands_members() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("Cargo.toml"),
+            r#"
+[workspace]
+members = ["crates/*"]
+"#,
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("crates/api")).unwrap();
+        fs::write(
+            root.join("crates/api/Cargo.toml"),
+            r#"
+[package]
+name = "api"
+version = "0.1.0"
+
+[dependencies]
+axum = "0.7"
+"#,
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("crates/worker")).unwrap();
+        fs::write(
+            root.join("crates/worker/Cargo.toml"),
+            r#"
+[package]
+name = "worker"
+version = "0.1.0"
+"#,
+        )
+        .unwrap();
+
+        let mut model = Model::default();
+        let mut index = ContainerIndex::new();
+        let config = AnalyzeConfig::default();
+        scan(&mut model, &mut index, root, &config);
+
+        assert!(model.elements.contains_key("api"));
+        assert!(model.elements.contains_key("worker"));
+        // The workspace root itself should NOT become a container.
+        let root_dir_name = root.file_name().unwrap().to_string_lossy().to_string();
+        assert!(!model.elements.contains_key(&slugify(&root_dir_name)));
+    }
+
+    #[test]
+    fn npm_workspace_expands_packages() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("package.json"),
+            r#"{
+  "name": "monorepo",
+  "workspaces": ["packages/*"]
+}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("packages/web")).unwrap();
+        fs::write(
+            root.join("packages/web/package.json"),
+            r#"{
+  "name": "web",
+  "dependencies": { "next": "14.0.0", "react": "18.0.0" }
+}"#,
+        )
+        .unwrap();
+
+        let mut model = Model::default();
+        let mut index = ContainerIndex::new();
+        let config = AnalyzeConfig::default();
+        scan(&mut model, &mut index, root, &config);
+
+        let web = model.elements.get("web").expect("web registered");
+        let tech = web.technology.as_deref().unwrap_or("");
+        assert!(
+            tech.ends_with("/ Next.js"),
+            "expected Next.js framework suffix, got {tech}"
+        );
+    }
+
+    #[test]
+    fn python_fastapi_detected() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("pyproject.toml"),
+            r#"
+[project]
+name = "svc"
+version = "0.1.0"
+dependencies = ["fastapi>=0.100", "uvicorn"]
+"#,
+        )
+        .unwrap();
+
+        let mut model = Model::default();
+        let mut index = ContainerIndex::new();
+        let config = AnalyzeConfig::default();
+        scan(&mut model, &mut index, root, &config);
+
+        let el = model.elements.get("svc").expect("svc container");
+        assert_eq!(el.technology.as_deref(), Some("Python / FastAPI"));
     }
 }

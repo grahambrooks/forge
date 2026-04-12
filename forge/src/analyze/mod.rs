@@ -6,16 +6,23 @@
 
 pub mod ci;
 pub mod code;
+pub mod container_index;
 pub mod docker;
 pub mod emit;
 pub mod git;
 pub mod infra;
 pub mod k8s;
-pub mod source;
+pub mod provenance;
+pub mod semantic;
+
+#[cfg(test)]
+mod fixture_tests;
 
 use std::path::{Path, PathBuf};
 
 use crate::model::Model;
+
+use container_index::ContainerIndex;
 
 /// Configuration for an analyze run.
 #[derive(Debug, Clone)]
@@ -34,7 +41,7 @@ impl Default for AnalyzeConfig {
             paths: vec![PathBuf::from(".")],
             scanners: vec![
                 "code".into(),
-                "source".into(),
+                "semantic".into(),
                 "ci".into(),
                 "docker".into(),
                 "git".into(),
@@ -89,6 +96,7 @@ pub fn slugify(name: &str) -> String {
 /// Run all configured scanners and merge results into a single Model.
 pub fn analyze(config: &AnalyzeConfig) -> Model {
     let mut model = Model::default();
+    let mut index = ContainerIndex::new();
 
     for scan_path in &config.paths {
         let dir_name = scan_path
@@ -99,13 +107,17 @@ pub fn analyze(config: &AnalyzeConfig) -> Model {
             model.name = dir_name;
         }
 
-        for scanner_name in &config.scanners {
+        // `code` must run before `semantic` so containers exist when source
+        // attribution runs. We preserve user ordering otherwise.
+        let ordered = order_scanners(&config.scanners);
+
+        for scanner_name in &ordered {
             match scanner_name.as_str() {
-                "code" => code::scan(&mut model, scan_path, config),
+                "code" => code::scan(&mut model, &mut index, scan_path, config),
+                "semantic" => semantic::scan(&mut model, &index, scan_path, config),
                 "ci" => ci::scan(&mut model, scan_path, config),
                 "docker" => docker::scan(&mut model, scan_path, config),
                 "git" => git::scan(&mut model, scan_path, config),
-                "source" => source::scan(&mut model, scan_path, config),
                 "k8s" => k8s::scan(&mut model, scan_path, config),
                 "infra" => infra::scan(&mut model, scan_path, config),
                 _ => {
@@ -116,4 +128,26 @@ pub fn analyze(config: &AnalyzeConfig) -> Model {
     }
 
     model
+}
+
+/// Ensure `code` runs before `semantic` so containers exist before source
+/// attribution, preserving the relative order of every other scanner.
+fn order_scanners(requested: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::with_capacity(requested.len());
+    let has_code = requested.iter().any(|s| s == "code");
+    let has_semantic = requested.iter().any(|s| s == "semantic");
+    if has_code && has_semantic {
+        for s in requested {
+            if s == "semantic" {
+                continue;
+            }
+            out.push(s.clone());
+            if s == "code" {
+                out.push("semantic".into());
+            }
+        }
+    } else {
+        out.extend(requested.iter().cloned());
+    }
+    out
 }

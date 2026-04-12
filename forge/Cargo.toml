@@ -27,3 +27,8 @@ tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util",
 notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
 gix = { version = "0.80", default-features = false, features = ["max-performance-safe"] }
 ab_glyph = "0.2"
+symgraph = { version = "2026.4.13", default-features = false }
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
