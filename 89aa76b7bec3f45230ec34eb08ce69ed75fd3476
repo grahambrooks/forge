@@ -1,0 +1,62 @@
+forge/tests/fixtures/analyze/node-next/app/route.ts
+  907b25380dc0ddb6 1-5
+forge/src/analyze/container_index.rs
+  907b25380dc0ddb6 1-85
+forge/src/analyze/semantic.rs
+  907b25380dc0ddb6 1-17,22-24,27-41,44,54-55,57-73,77-98,103-104,107-118,122-124,126-134,137-138,145,166,186,200,206-213,221,229-232,235,237,251,267,284,287,290,296,301,348,353,362,367,375-385,392,395-396,416,439,441,443,445,455,457-459,464-465,470-471,475-478,482-484,488,499-508,510
+forge/tests/fixtures/analyze/python-fastapi/pyproject.toml
+  907b25380dc0ddb6 1-8
+forge/tests/fixtures/analyze/node-next/package.json
+  907b25380dc0ddb6 1-9
+forge/tests/fixtures/analyze/go-gin/main.go
+  907b25380dc0ddb6 1-13
+forge/Cargo.toml
+  907b25380dc0ddb6 30-34
+forge/tests/fixtures/analyze/go-gin/go.mod
+  907b25380dc0ddb6 1-7
+forge/tests/fixtures/analyze/python-fastapi/app/main.py
+  907b25380dc0ddb6 1-14
+forge/tests/fixtures/analyze/cargo-monorepo/Cargo.toml
+  907b25380dc0ddb6 1-3
+forge/tests/fixtures/analyze/cargo-monorepo/crates/worker/src/main.rs
+  907b25380dc0ddb6 1-4
+forge/src/analyze/code.rs
+  907b25380dc0ddb6 1,3-9,11-12,16-18,21-22,25-46,49,58-63,66-81,84-86,89-90,94-104,107,111-112,114,117-138,142-161,167-168,170-173,176-181,183-184,188-189,193-197,200-202,204-215,217-219,223-228,230-248,250-293,295-296,298-300,302,304-311,313,315-317,319-328,331-345,348-351,355-362,364-380,388-389,392-397,399,402-417,421-435,438,442-524
+forge/src/analyze/provenance.rs
+  907b25380dc0ddb6 1-30
+forge/tests/fixtures/analyze/cargo-monorepo/crates/api/Cargo.toml
+  907b25380dc0ddb6 1-7
+forge/tests/fixtures/analyze/cargo-monorepo/crates/api/src/main.rs
+  907b25380dc0ddb6 1-5
+forge/tests/fixtures/analyze/cargo-monorepo/crates/worker/Cargo.toml
+  907b25380dc0ddb6 1-7
+forge/src/analyze/fixture_tests.rs
+  907b25380dc0ddb6 1-131
+forge/tests/fixtures/analyze/rust-axum/src/main.rs
+  907b25380dc0ddb6 1-19
+forge/tests/fixtures/analyze/rust-axum/Cargo.toml
+  907b25380dc0ddb6 1-9
+forge/src/analyze/mod.rs
+  907b25380dc0ddb6 9,15-16,18-19,25,44,99,110-114,116-117,132-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "89aa76b7bec3f45230ec34eb08ce69ed75fd3476",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 2020,
+      "total_deletions": 1122,
+      "accepted_lines": 1409,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/b6889a1abb3fe68914448e9c565cdbe2314cb15a510e9d8366b6e4527e13c31c"
+    }
+  }
+}
