@@ -306,6 +306,7 @@ fn parse_compose(model: &mut Model, text: &str) {
                     to: dep_id,
                     label: "depends on".into(),
                     technology: None,
+                    order: None,
                 });
             }
         }

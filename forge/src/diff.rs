@@ -455,6 +455,7 @@ mod tests {
             to: "b".into(),
             label: "calls".into(),
             technology: None,
+            order: None,
         });
 
         let result = diff(&baseline, &current);

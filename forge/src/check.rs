@@ -383,6 +383,15 @@ fn check_empty_views(model: &Model, violations: &mut Vec<Violation>) {
                 }),
                 ViewKind::ApiCatalogView => !model.api_catalogs.is_empty(),
                 ViewKind::EventFlowView => !model.event_flows.is_empty(),
+                ViewKind::Dynamic => model
+                    .elements
+                    .values()
+                    .any(|e| e.parent.as_deref() == Some(scope_id)),
+                ViewKind::Composite => view
+                    .composite
+                    .as_ref()
+                    .map(|c| !c.cells.is_empty())
+                    .unwrap_or(false),
             };
         if !has_content {
             violations.push(Violation {
@@ -603,12 +612,14 @@ mod tests {
             to: "b".into(),
             label: String::new(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "b".into(),
             to: "a".into(),
             label: String::new(),
             technology: None,
+            order: None,
         });
         let violations = check(&model, Severity::Error);
         assert!(
@@ -630,6 +641,7 @@ mod tests {
             to: "db".into(),
             label: "queries".into(),
             technology: None,
+            order: None,
         });
         let violations = check(&model, Severity::Error);
         assert!(violations
@@ -652,12 +664,14 @@ mod tests {
             to: "api".into(),
             label: "uses".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "api".into(),
             to: "db".into(),
             label: "reads".into(),
             technology: None,
+            order: None,
         });
         let violations = check(&model, Severity::Warning);
         assert!(
@@ -684,12 +698,14 @@ mod tests {
             to: "api".into(),
             label: "uses".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "api".into(),
             to: "db".into(),
             label: "reads".into(),
             technology: None,
+            order: None,
         });
         let violations = check(&model, Severity::Warning);
         assert!(
@@ -711,6 +727,7 @@ mod tests {
             to: "db".into(),
             label: "uses".into(),
             technology: None,
+            order: None,
         });
         let violations = check(&model, Severity::Warning);
         assert!(violations.iter().any(|v| v.rule == "data-class-boundary"));
@@ -731,12 +748,14 @@ mod tests {
             to: "api".into(),
             label: "uses".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "api".into(),
             to: "db".into(),
             label: "reads".into(),
             technology: None,
+            order: None,
         });
         let violations = check(&model, Severity::Warning);
         assert!(!violations.iter().any(|v| v.rule == "data-class-boundary"));
@@ -753,6 +772,7 @@ mod tests {
                 to: "b".into(),
                 label: format!("rel{}", i),
                 technology: None,
+                order: None,
             });
         }
         let violations = check(&model, Severity::Warning);
@@ -784,6 +804,7 @@ mod tests {
             auto_layout: AutoLayout::TopBottom,
             include_all: true,
             animation: Animation::default(),
+            composite: None,
         });
         let violations = check(&model, Severity::Warning);
         assert!(violations.iter().any(|v| v.rule == "empty-views"));

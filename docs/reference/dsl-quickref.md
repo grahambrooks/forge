@@ -396,6 +396,23 @@ views {
   eventFlowView "EventFlows" {
     include *
   }
+
+  dynamic payments "LoginFlow" {
+    title "User login sequence"
+    1. customer -> payments.api "POST /login" "HTTPS"
+    2. payments.api -> payments.db "SELECT user"
+    3. payments.api -> customer "JWT + session cookie"
+  }
+
+  composite "Dashboard" {
+    title "Executive overview"
+    grid 2 2
+    cellSize 600 400
+    cell "SystemContext"
+    cell "Containers"
+    cell "Pipeline"
+    cell "Production Topology"
+  }
 }
 ```
 
@@ -403,6 +420,33 @@ views {
 list element ids explicitly: `include payments.api payments.db`.
 
 `autoLayout` takes `lr` (left-to-right) or `tb` (top-to-bottom).
+
+### `dynamic` views
+
+A dynamic view is a container view with **ordered relationships** —
+each `<num>. src -> dst "label"` inside the block records the step
+number on the relationship. The renderer draws a circled step badge
+near each arrow's midpoint, and stepping through the view in
+`forge serve --present` mode auto-generates one animation frame per
+step. The frame for step N includes every element and relationship
+with `order ≤ N`, so viewers watch the flow build up cumulatively.
+If you want different animation semantics, add an explicit
+`animation { frames … }` block and it will override the derived one.
+
+### `composite` views
+
+Composite views embed other views in a grid. The DSL:
+
+- `grid <cols> <rows>` — the layout. Rows are optional; if you omit
+  `rows` forge infers it from the cell count.
+- `cellSize <w> <h>` — per-cell pixel dimensions. Default `600 400`.
+- `cell "<view-key>"` — adds a cell referencing another view by its
+  key, in row-major order.
+
+Each cell carries a thin frame and a small caption showing the
+referenced view key. Nested composites (a composite that references
+another composite) are short-circuited — the inner reference is
+skipped rather than recursed into.
 
 ## Animated views
 

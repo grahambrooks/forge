@@ -300,9 +300,8 @@ fn cmd_build(source: &Path, view: Option<&str>, out: &Path, style: &str) {
             }
         }
 
-        let lo = layout::compute_layout(&model, v);
-        let mut svg = render::render_svg(&lo, style);
-        if !v.animation.is_empty() {
+        let mut svg = render::render_view(&model, v, style);
+        if !v.animation.is_empty() || v.kind == model::ViewKind::Dynamic {
             svg = animate::animate_svg(&svg, v, &model);
         }
 

@@ -38,6 +38,8 @@ so nobody picks them up twice.
 | [`2ec1a43`](../forge/examples/ci/analyze.yml) | K8s env providers for Deployment / StatefulSet / DaemonSet (direct `env:`, `valueFrom`, `envFrom`); reference CI workflow template |
 | [`610ab3c`](../forge/src/analyze/correlate.rs) | Connection-string fallback (DATABASE_URL → postgres-tagged container) and pipeline-env correlation (CI stage → synthetic Environment → k8s namespace deployment) |
 | _pending_ | [Item 7](#7-data-classification-tags--visual-indicators): `dataClass` DSL keyword, shield badges on containers (pii/financial/secret/public/internal colouring), `data-class-boundary` linter rule |
+| _pending_ | [Item 4](#4-dynamic-view-type--numbered-relationship-ordering): `dynamic` view type with `<num>. src -> dst "label"` ordered relationships, circled step badges, auto-generated animation frames |
+| _pending_ | [Item 5](#5-composite-view-type--grid-of-views): `composite` view type, `grid N M` + `cell "key"` DSL, child SVGs assembled as nested `<svg>` elements with per-cell frames and captions |
 
 ### Features `DESIGN.md §10` still lists as "Remaining" but are actually done
 
@@ -97,8 +99,8 @@ Effort estimates:
 | [1](#1-png--pdf-export-via-resvg) | P0 | M | PNG / PDF export via `resvg` | Raster output for PRs, slides, printed docs |
 | [2](#2-http-transport-for-forge-mcp) | P0 | S | HTTP transport for `forge mcp` | Unblocks remote MCP clients |
 | [3](#3-force-directed-layout--landscape-view-type) | P0 | L | Force-directed layout + `landscape` view | Enterprise-scale overview views |
-| [4](#4-dynamic-view-type--numbered-relationship-ordering) | P1 | M | `dynamic` view type | Numbered-step flow views |
-| [5](#5-composite-view-type--grid-of-views) | P1 | M | `composite` view type | Grid of views on one canvas |
+| ~~[4](#4-dynamic-view-type--numbered-relationship-ordering)~~ | ~~P1~~ | ~~M~~ | ~~`dynamic` view type~~ | **Shipped** — see [Recently shipped](#recently-shipped) |
+| ~~[5](#5-composite-view-type--grid-of-views)~~ | ~~P1~~ | ~~M~~ | ~~`composite` view type~~ | **Shipped** — see [Recently shipped](#recently-shipped) |
 | [6](#6-write-capable-mcp-tools) | P1 | M | Write-capable MCP tools | `forge_analyze`, `forge_diff`, `forge_suggest_fix` |
 | ~~[7](#7-data-classification-tags--visual-indicators)~~ | ~~P1~~ | ~~S~~ | ~~Data classification tags~~ | **Shipped** — see [Recently shipped](#recently-shipped) |
 | [8](#8-flowview--runbook-element-kind) | P1 | L | `flowView` + `runbook` kind | Runbooks as first-class model content |
@@ -438,6 +440,12 @@ views {
 
 ### 4. `dynamic` view type — numbered relationship ordering
 
+> **Status: shipped.** `dynamic scope "Key" { … }` blocks accept
+> `<num>. src -> dst "label"` ordered relationships, circled step
+> badges render on each edge, and dynamic views with no explicit
+> animation auto-generate one frame per step. The design notes below
+> are retained for historical reference.
+
 **Priority:** P1 &nbsp; **Effort:** M &nbsp; **Depends on:** none
 
 **Problem.** `DESIGN.md §9` lists `dynamic` as "animated sequence
@@ -534,6 +542,13 @@ views {
 ---
 
 ### 5. `composite` view type — grid of views
+
+> **Status: shipped.** `composite "Key" { grid N M; cell "view-key"; … }`
+> blocks dispatch to each cell view's normal layout/render pipeline
+> and assemble the child SVGs into a row-major grid, with per-cell
+> frames and captions. Nested composites are short-circuited to
+> avoid infinite recursion. The design notes below are retained for
+> historical reference.
 
 **Priority:** P1 &nbsp; **Effort:** M &nbsp; **Depends on:** none
 

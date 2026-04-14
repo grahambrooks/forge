@@ -117,6 +117,7 @@ mod tests {
             to: "stale-service".into(),
             label: "calls".into(),
             technology: None,
+            order: None,
         });
 
         let mut fresh = Model::default();
@@ -126,6 +127,7 @@ mod tests {
             to: "new-service".into(),
             label: "calls".into(),
             technology: None,
+            order: None,
         });
 
         merge(&mut existing, fresh);

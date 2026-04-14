@@ -18,7 +18,6 @@ use std::path::PathBuf;
 use crate::animate;
 use crate::check;
 use crate::diff::{ChangeKind, DiffResult};
-use crate::layout;
 use crate::model::*;
 use crate::render;
 
@@ -71,9 +70,8 @@ pub fn generate(
     // Render all view SVGs (with diff highlighting if available)
     let mut view_svgs: HashMap<String, String> = HashMap::new();
     for view in &model.views {
-        let lo = layout::compute_layout(model, view);
-        let mut svg = render::render_svg(&lo, &config.style);
-        if !view.animation.is_empty() {
+        let mut svg = render::render_view(model, view, &config.style);
+        if !view.animation.is_empty() || view.kind == ViewKind::Dynamic {
             svg = animate::animate_svg(&svg, view, model);
         }
         if let Some(dr) = diff {

@@ -401,6 +401,7 @@ rule "max-deps" {
                 to: target.into(),
                 label: "uses".into(),
                 technology: None,
+                order: None,
             });
         }
 

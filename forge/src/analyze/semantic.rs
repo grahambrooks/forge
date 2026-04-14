@@ -545,6 +545,7 @@ fn add_relationship_if_new(model: &mut Model, from: &str, to: &str, label: &str)
             to: to.into(),
             label: label.into(),
             technology: None,
+            order: None,
         });
     }
 }

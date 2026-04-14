@@ -34,6 +34,8 @@ pub enum ViewKind {
     Component,
     ApiCatalogView,
     EventFlowView,
+    Dynamic,
+    Composite,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,6 +85,11 @@ pub struct Relationship {
     pub to: String,
     pub label: String,
     pub technology: Option<String>,
+    /// Step number within a `dynamic` view. `None` for ordinary
+    /// relationships; `Some(n)` means this edge is step `n` in a
+    /// numbered sequence (e.g. a user-login flow). Ordered edges
+    /// render with a circled step badge near the arrow midpoint.
+    pub order: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -140,6 +147,19 @@ pub struct View {
     pub auto_layout: AutoLayout,
     pub include_all: bool,
     pub animation: Animation,
+    /// Composite-view payload. `Some` only when `kind == ViewKind::Composite`.
+    pub composite: Option<CompositeView>,
+}
+
+/// Grid layout for a composite view. Cells reference other view keys by
+/// string; the renderer invokes each cell view's normal layout/render
+/// pipeline and assembles the child SVGs into a row-major grid.
+#[derive(Debug, Clone)]
+pub struct CompositeView {
+    pub cells: Vec<String>,
+    pub cols: u32,
+    pub rows: u32,
+    pub cell_size: (u32, u32),
 }
 
 #[derive(Debug, Clone)]
@@ -369,18 +389,21 @@ mod tests {
             to: "b".into(),
             label: "1".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "a".into(),
             to: "c".into(),
             label: "2".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "c".into(),
             to: "d".into(),
             label: "3".into(),
             technology: None,
+            order: None,
         });
 
         let ids: HashSet<String> = ["a", "b", "c"].iter().map(|s| s.to_string()).collect();
@@ -396,12 +419,14 @@ mod tests {
             to: "b".into(),
             label: "1".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: "c".into(),
             to: "d".into(),
             label: "2".into(),
             technology: None,
+            order: None,
         });
 
         let ids: HashSet<String> = ["a"].iter().map(|s| s.to_string()).collect();

@@ -100,6 +100,7 @@ fn correlate_env_vars(model: &mut Model) {
                 to: provider.clone(),
                 label,
                 technology: None,
+                order: None,
             });
         }
 
@@ -263,6 +264,7 @@ fn correlate_connection_strings(model: &mut Model) {
                 to: to.clone(),
                 label,
                 technology: None,
+                order: None,
             });
         }
         // Drop any stale _inferred_* edge from the reader now that a concrete
@@ -335,6 +337,7 @@ fn correlate_pipeline_environments(model: &mut Model) {
                         to: dep_id.clone(),
                         label: "hosts".into(),
                         technology: None,
+                        order: None,
                     });
                 }
             }
@@ -357,6 +360,7 @@ fn correlate_pipeline_environments(model: &mut Model) {
                 to: env_id,
                 label: "deploys to".into(),
                 technology: None,
+                order: None,
             });
         }
     }
@@ -429,6 +433,7 @@ mod tests {
             to: "_inferred_postgresql".into(),
             label: "reads/writes".into(),
             technology: None,
+            order: None,
         });
 
         let mut provider = container("postgres");

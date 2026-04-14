@@ -413,6 +413,7 @@ impl Parser {
             to,
             label,
             technology,
+            order: None,
         });
         Ok(())
     }
@@ -558,6 +559,7 @@ impl Parser {
                                         to: branch_id.clone(),
                                         label: "branches from".into(),
                                         technology: None,
+                                        order: None,
                                     });
                                 }
                                 "mergesInto" => {
@@ -569,6 +571,7 @@ impl Parser {
                                         to: resolved,
                                         label: "merges into".into(),
                                         technology: None,
+                                        order: None,
                                     });
                                 }
                                 _ => {
@@ -861,6 +864,7 @@ impl Parser {
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -877,6 +881,7 @@ impl Parser {
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -894,6 +899,7 @@ impl Parser {
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -910,6 +916,7 @@ impl Parser {
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -924,6 +931,7 @@ impl Parser {
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -940,6 +948,7 @@ impl Parser {
                         auto_layout: AutoLayout::LeftRight,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -956,8 +965,54 @@ impl Parser {
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
+                "dynamic" => {
+                    let scope_raw = self.parse_ident()?;
+                    let scope = self.resolve_ref(&scope_raw);
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: ViewKind::Dynamic,
+                        key,
+                        scope: Some(scope),
+                        title: None,
+                        auto_layout: AutoLayout::TopBottom,
+                        include_all: false,
+                        animation: Animation::default(),
+                        composite: None,
+                    };
+                    self.parse_view_body(&mut view)?;
+                    self.model.views.push(view);
+                }
+                "composite" => {
+                    let key = self.parse_string()?;
+                    let mut view = View {
+                        kind: ViewKind::Composite,
+                        key,
+                        scope: None,
+                        title: None,
+                        auto_layout: AutoLayout::TopBottom,
+                        include_all: false,
+                        animation: Animation::default(),
+                        composite: Some(CompositeView {
+                            cells: Vec::new(),
+                            cols: 1,
+                            rows: 1,
+                            cell_size: (600, 400),
+                        }),
+                    };
+                    self.parse_view_body(&mut view)?;
+                    // After body parsing, cells may have been collected — infer
+                    // rows from cols if the user only specified one of them.
+                    if let Some(comp) = view.composite.as_mut() {
+                        if !comp.cells.is_empty() && comp.rows * comp.cols < comp.cells.len() as u32
+                        {
+                            comp.rows = comp.cells.len().div_ceil(comp.cols.max(1) as usize) as u32;
+                        }
+                    }
                     self.model.views.push(view);
                 }
                 "dataModelView" | "trustBoundaryView" | "teamView" | "apiCatalogView"
@@ -979,6 +1034,7 @@ impl Parser {
                         auto_layout: AutoLayout::TopBottom,
                         include_all: false,
                         animation: Animation::default(),
+                        composite: None,
                     };
                     self.parse_view_body(&mut view)?;
                     self.model.views.push(view);
@@ -1014,6 +1070,40 @@ impl Parser {
             if self.at_end() {
                 return Err(self.error("unexpected EOF in view"));
             }
+
+            // Numbered relationship for dynamic views: `1. src -> dst "label"`.
+            // Detection: leading ASCII digit followed (after optional whitespace)
+            // by a `.`. Only meaningful inside dynamic views — we still parse
+            // and drop the result elsewhere so a stray number doesn't blow up.
+            if view.kind == ViewKind::Dynamic && self.peek().is_some_and(|c| c.is_ascii_digit()) {
+                let order = self.parse_u32()?;
+                self.skip_ws();
+                self.expect('.')?;
+                self.skip_ws();
+                let src_raw = self.parse_ident()?;
+                let src = self.resolve_ref(&src_raw);
+                self.skip_ws();
+                self.expect('-')?;
+                self.expect('>')?;
+                self.skip_ws();
+                let dst_raw = self.parse_ident()?;
+                let dst = self.resolve_ref(&dst_raw);
+                let label = self.parse_string()?;
+                let tech = if self.peek_after_ws() == Some('"') {
+                    Some(self.parse_string()?)
+                } else {
+                    None
+                };
+                self.model.add_relationship(Relationship {
+                    frm: src,
+                    to: dst,
+                    label,
+                    technology: tech,
+                    order: Some(order),
+                });
+                continue;
+            }
+
             let prop = self.parse_ident()?;
             match prop.as_str() {
                 "include" => {
@@ -1039,6 +1129,29 @@ impl Parser {
                 "animation" => {
                     self.parse_animation(&mut view.animation)?;
                 }
+                "grid" if view.kind == ViewKind::Composite => {
+                    let cols = self.parse_u32()?;
+                    self.skip_ws();
+                    let rows = self.parse_u32()?;
+                    if let Some(comp) = view.composite.as_mut() {
+                        comp.cols = cols.max(1);
+                        comp.rows = rows.max(1);
+                    }
+                }
+                "cellSize" if view.kind == ViewKind::Composite => {
+                    let w = self.parse_u32()?;
+                    self.skip_ws();
+                    let h = self.parse_u32()?;
+                    if let Some(comp) = view.composite.as_mut() {
+                        comp.cell_size = (w.max(100), h.max(100));
+                    }
+                }
+                "cell" if view.kind == ViewKind::Composite => {
+                    let key = self.parse_string()?;
+                    if let Some(comp) = view.composite.as_mut() {
+                        comp.cells.push(key);
+                    }
+                }
                 _ => {
                     if self.peek_after_ws() == Some('"') {
                         self.parse_string()?;
@@ -1048,6 +1161,21 @@ impl Parser {
                 }
             }
         }
+    }
+
+    /// Parse an unsigned integer literal. Used by dynamic view step numbers
+    /// and composite view grid dimensions.
+    fn parse_u32(&mut self) -> Result<u32, ParseError> {
+        self.skip_ws();
+        let start = self.pos;
+        while self.pos < self.text.len() && self.text[self.pos].is_ascii_digit() {
+            self.pos += 1;
+        }
+        if self.pos == start {
+            return Err(self.error("expected number"));
+        }
+        let s: String = self.text[start..self.pos].iter().collect();
+        s.parse::<u32>().map_err(|_| self.error("invalid number"))
     }
 
     // ── Animation ──
@@ -1885,6 +2013,97 @@ forge "t" {
         );
         // dataClass doesn't pollute tags
         assert!(!db.tags.contains(&"pii".to_string()));
+    }
+
+    #[test]
+    fn parse_dynamic_view_with_ordered_relationships() {
+        let src = r#"
+forge "Login" {
+  model {
+    user = person "User"
+    app = system "Web App" {
+      web = container "Web UI"
+      api = container "API"
+      db = container "DB"
+    }
+    user -> app.web "uses"
+  }
+
+  views {
+    dynamic app "LoginFlow" {
+      title "User Login Flow"
+      1. user -> app.web "submits credentials" "HTTPS"
+      2. app.web -> app.api "POST /login"
+      3. app.api -> app.db "SELECT user"
+    }
+  }
+}
+"#;
+        let m = parse(src).unwrap();
+        assert_eq!(m.views.len(), 1);
+        let view = &m.views[0];
+        assert_eq!(view.kind, ViewKind::Dynamic);
+        assert_eq!(view.key, "LoginFlow");
+        assert_eq!(view.title.as_deref(), Some("User Login Flow"));
+
+        // Ordered relationships landed with step numbers
+        let ordered: Vec<(&str, &str, u32)> = m
+            .relationships
+            .iter()
+            .filter(|r| r.order.is_some())
+            .map(|r| (r.frm.as_str(), r.to.as_str(), r.order.unwrap()))
+            .collect();
+        assert_eq!(ordered.len(), 3);
+        assert!(ordered.contains(&("user", "app.web", 1)));
+        assert!(ordered.contains(&("app.web", "app.api", 2)));
+        assert!(ordered.contains(&("app.api", "app.db", 3)));
+
+        // The unordered relationship from the model block is preserved
+        assert!(m
+            .relationships
+            .iter()
+            .any(|r| r.frm == "user" && r.to == "app.web" && r.order.is_none()));
+    }
+
+    #[test]
+    fn parse_composite_view() {
+        let src = r#"
+forge "Dash" {
+  model {
+    sys = system "S" {
+      api = container "API"
+    }
+  }
+  views {
+    systemContext sys "Context" {
+      include *
+    }
+    container sys "Containers" {
+      include *
+    }
+    composite "Dashboard" {
+      title "Exec Dashboard"
+      grid 2 1
+      cell "Context"
+      cell "Containers"
+    }
+  }
+}
+"#;
+        let m = parse(src).unwrap();
+        let comp_view = m
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Composite)
+            .expect("composite view");
+        let comp = comp_view.composite.as_ref().expect("composite payload");
+        assert_eq!(comp.cols, 2);
+        assert_eq!(comp.rows, 1);
+        assert_eq!(
+            comp.cells,
+            vec!["Context".to_string(), "Containers".to_string()]
+        );
+        assert_eq!(comp_view.title.as_deref(), Some("Exec Dashboard"));
     }
 
     #[test]

@@ -106,12 +106,14 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
             to: feat_id.clone(),
             label: "branches from".into(),
             technology: None,
+            order: None,
         });
         model.add_relationship(Relationship {
             frm: feat_id,
             to: trunk_id.clone(),
             label: "merges into".into(),
             technology: None,
+            order: None,
         });
     }
 

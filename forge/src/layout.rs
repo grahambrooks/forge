@@ -56,6 +56,9 @@ pub struct LayoutEdge {
     pub to: String,
     pub label: String,
     pub technology: Option<String>,
+    /// Step number for dynamic views. `None` for ordinary edges; `Some(n)`
+    /// renders a circled step badge at the arrow midpoint.
+    pub order: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -86,6 +89,8 @@ pub fn compute_layout_with(model: &Model, view: &View, tm: &TextMeasurer) -> Lay
         ViewKind::TeamMap => layout_team_map(model, view, tm),
         ViewKind::ApiCatalogView => layout_api_catalog(model, view, tm),
         ViewKind::EventFlowView => layout_event_flow(model, view, tm),
+        ViewKind::Dynamic => layout_dynamic(model, view, tm),
+        ViewKind::Composite => layout_composite(model, view, tm),
     }
 }
 
@@ -262,6 +267,7 @@ fn layout_system_context(model: &Model, view: &View, tm: &TextMeasurer) -> Layou
                 to,
                 label: r.label.clone(),
                 technology: r.technology.clone(),
+                order: None,
             });
         }
     }
@@ -353,6 +359,7 @@ fn layout_container(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
             to: r.to.clone(),
             label: r.label.clone(),
             technology: r.technology.clone(),
+            order: r.order,
         })
         .collect();
 
@@ -468,6 +475,7 @@ fn layout_pipeline(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
             to: ordered[i].id.clone(),
             label: String::new(),
             technology: None,
+            order: None,
         });
     }
 
@@ -919,6 +927,7 @@ fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 to: branch.id.clone(),
                 label: String::new(),
                 technology: None,
+                order: None,
             });
         }
         if let Some(into) = branch.properties.get("mergesInto") {
@@ -927,6 +936,7 @@ fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 to: into.clone(),
                 label: String::new(),
                 technology: None,
+                order: None,
             });
         }
     }
@@ -1021,6 +1031,7 @@ fn layout_component(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
             to: r.to.clone(),
             label: r.label.clone(),
             technology: r.technology.clone(),
+            order: r.order,
         })
         .collect();
 
@@ -1166,6 +1177,7 @@ fn layout_data_model(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
             to: to_id,
             label: format!("{} [{}]", rel.label, rel.cardinality),
             technology: None,
+            order: None,
         });
     }
 
@@ -1558,6 +1570,7 @@ fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 to: topic_id.clone(),
                 label: "publishes".into(),
                 technology: None,
+                order: None,
             });
             py += actor_h + 10.0;
         }
@@ -1594,6 +1607,7 @@ fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 to: sid,
                 label: "delivers".into(),
                 technology: None,
+                order: None,
             });
             sy += actor_h + 10.0;
         }
@@ -1614,6 +1628,54 @@ fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
         title: Some(title),
         nodes,
         edges,
+    }
+}
+
+// ─── Dynamic View ────────────────────────────────────────────────
+
+/// A dynamic view looks identical to a container view in structure —
+/// the same scope, the same nodes, the same layout. What's different
+/// is that relationships with an `order` field render with a circled
+/// step number on the arrow. Ordering is static metadata, not a
+/// layout concern; the renderer picks it up directly.
+fn layout_dynamic(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
+    let mut lo = layout_container(model, view, tm);
+    // Fall back to the model name + "— Flow" if the view didn't set a title
+    // so the page header reads usefully.
+    if lo.title.as_deref() == Some(&format!("{} — Containers", model.name)) {
+        lo.title = Some(format!("{} — Dynamic Flow", model.name));
+    }
+    lo
+}
+
+// ─── Composite View ──────────────────────────────────────────────
+
+/// Composite views aren't a single layout — they dispatch to each
+/// referenced view and the renderer assembles the child SVGs into a
+/// grid. This function returns a placeholder layout carrying just the
+/// title and canvas dimensions; `render::render_svg` detects the
+/// composite kind and re-invokes the layout/render pipeline per cell.
+fn layout_composite(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
+    let cells = view.composite.as_ref();
+    let (cols, rows, cell_w, cell_h) = cells
+        .map(|c| (c.cols, c.rows, c.cell_size.0 as f64, c.cell_size.1 as f64))
+        .unwrap_or((1, 1, 600.0, 400.0));
+
+    let gap = 20.0;
+    let canvas_w = PAD * 2.0 + cols as f64 * cell_w + (cols.saturating_sub(1)) as f64 * gap;
+    let canvas_h =
+        PAD * 2.0 + TITLE_H + rows as f64 * cell_h + (rows.saturating_sub(1)) as f64 * gap;
+
+    let title = view
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("{} — Composite", model.name));
+    Layout {
+        width: canvas_w,
+        height: canvas_h,
+        title: Some(title),
+        nodes: Vec::new(),
+        edges: Vec::new(),
     }
 }
 

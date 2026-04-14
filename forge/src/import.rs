@@ -153,6 +153,7 @@ fn parse_c4_rel(args: &str) -> Option<Relationship> {
         to,
         label,
         technology,
+        order: None,
     })
 }
 
@@ -242,6 +243,7 @@ fn import_mermaid(text: &str) -> Result<Model, String> {
                     to: to_id,
                     label: edge_label,
                     technology: None,
+                    order: None,
                 });
             }
         }

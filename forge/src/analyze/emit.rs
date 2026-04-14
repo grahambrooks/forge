@@ -331,6 +331,8 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         ViewKind::Component => "component",
         ViewKind::ApiCatalogView => "apiCatalogView",
         ViewKind::EventFlowView => "eventFlowView",
+        ViewKind::Dynamic => "dynamic",
+        ViewKind::Composite => "composite",
     };
 
     let scope = view.scope.as_deref().unwrap_or("");

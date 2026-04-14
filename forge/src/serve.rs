@@ -367,8 +367,7 @@ fn generate_present_page(source: &Path, out_dir: &Path, style: &str, port: u16) 
     // Build SVG for the first animated view (or all as a list)
     let mut svgs = String::new();
     for view in &animated_views {
-        let lo = crate::layout::compute_layout(&model, view);
-        let mut svg = crate::render::render_svg(&lo, style);
+        let mut svg = crate::render::render_view(&model, view, style);
         svg = crate::animate::animate_svg(&svg, view, &model);
 
         let view_title = view.title.as_deref().unwrap_or(&view.key);
