@@ -1,0 +1,54 @@
+forge/examples/multi-file/process/pipeline.forge
+  907b25380dc0ddb6 4
+forge/examples/multi-file/views/all.forge
+  907b25380dc0ddb6 3,5,9,11,15,17
+forge/examples/payments.forge
+  907b25380dc0ddb6 51,74,79-80,84-85,114-115,118,121,124,129,134,140,146,155,192,244,284,289,293,298,304,307,313,333,355,391,393,397,399,403,405,409,411,415,417,421,426,428,432,437,442,447,452,457,459
+docs/roadmap.md
+  907b25380dc0ddb6 43
+forge/src/render.rs
+  907b25380dc0ddb6 1020,1041,1553,1558,1560,1598,1601,1604,1641-1642,1646,1675,1713,1718
+forge/src/analyze/emit.rs
+  907b25380dc0ddb6 101,192,259,261,263,324-337,340-342,345-354,356,358,361,364,366,381,386-397,466-467
+forge/src/lsp.rs
+  907b25380dc0ddb6 436-438,441,500-502,520-521,538,540-546,548
+docs/reference/grammar.md
+  907b25380dc0ddb6 1-695
+forge/src/layout.rs
+  907b25380dc0ddb6 922,924,933
+docs/README.md
+  907b25380dc0ddb6 40
+forge/src/parser.rs
+  907b25380dc0ddb6 236-238,241-242,248,333,435-447,470-472,478,480-485,489-490,532,536,545,548,589,613-619,685-687,694-697,702,709-713,733-736,763,791,815-830,832-835,837-876,880,937-945,948,952,954-958,976,991,1108,1114-1117,1189,1203,1261,1357,1377,1382,1471-1475,1530,1588,1631,1644,1646,1648,1691,1696,1824,1836,1855,1900,1903,1906,2199-2200,2350
+forge/examples/payments-baseline.forge
+  907b25380dc0ddb6 41,46-47,51-52,82,84,88,90,94,96,101
+forge/src/analyze/git.rs
+  907b25380dc0ddb6 99,101,132
+forge/src/export.rs
+  907b25380dc0ddb6 48,60,73,108,110
+docs/reference/dsl-quickref.md
+  907b25380dc0ddb6 19,112,122-123,147-148,150,152,154,253,258,364,368,376
+integrations/backstage/architecture.forge
+  907b25380dc0ddb6 27,40,42,45,47,50,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "b0fc8f7d2d40450565a0c3e928d6b1bf91994001",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 8417,
+      "total_deletions": 10875,
+      "accepted_lines": 1276,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/76319ada6c869e0e99902e6193be1f9e84f4b5af4594432ba3b36f63c6c35e83"
+    }
+  }
+}
