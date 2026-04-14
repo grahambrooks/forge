@@ -1017,7 +1017,7 @@ fn render_gitgraph_edge(
     let color_var = format!("var(--svg-git{})", lane_idx % 8);
 
     if frm_trunk {
-        // branchesFrom: trunk → feature (fork point)
+        // branches-from: trunk → feature (fork point)
         // Curved path from a commit on trunk down to first commit on feature
         let fork_x = frm_timeline_x + commit_spacing; // 2nd commit on trunk
         let start_y = frm_y;
@@ -1038,7 +1038,7 @@ fn render_gitgraph_edge(
             color_var
         ));
     } else {
-        // mergesInto: feature → trunk (merge point)
+        // merges-into: feature → trunk (merge point)
         // Curved path from last commit on feature up to a commit on trunk
         let (frm_commits, _, _, _) = parse_gitgraph_params(&frm.sublabel);
         let merge_from_x =
@@ -1550,14 +1550,14 @@ forge "t" {
       db = container "Ledger" {
         technology "PostgreSQL"
         tags "database"
-        dataClass "pii" "financial"
+        data-class "pii" "financial"
       }
     }
   }
   views {
-    container sys "C" {
+    container-view sys "C" {
       include *
-      autoLayout tb
+      auto-layout tb
     }
   }
 }
@@ -1595,13 +1595,13 @@ forge "dash" {
     }
   }
   views {
-    systemContext sys "Context" {
+    system-context-view sys "Context" {
       include *
     }
-    container sys "Containers" {
+    container-view sys "Containers" {
       include *
     }
-    composite "Dashboard" {
+    composite-view "Dashboard" {
       title "Exec Dashboard"
       grid 2 1
       cell "Context"
@@ -1638,12 +1638,12 @@ forge "dash" {
     sys = system "S" { api = container "API" }
   }
   views {
-    systemContext sys "Context" { include * }
-    composite "Inner" {
+    system-context-view sys "Context" { include * }
+    composite-view "Inner" {
       grid 1 1
       cell "Context"
     }
-    composite "Outer" {
+    composite-view "Outer" {
       grid 1 1
       cell "Inner"
     }
@@ -1672,7 +1672,7 @@ forge "flow" {
     }
   }
   views {
-    dynamic app "LoginFlow" {
+    dynamic-view app "LoginFlow" {
       1. user -> app.web "login" "HTTPS"
       2. app.web -> app.api "POST /login"
       3. app.api -> app.db "SELECT user"
@@ -1710,12 +1710,12 @@ forge "t" {
   model {
     sys = system "Sys" {
       box = container "Box" {
-        dataClass "custom-level"
+        data-class "custom-level"
       }
     }
   }
   views {
-    container sys "C" { include * autoLayout tb }
+    container-view sys "C" { include * auto-layout tb }
   }
 }
 "#;

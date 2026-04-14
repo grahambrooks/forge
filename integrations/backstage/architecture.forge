@@ -24,7 +24,7 @@ forge "Payment Platform" {
   }
 
   process {
-    pipeline "ci" {
+    ci = pipeline "CI" {
       build = stage "Build & Test" {
         step "cargo build --release"
         step "cargo test"
@@ -37,19 +37,19 @@ forge "Payment Platform" {
   }
 
   views {
-    systemContext payments "SystemContext" {
+    system-context-view payments "SystemContext" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "Payment Platform — System Context"
     }
-    container payments "Containers" {
+    container-view payments "Containers" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Payment Platform — Containers"
     }
-    pipelineView "ci" "Pipeline" {
+    pipeline-view ci "Pipeline" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "CI/CD Pipeline"
     }
   }

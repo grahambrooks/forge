@@ -96,9 +96,9 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
         feat.properties
             .insert("strategy".into(), strategy_id.clone());
         feat.properties
-            .insert("branchesFrom".into(), trunk_id.clone());
+            .insert("branches-from".into(), trunk_id.clone());
         feat.properties
-            .insert("mergesInto".into(), trunk_id.clone());
+            .insert("merges-into".into(), trunk_id.clone());
         feat.tags.push("inferred".into());
         model.add_element(feat);
         model.add_relationship(Relationship {
@@ -129,7 +129,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
         dev.properties
             .insert("strategy".into(), strategy_id.clone());
         dev.properties
-            .insert("branchesFrom".into(), trunk_id.clone());
+            .insert("branches-from".into(), trunk_id.clone());
         dev.tags.push("inferred".into());
         model.add_element(dev);
     }

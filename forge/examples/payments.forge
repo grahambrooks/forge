@@ -48,6 +48,7 @@ forge "Payment Platform" {
       db = container "Ledger DB" {
         technology "PostgreSQL 16"
         tags "database"
+        data-class "pii" "financial"
       }
 
       cache = container "Session Cache" {
@@ -70,18 +71,18 @@ forge "Payment Platform" {
       system payments
     }
 
-    strategy "trunk-based" {
+    trunk-based = strategy "Trunk-based" {
       trunk = branch "main" {
         protection "require-review" "require-ci"
       }
       feature = branch "feature/*" {
-        branchesFrom trunk
-        mergesInto trunk
+        branches-from trunk
+        merges-into trunk
       }
     }
 
-    pipeline "payments-ci" {
-      triggers repo.main on "push"
+    payments-ci = pipeline "Payments CI" {
+      triggers repo "push"
 
       build = stage "Build & Test" {
         step "cargo build --release"
@@ -110,39 +111,39 @@ forge "Payment Platform" {
     }
   }
 
-  deployment "production" {
-    node "AWS" {
+  deployment production "Production" {
+    node aws "AWS" {
       technology "Amazon Web Services"
 
-      node "us-east-1" {
+      node us-east-1 "us-east-1" {
         technology "AWS Region"
 
-        node "EKS Cluster" {
+        node eks "EKS Cluster" {
           technology "Kubernetes 1.29"
 
-          node "API Pods" {
+          node api-pods "API Pods" {
             technology "3 replicas"
             instance api
           }
 
-          node "Processor Pods" {
+          node processor-pods "Processor Pods" {
             technology "3 replicas"
             instance processor
           }
 
-          node "Notification Pods" {
+          node notification-pods "Notification Pods" {
             technology "2 replicas"
             instance notifier
           }
         }
 
-        node "RDS" {
+        node rds "RDS" {
           technology "Managed PostgreSQL"
           description "Primary + 2 read replicas, synchronous replication"
           instance db
         }
 
-        node "ElastiCache" {
+        node elasticache "ElastiCache" {
           technology "Managed Redis"
           description "3-node cluster with consistent hashing"
           instance cache
@@ -151,7 +152,7 @@ forge "Payment Platform" {
     }
   }
 
-  techStack {
+  tech-stack {
     category "Languages & Frameworks" {
       tech "Rust" { version "1.75"
         purpose "Payment API and Processor" }
@@ -188,7 +189,7 @@ forge "Payment Platform" {
     }
   }
 
-  dataModel {
+  data-model {
     entity "Transaction" {
       field "id" "UUID" "PK"
       field "amount" "DECIMAL(19,4)" "NOT NULL"
@@ -240,7 +241,7 @@ forge "Payment Platform" {
     }
   }
 
-  trustBoundaries {
+  trust-boundaries {
     boundary "Public Internet" {
       level "public"
       includes customer
@@ -280,36 +281,36 @@ forge "Payment Platform" {
 
   apis {
     api payments.api {
-      endpoint "POST /payments" {
+      endpoint "POST" "/payments" {
         description "Create a new payment"
         request "{ amount, currency, customer_id, payment_method_id }"
         response "{ id, status, created_at }"
       }
-      endpoint "GET /payments/{id}" {
+      endpoint "GET" "/payments/{id}" {
         description "Get payment details"
         response "{ id, amount, currency, status, customer_id }"
       }
-      endpoint "POST /payments/{id}/refund" {
+      endpoint "POST" "/payments/{id}/refund" {
         description "Refund a payment"
         request "{ amount, reason }"
         response "{ id, status, refund_id }"
       }
-      endpoint "GET /payments" {
+      endpoint "GET" "/payments" {
         description "List payments with filters"
         response "{ items: [...], total, page }"
       }
     }
     api payments.processor {
-      endpoint "ProcessPayment" {
+      endpoint "RPC" "ProcessPayment" {
         description "gRPC: process a payment authorization"
       }
-      endpoint "CapturePayment" {
+      endpoint "RPC" "CapturePayment" {
         description "gRPC: capture a previously authorized payment"
       }
     }
   }
 
-  eventFlows {
+  event-flows {
     flow "payment-completed" {
       topic "payments.events.completed"
       description "Emitted after successful payment capture"
@@ -329,7 +330,7 @@ forge "Payment Platform" {
     }
   }
 
-  envConfig {
+  env-config {
     env "staging" {
       PAYMENT_GATEWAY "stripe-test"
       DATABASE_URL "postgres://staging-rds:5432/payments"
@@ -351,7 +352,7 @@ forge "Payment Platform" {
     slo payments.api {
       latency "< 200ms p99"
       availability "99.99%"
-      error_budget "0.01% per month"
+      error-budget "0.01% per month"
     }
     slo payments.processor {
       latency "< 500ms p99"
@@ -387,75 +388,75 @@ forge "Payment Platform" {
   }
 
   views {
-    systemContext payments "SystemContext" {
+    system-context-view payments "SystemContext" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "Payment Platform — System Context"
     }
 
-    container payments "Containers" {
+    container-view payments "Containers" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Payment Platform — Containers"
     }
 
-    component payments.api "APIComponents" {
+    component-view payments.api "APIComponents" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Payment API — Components"
     }
 
-    pipelineView "payments-ci" "Pipeline" {
+    pipeline-view payments-ci "Pipeline" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "Payment API — CI/CD Pipeline"
     }
 
-    deploymentView "production" "Deployment" {
+    deployment-view production "Deployment" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Payment Platform — Production Deployment"
     }
 
-    techStackView "TechStack" {
+    tech-stack-view "TechStack" {
       include *
       title "Payment Platform — Technology Stack"
     }
 
-    branchingView "trunk-based" "Branching" {
+    branching-view trunk-based "Branching" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Payment API — Branching Strategy"
     }
 
-    dataModelView "DataModel" {
+    data-model-view "DataModel" {
       include *
       title "Payment Platform — Data Model"
     }
 
-    trustBoundaryView "TrustBoundaries" {
+    trust-boundary-view "TrustBoundaries" {
       include *
       title "Payment Platform — Trust Boundaries"
     }
 
-    teamView "Teams" {
+    team-view "Teams" {
       include *
       title "Payment Platform — Team Ownership"
     }
 
-    apiCatalogView "APICatalog" {
+    api-catalog-view "APICatalog" {
       include *
       title "Payment Platform — API Catalog"
     }
 
-    eventFlowView "EventFlows" {
+    event-flow-view "EventFlows" {
       include *
       title "Payment Platform — Event Flows"
     }
 
-    container payments "PaymentFlow" {
+    container-view payments "PaymentFlow" {
       title "Payment Flow — Step by Step"
-      autoLayout tb
+      auto-layout tb
 
       animation {
         frame "Customer initiates payment" {
@@ -503,18 +504,5 @@ forge "Payment Platform" {
     doc "Deployment" "docs/deployment.md"
     doc "Security" "docs/security.md"
     doc "ADR-006: Async Notifications and Caching" "docs/adr-006-async-notifications-and-caching.md"
-  }
-
-  styles {
-    element "person" {
-      shape person
-      background "#08427B"
-      color "#ffffff"
-    }
-    element "container" {
-      shape roundedBox
-      background "#438DD5"
-      color "#ffffff"
-    }
   }
 }

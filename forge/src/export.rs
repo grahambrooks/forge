@@ -45,7 +45,7 @@ pub fn to_json(model: &Model) -> String {
                 "key": v.key,
                 "scope": v.scope,
                 "title": v.title,
-                "autoLayout": format!("{:?}", v.auto_layout),
+                "auto-layout": format!("{:?}", v.auto_layout),
                 "animated": !v.animation.is_empty(),
             })
         })
@@ -57,7 +57,7 @@ pub fn to_json(model: &Model) -> String {
         "elements": elements,
         "relationships": relationships,
         "views": views,
-        "techStack": model.tech_stack.iter().map(|c| json!({
+        "tech-stack": model.tech_stack.iter().map(|c| json!({
             "category": c.name,
             "entries": c.entries.iter().map(|e| json!({
                 "name": e.name, "version": e.version, "purpose": e.purpose,
@@ -70,7 +70,7 @@ pub fn to_json(model: &Model) -> String {
                 "name": f.name, "type": f.field_type, "constraints": f.constraints,
             })).collect::<Vec<_>>(),
         })).collect::<Vec<_>>(),
-        "trustBoundaries": model.trust_boundaries.iter().map(|b| json!({
+        "trust-boundaries": model.trust_boundaries.iter().map(|b| json!({
             "name": b.name, "level": b.level, "members": b.members,
         })).collect::<Vec<_>>(),
         "teams": model.teams.iter().map(|t| json!({
@@ -105,9 +105,9 @@ mod tests {
         assert!(json.contains("\"elements\""));
         assert!(json.contains("\"relationships\""));
         assert!(json.contains("\"views\""));
-        assert!(json.contains("\"techStack\""));
+        assert!(json.contains("\"tech-stack\""));
         assert!(json.contains("\"dataEntities\""));
-        assert!(json.contains("\"trustBoundaries\""));
+        assert!(json.contains("\"trust-boundaries\""));
         assert!(json.contains("\"teams\""));
     }
 

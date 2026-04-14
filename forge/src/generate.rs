@@ -651,7 +651,7 @@ fn render_element_page(
         main.push_str("<h2>Service Level Objectives</h2>");
         main.push_str(r#"<table class="forge-table"><tbody>"#);
         for slo in &slos {
-            if let Some(ref l) = slo.latency_p99 {
+            if let Some(ref l) = slo.latency {
                 main.push_str(&format!(
                     "<tr><th>Latency (p99)</th><td>{}</td></tr>",
                     esc(l)

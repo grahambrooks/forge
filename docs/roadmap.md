@@ -40,6 +40,7 @@ so nobody picks them up twice.
 | _pending_ | [Item 7](#7-data-classification-tags--visual-indicators): `dataClass` DSL keyword, shield badges on containers (pii/financial/secret/public/internal colouring), `data-class-boundary` linter rule |
 | _pending_ | [Item 4](#4-dynamic-view-type--numbered-relationship-ordering): `dynamic` view type with `<num>. src -> dst "label"` ordered relationships, circled step badges, auto-generated animation frames |
 | _pending_ | [Item 5](#5-composite-view-type--grid-of-views): `composite` view type, `grid N M` + `cell "key"` DSL, child SVGs assembled as nested `<svg>` elements with per-cell frames and captions |
+| _pending_ | **DSL v2 consistency overhaul** ([grammar.md](reference/grammar.md)): every keyword kebab-case, every view kind gets the `-view` suffix, every process element uses `id = kind "Name"` bindings, single-spelling keywords, structured endpoint method/path, strict parse errors on unknown keywords, view bodies are optional, `styles`/`produces` removed. Breaking change with no backwards compatibility. |
 
 ### Features `DESIGN.md §10` still lists as "Remaining" but are actually done
 

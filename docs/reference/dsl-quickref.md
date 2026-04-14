@@ -16,14 +16,14 @@ forge "Name" {
 
   model { ... }
   process { ... }
-  deployment "env" { ... }
-  techStack { ... }
-  dataModel { ... }
-  trustBoundaries { ... }
+  deployment prod "Production" { ... }
+  tech-stack { ... }
+  data-model { ... }
+  trust-boundaries { ... }
   teams { ... }
   apis { ... }
-  eventFlows { ... }
-  envConfig { ... }
+  event-flows { ... }
+  env-config { ... }
   slos { ... }
   dependencies { ... }
   docs { ... }
@@ -109,18 +109,18 @@ process {
     system payments
   }
 
-  strategy "trunk-based" {
+  trunk-based = strategy "Trunk-based" {
     trunk = branch "main" {
       protection "require-review" "require-ci"
     }
     feature = branch "feature/*" {
-      branchesFrom trunk
-      mergesInto trunk
+      branches-from trunk
+      merges-into trunk
     }
   }
 
-  pipeline "payments-ci" {
-    triggers repo.main on "push"
+  payments-ci = pipeline "Payments CI" {
+    triggers repo "push"
 
     build = stage "Build & Test" {
       step "cargo build --release"
@@ -144,14 +144,14 @@ Deployment topology: nested nodes, each with a technology and
 (optionally) container instances.
 
 ```forge
-deployment "production" {
-  node "AWS" {
+deployment production "Production" {
+  node aws "AWS" {
     technology "Amazon Web Services"
-    node "us-east-1" {
+    node us-east-1 "us-east-1" {
       technology "AWS Region"
-      node "EKS Cluster" {
+      node eks "EKS Cluster" {
         technology "Kubernetes 1.29"
-        node "API Pods" {
+        node api-pods "API Pods" {
           technology "3 replicas"
           instance api
         }
@@ -164,12 +164,12 @@ deployment "production" {
 `instance <id>` binds a deployment node to a container declared in
 the `model` block.
 
-## `techStack` block
+## `tech-stack` block
 
 Categorised inventory of technologies used in the system.
 
 ```forge
-techStack {
+tech-stack {
   category "Languages & Frameworks" {
     tech "Rust" { version "1.75" purpose "Payment API and Processor" }
     tech "Actix-web" { version "4" purpose "HTTP/REST framework" }
@@ -180,12 +180,12 @@ techStack {
 }
 ```
 
-## `dataModel` block
+## `data-model` block
 
 Entity-relationship model with field-level detail.
 
 ```forge
-dataModel {
+data-model {
   entity "Transaction" {
     field "id" "UUID" "PK"
     field "amount" "DECIMAL(19,4)" "NOT NULL"
@@ -208,13 +208,13 @@ dataModel {
 
 `owner <id>` binds the entity to the container that stores it.
 
-## `trustBoundaries` block
+## `trust-boundaries` block
 
 Security zones with element membership. Zone levels: `public`, `dmz`,
 `internal`, `pci`.
 
 ```forge
-trustBoundaries {
+trust-boundaries {
   boundary "Public Internet" {
     level "public"
     includes customer
@@ -250,12 +250,12 @@ Endpoint catalog per container.
 ```forge
 apis {
   api payments.api {
-    endpoint "POST /payments" {
+    endpoint "POST" "/payments" {
       description "Create a new payment"
       request "{ amount, currency, customer_id }"
       response "{ id, status, created_at }"
     }
-    endpoint "GET /payments/{id}" {
+    endpoint "GET" "/payments/{id}" {
       description "Get payment details"
       response "{ id, amount, currency, status }"
     }
@@ -263,12 +263,12 @@ apis {
 }
 ```
 
-## `eventFlows` block
+## `event-flows` block
 
 Message/event flow model with publishers and subscribers.
 
 ```forge
-eventFlows {
+event-flows {
   flow "payment-completed" {
     topic "payments.events.completed"
     description "Emitted after successful payment capture"
@@ -278,12 +278,12 @@ eventFlows {
 }
 ```
 
-## `envConfig` block
+## `env-config` block
 
 Per-environment configuration values.
 
 ```forge
-envConfig {
+env-config {
   env "staging" {
     PAYMENT_GATEWAY "stripe-test"
     DATABASE_URL "postgres://staging-rds:5432/payments"
@@ -304,7 +304,7 @@ slos {
   slo payments.api {
     latency "< 200ms p99"
     availability "99.99%"
-    error_budget "0.01% per month"
+    error-budget "0.01% per month"
   }
 }
 ```
@@ -346,68 +346,68 @@ title and layout direction.
 
 ```forge
 views {
-  systemContext payments "Context" {
+  system-context-view payments "Context" {
     include *
-    autoLayout lr
+    auto-layout lr
     title "Payment Platform — System Context"
   }
 
-  container payments "Containers" {
+  container-view payments "Containers" {
     include *
-    autoLayout tb
+    auto-layout tb
   }
 
-  component payments.api "APIComponents" {
-    include *
-  }
-
-  pipelineView "payments-ci" "Pipeline" {
+  component-view payments.api "APIComponents" {
     include *
   }
 
-  deploymentView "production" "Production Topology" {
+  pipeline-view payments-ci "Pipeline" {
     include *
   }
 
-  techStackView "TechStack" {
+  deployment-view production "Production Topology" {
     include *
   }
 
-  branchingView "Branching" {
+  tech-stack-view "TechStack" {
     include *
   }
 
-  dataModelView "DataModel" {
+  branching-view trunk-based "Branching" {
     include *
   }
 
-  trustBoundaryView "TrustBoundaries" {
+  data-model-view "DataModel" {
     include *
   }
 
-  teamView "TeamMap" {
+  trust-boundary-view "TrustBoundaries" {
     include *
   }
 
-  apiCatalogView "APICatalog" {
+  team-view "TeamMap" {
     include *
   }
 
-  eventFlowView "EventFlows" {
+  api-catalog-view "APICatalog" {
     include *
   }
 
-  dynamic payments "LoginFlow" {
+  event-flow-view "EventFlows" {
+    include *
+  }
+
+  dynamic-view payments "LoginFlow" {
     title "User login sequence"
     1. customer -> payments.api "POST /login" "HTTPS"
     2. payments.api -> payments.db "SELECT user"
     3. payments.api -> customer "JWT + session cookie"
   }
 
-  composite "Dashboard" {
+  composite-view "Dashboard" {
     title "Executive overview"
     grid 2 2
-    cellSize 600 400
+    cell-size 600 400
     cell "SystemContext"
     cell "Containers"
     cell "Pipeline"
@@ -419,7 +419,7 @@ views {
 `include *` means "every element in scope of this view." You can also
 list element ids explicitly: `include payments.api payments.db`.
 
-`autoLayout` takes `lr` (left-to-right) or `tb` (top-to-bottom).
+`auto-layout` takes `lr` (left-to-right) or `tb` (top-to-bottom).
 
 ### `dynamic` views
 
@@ -439,7 +439,7 @@ Composite views embed other views in a grid. The DSL:
 
 - `grid <cols> <rows>` — the layout. Rows are optional; if you omit
   `rows` forge infers it from the cell count.
-- `cellSize <w> <h>` — per-cell pixel dimensions. Default `600 400`.
+- `cell-size <w> <h>` — per-cell pixel dimensions. Default `600 400`.
 - `cell "<view-key>"` — adds a cell referencing another view by its
   key, in row-major order.
 
@@ -454,9 +454,9 @@ Any view can carry an `animation { … }` block with frame-by-frame
 instructions for presentation mode:
 
 ```forge
-container payments "PaymentFlow" {
+container-view payments "PaymentFlow" {
   include *
-  autoLayout tb
+  auto-layout tb
   animation {
     frame "Step 1: Customer submits payment" {
       include customer payments.api

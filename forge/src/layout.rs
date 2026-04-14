@@ -919,9 +919,9 @@ fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
         });
     }
 
-    // Edges for branchesFrom / mergesInto (renderer draws curves)
+    // Edges for branches-from / merges-into (renderer draws curves)
     for branch in &sorted {
-        if let Some(from) = branch.properties.get("branchesFrom") {
+        if let Some(from) = branch.properties.get("branches-from") {
             edges.push(LayoutEdge {
                 frm: from.clone(),
                 to: branch.id.clone(),
@@ -930,7 +930,7 @@ fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
                 order: None,
             });
         }
-        if let Some(into) = branch.properties.get("mergesInto") {
+        if let Some(into) = branch.properties.get("merges-into") {
             edges.push(LayoutEdge {
                 frm: branch.id.clone(),
                 to: into.clone(),

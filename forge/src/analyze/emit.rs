@@ -98,7 +98,7 @@ pub fn emit(model: &Model) -> String {
 
     // ── Tech Stack section ──
     if !model.tech_stack.is_empty() {
-        o.push_str("\n  techStack {\n");
+        o.push_str("\n  tech-stack {\n");
         for cat in &model.tech_stack {
             o.push_str(&format!("    category \"{}\" {{\n", escape(&cat.name)));
             for entry in &cat.entries {
@@ -189,7 +189,7 @@ fn emit_element(o: &mut String, model: &Model, el: &Element, indent: usize) {
                 .iter()
                 .map(|c| format!("\"{}\"", escape(c)))
                 .collect();
-            o.push_str(&format!("{}dataClass {}\n", inner, classes.join(" ")));
+            o.push_str(&format!("{}data-class {}\n", inner, classes.join(" ")));
         }
 
         // Emit children
@@ -256,9 +256,11 @@ fn emit_repository(o: &mut String, el: &Element, indent: usize) {
 
 fn emit_pipeline(o: &mut String, model: &Model, pipeline: &Element, indent: usize) {
     let pad = " ".repeat(indent);
+    let local_id = pipeline.id.split('.').next_back().unwrap_or(&pipeline.id);
     o.push_str(&format!(
-        "{}pipeline \"{}\" {{\n",
+        "{}{} = pipeline \"{}\" {{\n",
         pad,
+        local_id,
         escape(&pipeline.name)
     ));
 
@@ -319,54 +321,52 @@ fn emit_pipeline(o: &mut String, model: &Model, pipeline: &Element, indent: usiz
 fn emit_view(o: &mut String, view: &View, indent: usize) {
     let pad = " ".repeat(indent);
     let kind_str = match view.kind {
-        ViewKind::SystemContext => "systemContext",
-        ViewKind::Container => "container",
-        ViewKind::PipelineView => "pipelineView",
-        ViewKind::Deployment => "deploymentView",
-        ViewKind::TechStack => "techStackView",
-        ViewKind::Branching => "branchingView",
-        ViewKind::DataModel => "dataModelView",
-        ViewKind::TrustBoundaryView => "trustBoundaryView",
-        ViewKind::TeamMap => "teamView",
-        ViewKind::Component => "component",
-        ViewKind::ApiCatalogView => "apiCatalogView",
-        ViewKind::EventFlowView => "eventFlowView",
-        ViewKind::Dynamic => "dynamic",
-        ViewKind::Composite => "composite",
+        ViewKind::SystemContext => "system-context-view",
+        ViewKind::Container => "container-view",
+        ViewKind::Component => "component-view",
+        ViewKind::PipelineView => "pipeline-view",
+        ViewKind::Deployment => "deployment-view",
+        ViewKind::TechStack => "tech-stack-view",
+        ViewKind::Branching => "branching-view",
+        ViewKind::DataModel => "data-model-view",
+        ViewKind::TrustBoundaryView => "trust-boundary-view",
+        ViewKind::TeamMap => "team-view",
+        ViewKind::ApiCatalogView => "api-catalog-view",
+        ViewKind::EventFlowView => "event-flow-view",
+        ViewKind::Dynamic => "dynamic-view",
+        ViewKind::Composite => "composite-view",
     };
 
+    // DSL v2: every view either (a) needs a scope id, which is always a
+    // bare id reference, or (b) takes only a key. The earlier v1
+    // two-shape emitter collapses to one rule.
     let scope = view.scope.as_deref().unwrap_or("");
     let scope_ref = scope.split('.').next_back().unwrap_or(scope);
+    let needs_scope = matches!(
+        view.kind,
+        ViewKind::SystemContext
+            | ViewKind::Container
+            | ViewKind::Component
+            | ViewKind::PipelineView
+            | ViewKind::Deployment
+            | ViewKind::Branching
+            | ViewKind::Dynamic
+    );
 
-    if view.kind == ViewKind::TechStack
-        || view.kind == ViewKind::DataModel
-        || view.kind == ViewKind::TrustBoundaryView
-        || view.kind == ViewKind::TeamMap
-        || view.kind == ViewKind::ApiCatalogView
-        || view.kind == ViewKind::EventFlowView
-    {
-        // techStackView has no scope, just a key
+    if needs_scope {
+        o.push_str(&format!(
+            "{}{} {} \"{}\" {{\n",
+            pad,
+            kind_str,
+            scope_ref,
+            escape(&view.key)
+        ));
+    } else {
         o.push_str(&format!(
             "{}{} \"{}\" {{\n",
             pad,
             kind_str,
             escape(&view.key)
-        ));
-    } else if view.kind == ViewKind::PipelineView
-        || view.kind == ViewKind::Deployment
-        || view.kind == ViewKind::Branching
-    {
-        o.push_str(&format!(
-            "{}{} \"{}\" \"{}\" {{\n",
-            pad,
-            kind_str,
-            escape(scope),
-            escape(&view.key)
-        ));
-    } else {
-        o.push_str(&format!(
-            "{}{} {} \"{}\" {{\n",
-            pad, kind_str, scope_ref, &view.key
         ));
     }
 
@@ -378,9 +378,23 @@ fn emit_view(o: &mut String, view: &View, indent: usize) {
         AutoLayout::LeftRight => "lr",
         AutoLayout::TopBottom => "tb",
     };
-    o.push_str(&format!("{}autoLayout {}\n", inner, layout_str));
+    o.push_str(&format!("{}auto-layout {}\n", inner, layout_str));
     if let Some(ref title) = view.title {
         o.push_str(&format!("{}title \"{}\"\n", inner, escape(title)));
+    }
+
+    // Composite cells
+    if let Some(comp) = view.composite.as_ref() {
+        o.push_str(&format!("{}grid {} {}\n", inner, comp.cols, comp.rows));
+        if comp.cell_size != (600, 400) {
+            o.push_str(&format!(
+                "{}cell-size {} {}\n",
+                inner, comp.cell_size.0, comp.cell_size.1
+            ));
+        }
+        for cell in &comp.cells {
+            o.push_str(&format!("{}cell \"{}\"\n", inner, escape(cell)));
+        }
     }
 
     o.push_str(&format!("{}}}\n", pad));
@@ -449,8 +463,8 @@ mod tests {
 
         let emitted = emit(&model);
         assert!(
-            emitted.contains("dataClass \"pii\" \"financial\""),
-            "expected dataClass in emitted output, got:\n{emitted}"
+            emitted.contains("data-class \"pii\" \"financial\""),
+            "expected data-class in emitted output, got:\n{emitted}"
         );
 
         let reparsed = parser::parse(&emitted).unwrap();

@@ -233,26 +233,19 @@ impl Parser {
                 "model" => self.parse_model()?,
                 "process" => self.parse_process()?,
                 "deployment" => self.parse_deployment()?,
-                "techStack" => self.parse_tech_stack()?,
-                "dataModel" => self.parse_data_model()?,
-                "trustBoundaries" => self.parse_trust_boundaries()?,
+                "tech-stack" => self.parse_tech_stack()?,
+                "data-model" => self.parse_data_model()?,
+                "trust-boundaries" => self.parse_trust_boundaries()?,
                 "teams" => self.parse_teams()?,
                 "apis" => self.parse_apis()?,
-                "eventFlows" => self.parse_event_flows()?,
-                "envConfig" => self.parse_env_config()?,
+                "event-flows" => self.parse_event_flows()?,
+                "env-config" => self.parse_env_config()?,
                 "slos" => self.parse_slos()?,
                 "dependencies" => self.parse_dependencies()?,
                 "views" => self.parse_views()?,
                 "docs" => self.parse_docs()?,
-                "styles" => {
-                    self.skip_block()?;
-                }
                 _ => {
-                    if self.peek_after_ws() == Some('{') {
-                        self.skip_block()?;
-                    } else if self.peek_after_ws() == Some('"') {
-                        self.parse_string()?;
-                    }
+                    return Err(self.error(format!("unknown top-level block '{}'", kw)));
                 }
             }
         }
@@ -337,7 +330,7 @@ impl Parser {
                                 el.tags.push(self.parse_string()?);
                             }
                         }
-                        "dataClass" => {
+                        "data-class" => {
                             while self.peek_after_ws() == Some('"') {
                                 el.data_classes.push(self.parse_string()?);
                             }
@@ -439,10 +432,19 @@ impl Parser {
         let first = self.parse_ident()?;
         self.skip_ws();
 
-        if self.peek() == Some('=') {
-            self.advance();
-            let kind_str = self.parse_ident()?;
-            if kind_str == "repository" {
+        // DSL v2: every process-section element uses the same binding form
+        // as model elements: `<id> = <kind> "Display Name" { ... }`.
+        // Supported kinds: repository, strategy, pipeline.
+        if self.peek() != Some('=') {
+            return Err(self.error(format!(
+                "expected '=' after process binding '{}', use `{} = <kind> \"Name\"`",
+                first, first
+            )));
+        }
+        self.advance();
+        let kind_str = self.parse_ident()?;
+        match kind_str.as_str() {
+            "repository" => {
                 let name = self.parse_string()?;
                 let mut el = Element::new(&first, ElementKind::Repository, &name);
                 self.id_map.insert(first.clone(), first.clone());
@@ -465,49 +467,27 @@ impl Parser {
                                     .insert("system".into(), self.resolve_ref(&sys));
                             }
                             _ => {
-                                if self.peek_after_ws() == Some('"') {
-                                    self.parse_string()?;
-                                } else if self.peek_after_ws() == Some('{') {
-                                    self.skip_block()?;
-                                }
+                                return Err(
+                                    self.error(format!("unknown repository keyword '{}'", prop))
+                                );
                             }
                         }
                     }
                 }
                 self.model.add_element(el);
-            } else {
-                if self.peek_after_ws() == Some('"') {
-                    self.parse_string()?;
-                }
-                if self.peek_after_ws() == Some('{') {
-                    self.skip_block()?;
-                }
+                Ok(())
             }
-            return Ok(());
+            "strategy" => self.parse_strategy(first),
+            "pipeline" => self.parse_pipeline(first),
+            _ => Err(self.error(format!(
+                "unknown process-section element kind '{}', expected repository/strategy/pipeline",
+                kind_str
+            ))),
         }
-
-        match first.as_str() {
-            "strategy" => {
-                self.parse_strategy()?;
-            }
-            "pipeline" => {
-                self.parse_pipeline()?;
-            }
-            _ => {
-                if self.peek_after_ws() == Some('"') {
-                    self.parse_string()?;
-                }
-                if self.peek_after_ws() == Some('{') {
-                    self.skip_block()?;
-                }
-            }
-        }
-        Ok(())
     }
 
-    fn parse_strategy(&mut self) -> Result<(), ParseError> {
-        let strategy_name = self.parse_string()?;
-        let strategy_id = strategy_name.replace(' ', "-").to_lowercase();
+    fn parse_strategy(&mut self, strategy_id: String) -> Result<(), ParseError> {
+        let _display_name = self.parse_string()?;
 
         self.expect('{')?;
         while self.peek_after_ws() != Some('}') {
@@ -549,11 +529,11 @@ impl Parser {
                                     el.properties
                                         .insert("protection".into(), protections.join(", "));
                                 }
-                                "branchesFrom" => {
+                                "branches-from" => {
                                     let target = self.parse_ident()?;
                                     let resolved = self.resolve_ref(&target);
                                     el.properties
-                                        .insert("branchesFrom".into(), resolved.clone());
+                                        .insert("branches-from".into(), resolved.clone());
                                     self.model.add_relationship(Relationship {
                                         frm: resolved,
                                         to: branch_id.clone(),
@@ -562,10 +542,10 @@ impl Parser {
                                         order: None,
                                     });
                                 }
-                                "mergesInto" => {
+                                "merges-into" => {
                                     let target = self.parse_ident()?;
                                     let resolved = self.resolve_ref(&target);
-                                    el.properties.insert("mergesInto".into(), resolved.clone());
+                                    el.properties.insert("merges-into".into(), resolved.clone());
                                     self.model.add_relationship(Relationship {
                                         frm: branch_id.clone(),
                                         to: resolved,
@@ -606,9 +586,8 @@ impl Parser {
         Ok(())
     }
 
-    fn parse_pipeline(&mut self) -> Result<(), ParseError> {
+    fn parse_pipeline(&mut self, pipeline_id: String) -> Result<(), ParseError> {
         let pipeline_name = self.parse_string()?;
-        let pipeline_id = pipeline_name.replace(' ', "-").to_lowercase();
         self.model.add_element(Element::new(
             &pipeline_id,
             ElementKind::Pipeline,
@@ -627,14 +606,17 @@ impl Parser {
                 return Err(self.error("unexpected EOF in pipeline"));
             }
 
-            let _saved = self.pos;
             let first = self.parse_ident()?;
             self.skip_ws();
 
             if first == "triggers" {
-                // Skip to end of line
-                while self.pos < self.text.len() && self.text[self.pos] != '\n' {
-                    self.pos += 1;
+                // `triggers <repo-ref> "event"`. Tokenised properly rather
+                // than the line-scan hack of v1.
+                let repo_ref = self.parse_ident()?;
+                let _event = self.parse_string()?;
+                let resolved = self.resolve_ref(&repo_ref);
+                if let Some(el) = self.model.elements.get_mut(&pipeline_id) {
+                    el.properties.insert("triggered_by".into(), resolved);
                 }
                 continue;
             }
@@ -699,50 +681,36 @@ impl Parser {
                                     }
                                     self.model.add_element(gate);
                                 }
-                                "produces" => {
-                                    self.parse_ident()?;
-                                    self.parse_string()?;
-                                    if self.peek_after_ws() == Some('{') {
-                                        self.skip_block()?;
-                                    }
-                                }
                                 _ => {
-                                    if self.peek_after_ws() == Some('"') {
-                                        self.parse_string()?;
-                                    } else if self.peek_after_ws() == Some('{') {
-                                        self.skip_block()?;
-                                    }
+                                    return Err(
+                                        self.error(format!("unknown stage keyword '{}'", prop))
+                                    );
                                 }
                             }
                         }
                     }
                     self.model.add_element(el);
                 } else {
-                    if self.peek_after_ws() == Some('"') {
-                        self.parse_string()?;
-                    }
-                    if self.peek_after_ws() == Some('{') {
-                        self.skip_block()?;
-                    }
+                    return Err(self.error(format!(
+                        "unknown pipeline element kind '{}', expected 'stage'",
+                        kind_str
+                    )));
                 }
                 continue;
             }
 
-            // Unknown
-            if self.peek_after_ws() == Some('"') {
-                self.parse_string()?;
-            }
-            if self.peek_after_ws() == Some('{') {
-                self.skip_block()?;
-            }
+            return Err(self.error(format!("unknown pipeline keyword '{}'", first)));
         }
     }
 
     // ── Deployment ──
 
     fn parse_deployment(&mut self) -> Result<(), ParseError> {
-        let env_name = self.parse_string()?;
-        let env_id = env_name.replace(' ', "-").to_lowercase();
+        // DSL v2: `deployment <id> "Display Name" { node ... }`
+        // The bare id is how views reference this environment.
+        let env_id = self.parse_ident()?;
+        let _display_name = self.parse_string()?;
+        self.id_map.insert(env_id.clone(), env_id.clone());
         self.expect('{')?;
         while self.peek_after_ws() != Some('}') {
             if self.at_end() {
@@ -762,13 +730,11 @@ impl Parser {
     }
 
     fn parse_deployment_node(&mut self, env_id: &str, parent_id: &str) -> Result<(), ParseError> {
+        // DSL v2: `node <id> "Display Name" { ... }`. The bare id is
+        // scoped under the environment and lets views (and `instance`
+        // references) refer to nodes without string-lookup.
+        let local = self.parse_ident()?;
         let node_name = self.parse_string()?;
-        let local = node_name
-            .to_lowercase()
-            .replace(|c: char| !c.is_alphanumeric() && c != '-', "-")
-            .replace("--", "-")
-            .trim_matches('-')
-            .to_string();
         let node_id = format!("{}.{}", parent_id, local);
 
         let mut el = Element::new(&node_id, ElementKind::DeploymentNode, &node_name);
@@ -781,7 +747,6 @@ impl Parser {
             if self.at_end() {
                 return Err(self.error("unexpected EOF in deployment node"));
             }
-            let _saved = self.pos;
             let kw = self.parse_ident()?;
             match kw.as_str() {
                 "technology" => {
@@ -795,7 +760,7 @@ impl Parser {
                         el.tags.push(self.parse_string()?);
                     }
                 }
-                "instances" | "replicas" => {
+                "instances" => {
                     let count = self.parse_ident()?;
                     el.properties.insert("instances".into(), count);
                 }
@@ -823,11 +788,7 @@ impl Parser {
                     existing.push_str(&resolved);
                 }
                 _ => {
-                    if self.peek_after_ws() == Some('"') {
-                        self.parse_string()?;
-                    } else if self.peek_after_ws() == Some('{') {
-                        self.skip_block()?;
-                    }
+                    return Err(self.error(format!("unknown deployment-node keyword '{}'", kw)));
                 }
             }
         }
@@ -851,211 +812,72 @@ impl Parser {
             }
 
             let kind_str = self.parse_ident()?;
-            match kind_str.as_str() {
-                "systemContext" => {
-                    let scope_raw = self.parse_ident()?;
-                    let scope = self.resolve_ref(&scope_raw);
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::SystemContext,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::LeftRight,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
+            // DSL v2: every view kind ends in `-view`. Scoped views take a
+            // bare id; unscoped views take only a key. View bodies are
+            // optional — a view with no properties other than the key is
+            // valid (e.g. `tech-stack-view "TechStack"`).
+            let (kind, needs_scope, default_layout) = match kind_str.as_str() {
+                "system-context-view" => (ViewKind::SystemContext, true, AutoLayout::LeftRight),
+                "container-view" => (ViewKind::Container, true, AutoLayout::TopBottom),
+                "component-view" => (ViewKind::Component, true, AutoLayout::TopBottom),
+                "pipeline-view" => (ViewKind::PipelineView, true, AutoLayout::LeftRight),
+                "deployment-view" => (ViewKind::Deployment, true, AutoLayout::TopBottom),
+                "branching-view" => (ViewKind::Branching, true, AutoLayout::LeftRight),
+                "dynamic-view" => (ViewKind::Dynamic, true, AutoLayout::TopBottom),
+                "tech-stack-view" => (ViewKind::TechStack, false, AutoLayout::TopBottom),
+                "data-model-view" => (ViewKind::DataModel, false, AutoLayout::TopBottom),
+                "trust-boundary-view" => {
+                    (ViewKind::TrustBoundaryView, false, AutoLayout::TopBottom)
                 }
-                "container" => {
-                    let scope_raw = self.parse_ident()?;
-                    let scope = self.resolve_ref(&scope_raw);
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::Container,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "pipelineView" => {
-                    let scope_raw = self.parse_string()?;
-                    let scope_id = scope_raw.replace(' ', "-").to_lowercase();
-                    let scope = self.resolve_ref(&scope_id);
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::PipelineView,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::LeftRight,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "deploymentView" => {
-                    let scope_raw = self.parse_string()?;
-                    let scope = scope_raw.replace(' ', "-").to_lowercase();
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::Deployment,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "techStackView" => {
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::TechStack,
-                        key,
-                        scope: None,
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "branchingView" => {
-                    let scope_raw = self.parse_string()?;
-                    let scope = scope_raw.replace(' ', "-").to_lowercase();
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::Branching,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::LeftRight,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "component" => {
-                    let scope_raw = self.parse_ident()?;
-                    let scope = self.resolve_ref(&scope_raw);
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::Component,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "dynamic" => {
-                    let scope_raw = self.parse_ident()?;
-                    let scope = self.resolve_ref(&scope_raw);
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::Dynamic,
-                        key,
-                        scope: Some(scope),
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
-                "composite" => {
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: ViewKind::Composite,
-                        key,
-                        scope: None,
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: Some(CompositeView {
-                            cells: Vec::new(),
-                            cols: 1,
-                            rows: 1,
-                            cell_size: (600, 400),
-                        }),
-                    };
-                    self.parse_view_body(&mut view)?;
-                    // After body parsing, cells may have been collected — infer
-                    // rows from cols if the user only specified one of them.
-                    if let Some(comp) = view.composite.as_mut() {
-                        if !comp.cells.is_empty() && comp.rows * comp.cols < comp.cells.len() as u32
-                        {
-                            comp.rows = comp.cells.len().div_ceil(comp.cols.max(1) as usize) as u32;
-                        }
-                    }
-                    self.model.views.push(view);
-                }
-                "dataModelView" | "trustBoundaryView" | "teamView" | "apiCatalogView"
-                | "eventFlowView" => {
-                    let vk = match kind_str.as_str() {
-                        "dataModelView" => ViewKind::DataModel,
-                        "trustBoundaryView" => ViewKind::TrustBoundaryView,
-                        "teamView" => ViewKind::TeamMap,
-                        "apiCatalogView" => ViewKind::ApiCatalogView,
-                        "eventFlowView" => ViewKind::EventFlowView,
-                        _ => unreachable!(),
-                    };
-                    let key = self.parse_string()?;
-                    let mut view = View {
-                        kind: vk,
-                        key,
-                        scope: None,
-                        title: None,
-                        auto_layout: AutoLayout::TopBottom,
-                        include_all: false,
-                        animation: Animation::default(),
-                        composite: None,
-                    };
-                    self.parse_view_body(&mut view)?;
-                    self.model.views.push(view);
-                }
+                "team-view" => (ViewKind::TeamMap, false, AutoLayout::TopBottom),
+                "api-catalog-view" => (ViewKind::ApiCatalogView, false, AutoLayout::TopBottom),
+                "event-flow-view" => (ViewKind::EventFlowView, false, AutoLayout::TopBottom),
+                "composite-view" => (ViewKind::Composite, false, AutoLayout::TopBottom),
                 _ => {
-                    // Skip unknown view types
-                    loop {
-                        let p = self.peek_after_ws();
-                        if p == Some('"') {
-                            self.parse_string()?;
-                        } else if p.is_some_and(|c| c.is_alphanumeric()) {
-                            self.parse_ident()?;
-                        } else {
-                            break;
-                        }
-                    }
-                    if self.peek_after_ws() == Some('{') {
-                        self.skip_block()?;
+                    return Err(self.error(format!("unknown view kind '{}'", kind_str)));
+                }
+            };
+
+            let scope = if needs_scope {
+                let scope_raw = self.parse_ident()?;
+                Some(self.resolve_ref(&scope_raw))
+            } else {
+                None
+            };
+            let key = self.parse_string()?;
+            let composite = if kind == ViewKind::Composite {
+                Some(CompositeView {
+                    cells: Vec::new(),
+                    cols: 1,
+                    rows: 1,
+                    cell_size: (600, 400),
+                })
+            } else {
+                None
+            };
+            let mut view = View {
+                kind,
+                key,
+                scope,
+                title: None,
+                auto_layout: default_layout,
+                include_all: false,
+                animation: Animation::default(),
+                composite,
+            };
+            // Optional body — v2 lets you omit `{}` for views with nothing
+            // to configure beyond the key.
+            if self.peek_after_ws() == Some('{') {
+                self.parse_view_body(&mut view)?;
+            }
+            if view.kind == ViewKind::Composite {
+                if let Some(comp) = view.composite.as_mut() {
+                    if !comp.cells.is_empty() && comp.rows * comp.cols < comp.cells.len() as u32 {
+                        comp.rows = comp.cells.len().div_ceil(comp.cols.max(1) as usize) as u32;
                     }
                 }
             }
+            self.model.views.push(view);
         }
     }
 
@@ -1112,15 +934,28 @@ impl Parser {
                         self.advance();
                         view.include_all = true;
                     } else {
-                        self.parse_ident()?;
+                        // A list of element id references. Read until we
+                        // hit something that isn't an ident-start so
+                        // `include a b c` works as one line.
+                        while self
+                            .peek_after_ws()
+                            .is_some_and(|c| c.is_alphanumeric() || c == '_')
+                        {
+                            self.parse_ident()?;
+                        }
                     }
                 }
-                "autoLayout" => {
+                "auto-layout" => {
                     let d = self.parse_ident()?;
                     view.auto_layout = if d == "lr" {
                         AutoLayout::LeftRight
-                    } else {
+                    } else if d == "tb" {
                         AutoLayout::TopBottom
+                    } else {
+                        return Err(self.error(format!(
+                            "unknown auto-layout direction '{}', expected 'lr' or 'tb'",
+                            d
+                        )));
                     };
                 }
                 "title" => {
@@ -1138,7 +973,7 @@ impl Parser {
                         comp.rows = rows.max(1);
                     }
                 }
-                "cellSize" if view.kind == ViewKind::Composite => {
+                "cell-size" if view.kind == ViewKind::Composite => {
                     let w = self.parse_u32()?;
                     self.skip_ws();
                     let h = self.parse_u32()?;
@@ -1153,11 +988,7 @@ impl Parser {
                     }
                 }
                 _ => {
-                    if self.peek_after_ws() == Some('"') {
-                        self.parse_string()?;
-                    } else if self.peek_after_ws() == Some('{') {
-                        self.skip_block()?;
-                    }
+                    return Err(self.error(format!("unknown view keyword '{}'", prop)));
                 }
             }
         }
@@ -1274,15 +1105,16 @@ impl Parser {
                                     let hp = self.parse_ident()?;
                                     match hp.as_str() {
                                         "color" => hl.color = Some(self.parse_string()?),
-                                        "lineWidth" => {
+                                        "line-width" => {
                                             let v = self.parse_ident()?;
                                             hl.line_width = v.parse().ok();
                                         }
                                         "label" => hl.label = Some(self.parse_string()?),
                                         _ => {
-                                            if self.peek_after_ws() == Some('"') {
-                                                self.parse_string()?;
-                                            }
+                                            return Err(self.error(format!(
+                                                "unknown highlight keyword '{}'",
+                                                hp
+                                            )));
                                         }
                                     }
                                 }
@@ -1354,7 +1186,7 @@ impl Parser {
                 return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in techStack"));
+                return Err(self.error("unexpected EOF in tech-stack"));
             }
             let kw = self.parse_ident()?;
             if kw == "category" {
@@ -1368,7 +1200,7 @@ impl Parser {
                         break;
                     }
                     if self.at_end() {
-                        return Err(self.error("unexpected EOF in techStack category"));
+                        return Err(self.error("unexpected EOF in tech-stack category"));
                     }
                     let inner = self.parse_ident()?;
                     if inner == "tech" {
@@ -1426,7 +1258,7 @@ impl Parser {
                 return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in dataModel"));
+                return Err(self.error("unexpected EOF in data-model"));
             }
             let kw = self.parse_ident()?;
             if kw == "entity" {
@@ -1522,7 +1354,7 @@ impl Parser {
                 return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in trustBoundaries"));
+                return Err(self.error("unexpected EOF in trust-boundaries"));
             }
             let kw = self.parse_ident()?;
             if kw == "boundary" {
@@ -1542,16 +1374,12 @@ impl Parser {
                     let prop = self.parse_ident()?;
                     match prop.as_str() {
                         "level" => boundary.level = self.parse_string()?,
-                        "member" | "includes" => {
+                        "includes" => {
                             let member = self.parse_ident()?;
                             boundary.members.push(self.resolve_ref(&member));
                         }
                         _ => {
-                            if self.peek_after_ws() == Some('"') {
-                                self.parse_string()?;
-                            } else if self.peek_after_ws() == Some('{') {
-                                self.skip_block()?;
-                            }
+                            return Err(self.error(format!("unknown boundary keyword '{}'", prop)));
                         }
                     }
                 }
@@ -1640,11 +1468,11 @@ impl Parser {
                     }
                     let inner = self.parse_ident()?;
                     if inner == "endpoint" {
-                        let method_path = self.parse_string()?;
-                        let (method, path) = method_path
-                            .split_once(' ')
-                            .map(|(m, p)| (m.to_string(), p.to_string()))
-                            .unwrap_or((method_path.clone(), String::new()));
+                        // DSL v2: `endpoint "METHOD" "/path" { … }`.
+                        // Structured two-string form instead of the v1
+                        // `"METHOD /path"` split-on-space trick.
+                        let method = self.parse_string()?;
+                        let path = self.parse_string()?;
                         let mut ep = ApiEndpoint {
                             method,
                             path,
@@ -1699,7 +1527,7 @@ impl Parser {
                 return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in eventFlows"));
+                return Err(self.error("unexpected EOF in event-flows"));
             }
             let kw = self.parse_ident()?;
             if kw == "flow" {
@@ -1757,7 +1585,7 @@ impl Parser {
                 return Ok(());
             }
             if self.at_end() {
-                return Err(self.error("unexpected EOF in envConfig"));
+                return Err(self.error("unexpected EOF in env-config"));
             }
             let kw = self.parse_ident()?;
             if kw == "env" {
@@ -1800,7 +1628,7 @@ impl Parser {
                 let container = self.resolve_ref(&container_ref);
                 let mut slo = Slo {
                     container,
-                    latency_p99: None,
+                    latency: None,
                     availability: None,
                     error_budget: None,
                 };
@@ -1813,15 +1641,11 @@ impl Parser {
                     }
                     let p = self.parse_ident()?;
                     match p.as_str() {
-                        "latency" | "latency_p99" => slo.latency_p99 = Some(self.parse_string()?),
+                        "latency" => slo.latency = Some(self.parse_string()?),
                         "availability" => slo.availability = Some(self.parse_string()?),
-                        "error_budget" | "errorBudget" => {
-                            slo.error_budget = Some(self.parse_string()?)
-                        }
+                        "error-budget" => slo.error_budget = Some(self.parse_string()?),
                         _ => {
-                            if self.peek_after_ws() == Some('"') {
-                                self.parse_string()?;
-                            }
+                            return Err(self.error(format!("unknown slo keyword '{}'", p)));
                         }
                     }
                 }
@@ -1864,14 +1688,12 @@ impl Parser {
                     }
                     let p = self.parse_ident()?;
                     match p.as_str() {
-                        "kind" | "type" => dep.kind = self.parse_string()?,
+                        "kind" => dep.kind = self.parse_string()?,
                         "criticality" => dep.criticality = self.parse_string()?,
                         "url" => dep.url = Some(self.parse_string()?),
                         "description" => dep.description = Some(self.parse_string()?),
                         _ => {
-                            if self.peek_after_ws() == Some('"') {
-                                self.parse_string()?;
-                            }
+                            return Err(self.error(format!("unknown dependency keyword '{}'", p)));
                         }
                     }
                 }
@@ -1999,7 +1821,7 @@ forge "t" {
       db = container "Ledger" {
         technology "PostgreSQL"
         tags "database"
-        dataClass "pii" "financial"
+        data-class "pii" "financial"
       }
     }
   }
@@ -2011,7 +1833,7 @@ forge "t" {
             db.data_classes,
             vec!["pii".to_string(), "financial".to_string()]
         );
-        // dataClass doesn't pollute tags
+        // data-class doesn't pollute tags
         assert!(!db.tags.contains(&"pii".to_string()));
     }
 
@@ -2030,7 +1852,7 @@ forge "Login" {
   }
 
   views {
-    dynamic app "LoginFlow" {
+    dynamic-view app "LoginFlow" {
       title "User Login Flow"
       1. user -> app.web "submits credentials" "HTTPS"
       2. app.web -> app.api "POST /login"
@@ -2075,13 +1897,13 @@ forge "Dash" {
     }
   }
   views {
-    systemContext sys "Context" {
+    system-context-view sys "Context" {
       include *
     }
-    container sys "Containers" {
+    container-view sys "Containers" {
       include *
     }
-    composite "Dashboard" {
+    composite-view "Dashboard" {
       title "Exec Dashboard"
       grid 2 1
       cell "Context"
@@ -2374,8 +2196,8 @@ forge "Dash" {
         );
 
         let feature = branches.iter().find(|b| b.name == "feature/*").unwrap();
-        assert!(feature.properties.contains_key("branchesFrom"));
-        assert!(feature.properties.contains_key("mergesInto"));
+        assert!(feature.properties.contains_key("branches-from"));
+        assert!(feature.properties.contains_key("merges-into"));
     }
 
     #[test]
@@ -2525,7 +2347,7 @@ forge "Dash" {
         let m = payments_model();
         assert!(!m.slos.is_empty());
         let api_slo = m.slos.iter().find(|s| s.container.contains("api")).unwrap();
-        assert!(api_slo.latency_p99.is_some());
+        assert!(api_slo.latency.is_some());
         assert!(api_slo.availability.is_some());
     }
 

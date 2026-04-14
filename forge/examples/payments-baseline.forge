@@ -38,18 +38,18 @@ forge "Payment Platform" {
       system payments
     }
 
-    strategy "trunk-based" {
+    trunk-based = strategy "Trunk-based" {
       trunk = branch "main" {
         protection "require-review" "require-ci"
       }
       feature = branch "feature/*" {
-        branchesFrom trunk
-        mergesInto trunk
+        branches-from trunk
+        merges-into trunk
       }
     }
 
-    pipeline "payments-ci" {
-      triggers repo.main on "push"
+    payments-ci = pipeline "Payments CI" {
+      triggers repo "push"
 
       build = stage "Build & Test" {
         step "cargo build --release"
@@ -79,26 +79,26 @@ forge "Payment Platform" {
   }
 
   views {
-    systemContext payments "SystemContext" {
+    system-context-view payments "SystemContext" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "Payment Platform — System Context"
     }
 
-    container payments "Containers" {
+    container-view payments "Containers" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Payment Platform — Containers"
     }
 
-    pipelineView "payments-ci" "Pipeline" {
+    pipeline-view payments-ci "Pipeline" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "Payment API — CI/CD Pipeline"
     }
   }
 
-  techStack {
+  tech-stack {
     category "Languages & Frameworks" {
       tech "Rust" { version "1.75"
         purpose "Payment API and Processor" }

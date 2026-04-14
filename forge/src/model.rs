@@ -274,7 +274,7 @@ pub struct EnvConfig {
 #[derive(Debug, Clone)]
 pub struct Slo {
     pub container: String,
-    pub latency_p99: Option<String>,
+    pub latency: Option<String>,
     pub availability: Option<String>,
     pub error_budget: Option<String>,
 }

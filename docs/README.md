@@ -37,6 +37,7 @@ parser accepts.
 
 - [CLI command reference](reference/cli.md) — every subcommand and flag
 - [DSL quick reference](reference/dsl-quickref.md) — the `.forge` syntax in one page
+- [Grammar](reference/grammar.md) — formal W3C-style EBNF for the whole DSL
 - [Scanners](reference/scanners.md) — what each scanner reads and emits
 - [Languages and tools](reference/languages-and-tools.md) — what's supported today
 - [Correlations](reference/correlations.md) — the cross-scanner passes
