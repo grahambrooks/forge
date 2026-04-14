@@ -1,0 +1,28 @@
+.github/workflows/release.yml
+  907b25380dc0ddb6 54-62
+forge/src/analyze/code.rs
+  907b25380dc0ddb6 183-196,198
+tests/integration/run-tests.sh
+  907b25380dc0ddb6 47,79,82,90,97,103,110,160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "e1c5f44258ab0aeb08cde66d82bdc8610365decd",
+  "prompts": {
+    "907b25380dc0ddb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a619cea2-71c8-40b8-a817-9370fdb0e64f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 550,
+      "accepted_lines": 248,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/d078b08caabe1a8f58cf88f5cc07f1ccc393e5b99972a0fa7e2dde79fbbd280a"
+    }
+  }
+}
