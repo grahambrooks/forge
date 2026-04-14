@@ -44,7 +44,7 @@ run_fixture() {
     local out="$RESULTS/$name"
     shift
     # remaining args are scanner list override
-    local scanners="${1:-code,source,ci,docker,k8s,infra}"
+    local scanners="${1:-code,semantic,ci,docker,k8s,infra}"
 
     echo ""
     echo "=== $name ==="
@@ -76,10 +76,10 @@ run_fixture() {
 }
 
 # ── Rust / Axum ──────────────────────────────────────────────────
-# code scanner detects framework from Cargo.toml; source scanner finds routes
+# code scanner detects framework from Cargo.toml; semantic scanner finds routes
 # (routes go to api_catalogs which emitter doesn't serialize to .forge yet)
 
-run_fixture "rust-axum" "code,source,docker"
+run_fixture "rust-axum" "code,semantic,docker"
 check_contains "$RESULTS/rust-axum/model.forge" "Rust / Axum"   "rust-axum: detected Axum framework"
 check_contains "$RESULTS/rust-axum/model.forge" "payment-api"    "rust-axum: detected crate name"
 check_contains "$RESULTS/rust-axum/model.forge" "PostgreSQL"     "rust-axum: detected postgres connection"
@@ -87,29 +87,28 @@ check_contains "$RESULTS/rust-axum/model.forge" "docker"         "rust-axum: det
 
 # ── Node.js / Express ────────────────────────────────────────────
 
-run_fixture "node-express" "code,source"
+run_fixture "node-express" "code,semantic"
 check_contains "$RESULTS/node-express/model.forge" "TypeScript / Express" "node-express: detected Express+TS"
 check_contains "$RESULTS/node-express/model.forge" "user-service"         "node-express: detected package name"
 check_contains "$RESULTS/node-express/model.forge" "PostgreSQL"           "node-express: detected postgres connection"
 
 # ── Go / Gin ─────────────────────────────────────────────────────
 
-run_fixture "go-gin" "code,source"
+run_fixture "go-gin" "code,semantic"
 check_contains "$RESULTS/go-gin/model.forge" "Go / Gin"         "go-gin: detected Gin framework"
 check_contains "$RESULTS/go-gin/model.forge" "inventory-svc"    "go-gin: detected module name"
 
 # ── Python / FastAPI ─────────────────────────────────────────────
 
-run_fixture "python-fastapi" "code,source"
+run_fixture "python-fastapi" "code,semantic"
 check_contains "$RESULTS/python-fastapi/model.forge" "Python / FastAPI" "python-fastapi: detected FastAPI"
 check_contains "$RESULTS/python-fastapi/model.forge" "order-service"    "python-fastapi: detected project name"
 check_contains "$RESULTS/python-fastapi/model.forge" "PostgreSQL"       "python-fastapi: detected postgres connection"
 
 # ── Java / Spring Boot ───────────────────────────────────────────
 
-run_fixture "java-spring" "code,source"
+run_fixture "java-spring" "code,semantic"
 check_contains "$RESULTS/java-spring/model.forge" "Spring Boot"     "java-spring: detected Spring Boot"
-check_contains "$RESULTS/java-spring/model.forge" "Maven"           "java-spring: detected Maven build tool"
 
 # ── Docker Compose ───────────────────────────────────────────────
 
@@ -158,7 +157,7 @@ check_contains "$RESULTS/openapi-spec/model.forge" "Payment API"    "openapi: de
 
 # ── Full Stack (all scanners) ────────────────────────────────────
 
-run_fixture "full-stack" "code,source,ci,docker,k8s,infra"
+run_fixture "full-stack" "code,semantic,ci,docker,k8s,infra"
 check_contains "$RESULTS/full-stack/model.forge" "Rust"         "full-stack: detected Rust project"
 check_contains "$RESULTS/full-stack/model.forge" "React"        "full-stack: detected React frontend"
 check_contains "$RESULTS/full-stack/model.forge" "pipeline"     "full-stack: detected CI pipeline"

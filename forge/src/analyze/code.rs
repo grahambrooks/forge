@@ -180,8 +180,22 @@ fn build_container(result: &ExtractionResult, path: &Path, root: &Path) -> Optio
         .map(|n| n.name.clone())
         .collect();
 
+    // symgraph reports package.json as JavaScript. Promote to TypeScript
+    // when a sibling `tsconfig.json` exists so the node-express-style
+    // "TypeScript / Express" label lands correctly on real TS projects.
+    let effective_lang = if matches!(file_node.language, Language::JavaScript)
+        && path
+            .parent()
+            .map(|p| p.join("tsconfig.json").exists())
+            .unwrap_or(false)
+    {
+        Language::TypeScript
+    } else {
+        file_node.language
+    };
+
     let mut el = Element::new(&id, ElementKind::Container, &name);
-    el.technology = Some(infer_technology(file_node.language, &deps));
+    el.technology = Some(infer_technology(effective_lang, &deps));
 
     let rel_path = path.strip_prefix(root).unwrap_or(path);
     el.description = Some(format!(

@@ -51,6 +51,15 @@ jobs:
             sudo apt-get install -y gcc-aarch64-linux-gnu
             echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
           fi
+          # tree-sitter (pulled in via symgraph) compiles a C runtime with
+          # the host gcc, which defaults to `-D_FORTIFY_SOURCE=2` on modern
+          # Ubuntu. That emits glibc-only `__fprintf_chk` / `__snprintf_chk`
+          # / `__vsnprintf_chk` stubs that musl libc doesn't provide, so
+          # the final static link fails. Disable FORTIFY for both musl
+          # targets so the C code uses the plain libc functions that musl
+          # does expose.
+          echo "CFLAGS_x86_64_unknown_linux_musl=-U_FORTIFY_SOURCE" >> "$GITHUB_ENV"
+          echo "CFLAGS_aarch64_unknown_linux_musl=-U_FORTIFY_SOURCE" >> "$GITHUB_ENV"
 
       - uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc # v2.9.1
         with:
