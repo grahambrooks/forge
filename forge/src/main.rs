@@ -204,9 +204,10 @@ enum Commands {
 
     /// Start the MCP server for AI agent integration (stdio)
     Mcp {
-        /// Input .forge file
-        #[arg(short, long, default_value = "forge.forge")]
-        source: PathBuf,
+        /// Input .forge file. If omitted, the server starts with an empty
+        /// model and expects the client to populate it via `forge_analyze`.
+        #[arg(short, long)]
+        source: Option<PathBuf>,
     },
 
     /// Start the Language Server Protocol server (stdio)
@@ -267,7 +268,19 @@ fn main() {
             baseline,
             present,
         } => cmd_serve(source, out, style, port, baseline, present),
-        Commands::Mcp { source } => mcp::run(source),
+        Commands::Mcp { source } => {
+            if let Some(path) = &source {
+                if !path.exists() {
+                    eprintln!(
+                        "Warning: source {} does not exist; starting with empty model.",
+                        path.display()
+                    );
+                    mcp::run(None);
+                    return;
+                }
+            }
+            mcp::run(source);
+        }
         Commands::Lsp => {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()

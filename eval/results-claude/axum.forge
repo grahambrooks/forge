@@ -1,0 +1,513 @@
+forge "project" {
+
+  model {
+    user = person "User" {
+      description "End user inferred from a web-facing container"
+      tags "inferred:synth"
+    }
+    project-system = system "project" {
+      description "Inferred system wrapper for project"
+      tags "inferred:synth"
+
+      example-customize-extractor-error = container "example-customize-extractor-error" {
+        description "Rust crate at examples/customize-extractor-error"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-customize-path-rejection = container "example-customize-path-rejection" {
+        description "Rust crate at examples/customize-path-rejection"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      _inferred_mongodb = container "MongoDB" {
+        technology "MongoDB"
+        tags "database" "inferred:semantic"
+      }
+
+      example-tracing-aka-logging = container "example-tracing-aka-logging" {
+        description "Rust crate at examples/tracing-aka-logging"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-websockets = container "example-websockets" {
+        description "Rust crate at examples/websockets"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-compression = container "example-compression" {
+        description "Rust crate at examples/compression"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-static-file-server = container "example-static-file-server" {
+        description "Rust crate at examples/static-file-server"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-templates = container "example-templates" {
+        description "Rust crate at examples/templates"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-low-level-openssl = container "example-low-level-openssl" {
+        description "Rust crate at examples/low-level-openssl"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-prometheus-metrics = container "example-prometheus-metrics" {
+        description "Rust crate at examples/prometheus-metrics"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-tokio-redis = container "example-tokio-redis" {
+        description "Rust crate at examples/tokio-redis"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-versioning = container "example-versioning" {
+        description "Rust crate at examples/versioning"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-mongodb = container "example-mongodb" {
+        description "Rust crate at examples/mongodb"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-reqwest-response = container "example-reqwest-response" {
+        description "Rust crate at examples/reqwest-response"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-tokio-postgres = container "example-tokio-postgres" {
+        description "Rust crate at examples/tokio-postgres"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-low-level-rustls = container "example-low-level-rustls" {
+        description "Rust crate at examples/low-level-rustls"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-readme = container "example-readme" {
+        description "Rust crate at examples/readme"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-tls-rustls = container "example-tls-rustls" {
+        description "Rust crate at examples/tls-rustls"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-testing-websockets = container "example-testing-websockets" {
+        description "Rust crate at examples/testing-websockets"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-anyhow-error-response = container "example-anyhow-error-response" {
+        description "Rust crate at examples/anyhow-error-response"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-chat = container "example-chat" {
+        description "Rust crate at examples/chat"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-low-level-native-tls = container "example-low-level-native-tls" {
+        description "Rust crate at examples/low-level-native-tls"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-sqlx-postgres = container "example-sqlx-postgres" {
+        description "Rust crate at examples/sqlx-postgres"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-cors = container "example-cors" {
+        description "Rust crate at examples/cors"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-key-value-store = container "example-key-value-store" {
+        description "Rust crate at examples/key-value-store"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-templates-minijinja = container "example-templates-minijinja" {
+        description "Rust crate at examples/templates-minijinja"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      auto-reload = container "auto-reload" {
+        description "Rust crate at examples/auto-reload"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-graceful-shutdown = container "example-graceful-shutdown" {
+        description "Rust crate at examples/graceful-shutdown"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      axum-macros = container "axum-macros" {
+        description "Rust crate at axum-macros"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-validator = container "example-validator" {
+        description "Rust crate at examples/validator"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-routes-and-handlers-close-together = container "example-routes-and-handlers-close-together" {
+        description "Rust crate at examples/routes-and-handlers-close-together"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-tls-graceful-shutdown = container "example-tls-graceful-shutdown" {
+        description "Rust crate at examples/tls-graceful-shutdown"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-websockets-http2 = container "example-websockets-http2" {
+        description "Rust crate at examples/websockets-http2"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-simple-router-wasm = container "example-simple-router-wasm" {
+        description "Rust crate at examples/simple-router-wasm"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-jwt = container "example-jwt" {
+        description "Rust crate at examples/jwt"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-multipart-form = container "example-multipart-form" {
+        description "Rust crate at examples/multipart-form"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      axum-core = container "axum-core" {
+        description "Rust crate at axum-core"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-testing = container "example-testing" {
+        description "Rust crate at examples/testing"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-stream-to-file = container "example-stream-to-file" {
+        description "Rust crate at examples/stream-to-file"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-todos = container "example-todos" {
+        description "Rust crate at examples/todos"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-handle-head-request = container "example-handle-head-request" {
+        description "Rust crate at examples/handle-head-request"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-error-handling = container "example-error-handling" {
+        description "Rust crate at examples/error-handling"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-consume-body-in-extractor-or-middleware = container "example-consume-body-in-extractor-or-middleware" {
+        description "Rust crate at examples/consume-body-in-extractor-or-middleware"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      axum-extra = container "axum-extra" {
+        description "Rust crate at axum-extra"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-http-proxy = container "example-http-proxy" {
+        description "Rust crate at examples/http-proxy"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-request-id = container "example-request-id" {
+        description "Rust crate at examples/request-id"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      _inferred_redis = container "Redis" {
+        technology "Redis"
+        tags "database" "inferred:semantic"
+      }
+
+      _inferred_postgresql = container "PostgreSQL" {
+        technology "PostgreSQL"
+        tags "database" "inferred:semantic"
+      }
+
+      example-global-404-handler = container "example-global-404-handler" {
+        description "Rust crate at examples/global-404-handler"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-hello-world = container "example-hello-world" {
+        description "Rust crate at examples/hello-world"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-unix-domain-socket = container "example-unix-domain-socket" {
+        description "Rust crate at examples/unix-domain-socket"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-dependency-injection = container "example-dependency-injection" {
+        description "Rust crate at examples/dependency-injection"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-sse = container "example-sse" {
+        description "Rust crate at examples/sse"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-diesel-postgres = container "example-diesel-postgres" {
+        description "Rust crate at examples/diesel-postgres"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-reverse-proxy = container "example-reverse-proxy" {
+        description "Rust crate at examples/reverse-proxy"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      examples = container "examples" {
+        description "Rust crate at examples"
+        technology "Rust"
+        tags "inferred:code"
+      }
+
+      axum = container "axum" {
+        description "Rust crate at axum"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-oauth = container "example-oauth" {
+        description "Rust crate at examples/oauth"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-diesel-async-postgres = container "example-diesel-async-postgres" {
+        description "Rust crate at examples/diesel-async-postgres"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-serve-with-hyper = container "example-serve-with-hyper" {
+        description "Rust crate at examples/serve-with-hyper"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-form = container "example-form" {
+        description "Rust crate at examples/form"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-parse-body-based-on-content-type = container "example-parse-body-based-on-content-type" {
+        description "Rust crate at examples/parse-body-based-on-content-type"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+
+      example-print-request-response = container "example-print-request-response" {
+        description "Rust crate at examples/print-request-response"
+        technology "Rust / Axum"
+        tags "inferred:code"
+      }
+      example-tokio-redis -> _inferred_redis "reads/writes"
+    }
+    developer = person "Developer" {
+      description "Engineer inferred from CI pipeline presence"
+      tags "inferred:synth"
+    }
+    example-tokio-redis -> _inferred_redis "reads/writes"
+    user -> example-customize-extractor-error "uses"
+    developer -> ci "triggers"
+  }
+
+  process {
+    ci = pipeline "CI" {
+      tags "inferred:ci"
+      deny-check = stage "cargo-deny check" {
+        needs test-msrv
+        tags "inferred:ci"
+      }
+      wasm32-unknown-unknown = stage "wasm32-unknown-unknown" {
+        needs check
+        tags "inferred:ci"
+      }
+      test-msrv = stage "test-msrv" {
+        needs check
+        tags "inferred:ci"
+      }
+      typos = stage "Spell Check with Typos" {
+        needs dependencies-are-sorted
+        tags "inferred:ci"
+      }
+      external-types = stage "external-types" {
+        needs cargo-hack
+        tags "inferred:ci"
+      }
+      cargo-hack = stage "cargo-hack" {
+        needs check-docs
+        tags "inferred:ci"
+      }
+      check-docs = stage "check-docs" {
+        needs check
+        tags "inferred:ci"
+      }
+      test-nightly = stage "test-nightly" {
+        needs check
+        tags "inferred:ci"
+      }
+      dependencies-are-sorted = stage "dependencies-are-sorted" {
+        needs wasm32-unknown-unknown
+        tags "inferred:ci"
+      }
+      check = stage "check" {
+        tags "inferred:ci"
+      }
+      test-versions = stage "test-versions" {
+        needs check
+        tags "inferred:ci"
+      }
+      armv5te-unknown-linux-musleabi = stage "armv5te-unknown-linux-musleabi" {
+        needs check
+        tags "inferred:ci"
+      }
+    }
+  }
+
+  views {
+    system-context-view project-system "SystemContext" {
+      include *
+      auto-layout lr
+      title "System Context"
+    }
+    container-view project-system "Containers" {
+      include *
+      auto-layout tb
+      title "Containers"
+    }
+    pipeline-view ci "Pipeline" {
+      include *
+      auto-layout lr
+      title "CI/CD Pipeline"
+    }
+    branching-view trunk "Branching" {
+      include *
+      auto-layout tb
+      title "Branching Strategy"
+    }
+    tech-stack-view "TechStack" {
+      include *
+      auto-layout tb
+      title "Technology Stack"
+    }
+    team-view "Teams" {
+      include *
+      auto-layout tb
+      title "Team Ownership"
+    }
+    api-catalog-view "APICatalog" {
+      include *
+      auto-layout tb
+      title "API Catalog"
+    }
+  }
+
+  tech-stack {
+    category "MongoDB" {
+      tech "MongoDB" {
+        purpose "language"
+      }
+    }
+    category "PostgreSQL" {
+      tech "PostgreSQL" {
+        purpose "language"
+      }
+    }
+    category "Redis" {
+      tech "Redis" {
+        purpose "language"
+      }
+    }
+    category "Rust" {
+      tech "Rust" {
+        purpose "language"
+      }
+      tech "Axum" {
+        purpose "framework"
+      }
+    }
+  }
+}

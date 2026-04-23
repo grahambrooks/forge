@@ -1,0 +1,306 @@
+{
+  "dataEntities": [],
+  "description": "",
+  "elements": [
+    {
+      "children": [
+        "scorecard-supply-chain-security.analysis"
+      ],
+      "description": null,
+      "id": "scorecard-supply-chain-security",
+      "kind": "Pipeline",
+      "name": "Scorecard supply-chain security",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "codeql.analyze"
+      ],
+      "description": null,
+      "id": "codeql",
+      "kind": "Pipeline",
+      "name": "CodeQL",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "End user inferred from a web-facing container",
+      "id": "user",
+      "kind": "Person",
+      "name": "User",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.lint",
+      "kind": "Stage",
+      "name": "Lint",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "scorecard-supply-chain-security.analysis",
+      "kind": "Stage",
+      "name": "Scorecard analysis",
+      "parent": "scorecard-supply-chain-security",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Node.js package at ",
+      "id": "project-system.express",
+      "kind": "Container",
+      "name": "express",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Node.js / Express"
+    },
+    {
+      "children": [],
+      "description": "Engineer inferred from CI pipeline presence",
+      "id": "developer",
+      "kind": "Person",
+      "name": "Developer",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "codeql.analyze",
+      "kind": "Stage",
+      "name": "Analyze",
+      "parent": "codeql",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.test",
+      "kind": "Stage",
+      "name": "Node.js ${{ matrix.node-version }} - ${{matrix.os}}",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "ci.coverage",
+        "ci.lint",
+        "ci.test"
+      ],
+      "description": null,
+      "id": "ci",
+      "kind": "Pipeline",
+      "name": "ci",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.coverage",
+      "kind": "Stage",
+      "name": "coverage",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "legacy.test",
+      "kind": "Stage",
+      "name": "Node.js ${{ matrix.node-version }} - ${{matrix.os}}",
+      "parent": "legacy",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "legacy.coverage",
+      "kind": "Stage",
+      "name": "coverage",
+      "parent": "legacy",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "project-system.express"
+      ],
+      "description": "Inferred system wrapper for project",
+      "id": "project-system",
+      "kind": "System",
+      "name": "project",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "legacy.test",
+        "legacy.coverage"
+      ],
+      "description": null,
+      "id": "legacy",
+      "kind": "Pipeline",
+      "name": "legacy",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    }
+  ],
+  "name": "project",
+  "relationships": [
+    {
+      "from": "user",
+      "label": "uses",
+      "technology": null,
+      "to": "project-system.express"
+    },
+    {
+      "from": "developer",
+      "label": "triggers",
+      "technology": null,
+      "to": "codeql"
+    }
+  ],
+  "teams": [],
+  "tech-stack": [
+    {
+      "category": "Node.js",
+      "entries": [
+        {
+          "name": "Node.js",
+          "purpose": "language",
+          "version": null
+        },
+        {
+          "name": "Express",
+          "purpose": "framework",
+          "version": null
+        }
+      ]
+    }
+  ],
+  "trust-boundaries": [],
+  "views": [
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "SystemContext",
+      "kind": "SystemContext",
+      "scope": "project-system",
+      "title": "System Context"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Containers",
+      "kind": "Container",
+      "scope": "project-system",
+      "title": "Containers"
+    },
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "Pipeline",
+      "kind": "PipelineView",
+      "scope": "ci",
+      "title": "CI/CD Pipeline"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Branching",
+      "kind": "Branching",
+      "scope": "trunk",
+      "title": "Branching Strategy"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "TechStack",
+      "kind": "TechStack",
+      "scope": null,
+      "title": "Technology Stack"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Teams",
+      "kind": "TeamMap",
+      "scope": null,
+      "title": "Team Ownership"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "APICatalog",
+      "kind": "ApiCatalogView",
+      "scope": null,
+      "title": "API Catalog"
+    }
+  ]
+}

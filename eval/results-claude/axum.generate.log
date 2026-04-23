@@ -1,0 +1,6 @@
+$ forge generate /Users/graham/dev/projects/forge/eval/results-claude/axum.forge --out /Users/graham/dev/projects/forge/eval/results/site/axum-claude
+
+
+Generating site from "project"...
+  87 pages, 7 diagrams → /Users/graham/dev/projects/forge/eval/results/site/axum-claude
+Done.

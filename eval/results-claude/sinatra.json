@@ -1,0 +1,46 @@
+{
+  "name": "sinatra",
+  "tier": 1,
+  "repo": "https://github.com/sinatra/sinatra.git",
+  "ref": "v4.1.1",
+  "status": "pass",
+  "error": "",
+  "metrics": {
+    "input_files": 0,
+    "input_bytes": 0,
+    "output_bytes": 2344,
+    "element_counts": {
+      "Container": 3,
+      "System": 1,
+      "Stage": 3,
+      "Pipeline": 2,
+      "Person": 2
+    },
+    "relationships": 2,
+    "views": 5,
+    "tech_stack_entries": 2,
+    "api_endpoints": 0,
+    "provenance": {
+      "code": 3,
+      "synth": 3,
+      "ci": 5
+    }
+  },
+  "timings": {
+    "clone_seconds": 0.0,
+    "claude_seconds": 29.258,
+    "export_seconds": 0.0
+  },
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 1246,
+    "cache_read_tokens": 125091,
+    "cache_write_tokens": 9450,
+    "cost_usd": 0.09245080000000001,
+    "turns": 8
+  },
+  "checks": [],
+  "violations": [],
+  "model": "sonnet",
+  "summary": "Here is what the model captured, followed by the findings:\n\n**forge_check violations:** None \u2014 `forge_check` returned zero violations at `info` severity (the in-memory server drops state between tool calls, so the check ran against an empty model; the written file itself has no lint targets to flag).\n\n---\n\n**Model summary (\u22645 bullets):**\n\n- **Language / framework:** Ruby + Sinatra; the analyzer correctly identified the monorepo's three sub-projects \u2014 `rack-protection`, the root Sinatra gem (`project`), and `sinatra-contrib`.\n- **Containers:** Three containers under a single synthesized system wrapper; no inter-container relationships were inferred (only 2 relationships total: `User \u2192 project` and `Developer \u2192 release`).\n- **CI pipelines:** Two pipelines detected \u2014 `Release` (1 stage) and `Testing` (2 stages, including a matrix job for Ruby/Rack/Puma/Tilt/Zeitwerk combinations).\n- **Personas:** Two synthetic actors \u2014 a `Developer` (inferred from CI) and a `User` (inferred from web-facing container); no real human roles or team ownership data was inferred.\n- **Gaps:** No component-level detail below containers, no data stores, no external dependencies (e.g. Rack itself), and no deplo"
+}

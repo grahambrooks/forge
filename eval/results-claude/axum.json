@@ -1,0 +1,465 @@
+{
+  "name": "axum",
+  "tier": 1,
+  "repo": "https://github.com/tokio-rs/axum.git",
+  "ref": "axum-v0.8.1",
+  "status": "pass",
+  "error": "",
+  "metrics": {
+    "input_files": 488,
+    "input_bytes": 1885362,
+    "output_bytes": 15432,
+    "element_counts": {
+      "Container": 63,
+      "Pipeline": 1,
+      "Stage": 12,
+      "System": 1,
+      "Person": 2
+    },
+    "relationships": 4,
+    "views": 7,
+    "tech_stack_entries": 5,
+    "api_endpoints": 0,
+    "provenance": {
+      "code": 60,
+      "ci": 13,
+      "synth": 3,
+      "semantic": 3
+    }
+  },
+  "timings": {
+    "clone_seconds": 0.0,
+    "claude_seconds": 41.687458753585815,
+    "export_seconds": 0.00605010986328125
+  },
+  "usage": {
+    "input_tokens": 21,
+    "output_tokens": 1905,
+    "cache_read_tokens": 146413,
+    "cache_write_tokens": 14694,
+    "cost_usd": 0.1284064,
+    "turns": 10
+  },
+  "checks": [
+    {
+      "name": "min_containers",
+      "ok": true,
+      "detail": "found 63, expected \u2265 3"
+    },
+    {
+      "name": "scanner:code",
+      "ok": true,
+      "detail": "60 element(s) tagged inferred:code"
+    },
+    {
+      "name": "scanner:ci",
+      "ok": true,
+      "detail": "13 element(s) tagged inferred:ci"
+    },
+    {
+      "name": "claude_budget",
+      "ok": true,
+      "detail": "41.7s vs budget 300s (5\u00d7 baseline)"
+    }
+  ],
+  "violations": [
+    {
+      "element": null,
+      "message": "View 'Branching' has no visible elements",
+      "rule": "empty-views",
+      "severity": "warning"
+    },
+    {
+      "element": null,
+      "message": "View 'Teams' has no visible elements",
+      "rule": "empty-views",
+      "severity": "warning"
+    },
+    {
+      "element": null,
+      "message": "View 'APICatalog' has no visible elements",
+      "rule": "empty-views",
+      "severity": "warning"
+    },
+    {
+      "element": "project-system._inferred_redis",
+      "message": "Container 'Redis' has no description",
+      "rule": "missing-descriptions",
+      "severity": "warning"
+    },
+    {
+      "element": "project-system._inferred_postgresql",
+      "message": "Container 'PostgreSQL' has no description",
+      "rule": "missing-descriptions",
+      "severity": "warning"
+    },
+    {
+      "element": "project-system._inferred_mongodb",
+      "message": "Container 'MongoDB' has no description",
+      "rule": "missing-descriptions",
+      "severity": "warning"
+    },
+    {
+      "element": "project-system.example-global-404-handler",
+      "message": "Container 'example-global-404-handler' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.axum-macros",
+      "message": "Container 'axum-macros' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-low-level-rustls",
+      "message": "Container 'example-low-level-rustls' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-compression",
+      "message": "Container 'example-compression' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-jwt",
+      "message": "Container 'example-jwt' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-cors",
+      "message": "Container 'example-cors' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-oauth",
+      "message": "Container 'example-oauth' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-mongodb",
+      "message": "Container 'example-mongodb' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-diesel-postgres",
+      "message": "Container 'example-diesel-postgres' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-hello-world",
+      "message": "Container 'example-hello-world' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-static-file-server",
+      "message": "Container 'example-static-file-server' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-testing-websockets",
+      "message": "Container 'example-testing-websockets' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-key-value-store",
+      "message": "Container 'example-key-value-store' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.axum-core",
+      "message": "Container 'axum-core' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-readme",
+      "message": "Container 'example-readme' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-customize-path-rejection",
+      "message": "Container 'example-customize-path-rejection' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-tls-rustls",
+      "message": "Container 'example-tls-rustls' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.auto-reload",
+      "message": "Container 'auto-reload' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system._inferred_postgresql",
+      "message": "Container 'PostgreSQL' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-parse-body-based-on-content-type",
+      "message": "Container 'example-parse-body-based-on-content-type' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-websockets-http2",
+      "message": "Container 'example-websockets-http2' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-low-level-openssl",
+      "message": "Container 'example-low-level-openssl' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-http-proxy",
+      "message": "Container 'example-http-proxy' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-tokio-postgres",
+      "message": "Container 'example-tokio-postgres' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-tls-graceful-shutdown",
+      "message": "Container 'example-tls-graceful-shutdown' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-routes-and-handlers-close-together",
+      "message": "Container 'example-routes-and-handlers-close-together' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-serve-with-hyper",
+      "message": "Container 'example-serve-with-hyper' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-websockets",
+      "message": "Container 'example-websockets' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-templates",
+      "message": "Container 'example-templates' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-tracing-aka-logging",
+      "message": "Container 'example-tracing-aka-logging' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system._inferred_mongodb",
+      "message": "Container 'MongoDB' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-print-request-response",
+      "message": "Container 'example-print-request-response' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-graceful-shutdown",
+      "message": "Container 'example-graceful-shutdown' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-reverse-proxy",
+      "message": "Container 'example-reverse-proxy' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-error-handling",
+      "message": "Container 'example-error-handling' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-anyhow-error-response",
+      "message": "Container 'example-anyhow-error-response' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.axum-extra",
+      "message": "Container 'axum-extra' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-sse",
+      "message": "Container 'example-sse' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.axum",
+      "message": "Container 'axum' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-validator",
+      "message": "Container 'example-validator' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-prometheus-metrics",
+      "message": "Container 'example-prometheus-metrics' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-low-level-native-tls",
+      "message": "Container 'example-low-level-native-tls' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-consume-body-in-extractor-or-middleware",
+      "message": "Container 'example-consume-body-in-extractor-or-middleware' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-versioning",
+      "message": "Container 'example-versioning' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-stream-to-file",
+      "message": "Container 'example-stream-to-file' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-reqwest-response",
+      "message": "Container 'example-reqwest-response' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-dependency-injection",
+      "message": "Container 'example-dependency-injection' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.examples",
+      "message": "Container 'examples' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-diesel-async-postgres",
+      "message": "Container 'example-diesel-async-postgres' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-simple-router-wasm",
+      "message": "Container 'example-simple-router-wasm' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-multipart-form",
+      "message": "Container 'example-multipart-form' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-templates-minijinja",
+      "message": "Container 'example-templates-minijinja' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-form",
+      "message": "Container 'example-form' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-chat",
+      "message": "Container 'example-chat' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-testing",
+      "message": "Container 'example-testing' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-handle-head-request",
+      "message": "Container 'example-handle-head-request' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-sqlx-postgres",
+      "message": "Container 'example-sqlx-postgres' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-request-id",
+      "message": "Container 'example-request-id' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-unix-domain-socket",
+      "message": "Container 'example-unix-domain-socket' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    },
+    {
+      "element": "project-system.example-todos",
+      "message": "Container 'example-todos' has no relationships (may indicate incomplete modeling)",
+      "rule": "orphaned-elements",
+      "severity": "info"
+    }
+  ],
+  "model": "sonnet",
+  "summary": "The .forge file is complete. Here's the summary:\n\n**What the model detected:**\n- **Language/tech stack**: Rust throughout, Axum as the web framework; semantic scanning inferred three external datastores \u2014 MongoDB, PostgreSQL, and Redis.\n- **63 containers** under a single `project` system \u2014 3 core library crates (`axum`, `axum-core`, `axum-extra`, `axum-macros`) plus ~57 individual example crates, each modelled as a separate container.\n- **CI pipeline**: 12 stages captured from the GitHub Actions workflow (check \u2192 test-msrv / test-nightly / test-versions \u2192 cargo-hack \u2192 check-docs \u2192 external-types, plus wasm/ARM cross-compile and spell-check stages).\n- **Relationships**: Only 4 relationships detected \u2014 `example-tokio-redis \u2192 Redis`, `user \u2192 example-customize-extractor-error` (arbitrarily picked), `developer \u2192 CI`; intra-crate Cargo dependencies are entirely absent.\n- **Gaps**: No Cargo dependency edges between the core crates and examples; the single `user \u2192 container` relationship is synthetic and points to an arbitrary example rather than the primary library; `forge_overview` was unreachable (MCP server appears stateless across calls, so the in-memory model doesn't persist between tool invocations).\n\n**Violations**: `forge_check` returned zero violations at `info` severity."
+}

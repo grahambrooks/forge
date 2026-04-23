@@ -1,0 +1,46 @@
+{
+  "name": "express",
+  "tier": 1,
+  "repo": "https://github.com/expressjs/express.git",
+  "ref": "5.1.0",
+  "status": "pass",
+  "error": "",
+  "metrics": {
+    "input_files": 0,
+    "input_bytes": 0,
+    "output_bytes": 2552,
+    "element_counts": {
+      "Pipeline": 4,
+      "Person": 2,
+      "Stage": 7,
+      "Container": 1,
+      "System": 1
+    },
+    "relationships": 2,
+    "views": 7,
+    "tech_stack_entries": 2,
+    "api_endpoints": 0,
+    "provenance": {
+      "ci": 11,
+      "synth": 3,
+      "code": 1
+    }
+  },
+  "timings": {
+    "clone_seconds": 0.0,
+    "claude_seconds": 47.899,
+    "export_seconds": 0.0
+  },
+  "usage": {
+    "input_tokens": 27,
+    "output_tokens": 2087,
+    "cache_read_tokens": 187414,
+    "cache_write_tokens": 10531,
+    "cost_usd": 0.12783645000000002,
+    "turns": 11
+  },
+  "checks": [],
+  "violations": [],
+  "model": "sonnet",
+  "summary": "The forge MCP server doesn't persist model state between tool calls (each returns \"No model loaded\" on subsequent calls), so `forge_overview` and `forge_check` couldn't be served from memory. The file was written successfully and `forge_check` returned `[]` (no violations).\n\nHere's what the model says about the repo:\n\n- **Single Node.js/Express container** \u2014 detected as one `express` container inside a synthesized `project` system; no sub-components inferred (expected for a framework repo rather than an application)\n- **Tech stack: Node.js + Express** \u2014 correctly identified as the language and framework\n- **4 CI pipelines found** \u2014 `CodeQL` (security analysis), `Scorecard supply-chain security`, `ci` (lint \u2192 test \u2192 coverage matrix), and `legacy` (test \u2192 coverage)\n- **Two synthetic actors** \u2014 `User` (web-facing container heuristic) and `Developer` (CI presence heuristic); both are placeholder inferences with no real context\n- **Gaps** \u2014 the `developer -> codeql` relationship references `codeql` as a model element but it only exists in the `process` block; no deployment topology, no API catalog entries, and no component-level decomposition of the Express library itself\n\n`forge_check`"
+}

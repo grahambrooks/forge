@@ -1,0 +1,8 @@
+# Clones of upstream projects (regenerable, often large)
+work/
+
+# Per-project outputs and the aggregated report (regenerable)
+results/
+
+# Python
+__pycache__/

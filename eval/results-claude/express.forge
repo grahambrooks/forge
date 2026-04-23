@@ -1,0 +1,113 @@
+forge "project" {
+
+  model {
+    project-system = system "project" {
+      description "Inferred system wrapper for project"
+      tags "inferred:synth"
+
+      express = container "express" {
+        description "Node.js package at "
+        technology "Node.js / Express"
+        tags "inferred:code"
+      }
+    }
+    user = person "User" {
+      description "End user inferred from a web-facing container"
+      tags "inferred:synth"
+    }
+    developer = person "Developer" {
+      description "Engineer inferred from CI pipeline presence"
+      tags "inferred:synth"
+    }
+    user -> express "uses"
+    developer -> codeql "triggers"
+  }
+
+  process {
+    codeql = pipeline "CodeQL" {
+      tags "inferred:ci"
+      analyze = stage "Analyze" {
+        tags "inferred:ci"
+      }
+    }
+    scorecard-supply-chain-security = pipeline "Scorecard supply-chain security" {
+      tags "inferred:ci"
+      analysis = stage "Scorecard analysis" {
+        tags "inferred:ci"
+      }
+    }
+    ci = pipeline "ci" {
+      tags "inferred:ci"
+      coverage = stage "coverage" {
+        needs test
+        tags "inferred:ci"
+      }
+      lint = stage "Lint" {
+        tags "inferred:ci"
+      }
+      test = stage "Node.js ${{ matrix.node-version }} - ${{matrix.os}}" {
+        needs lint
+        tags "inferred:ci"
+      }
+    }
+    legacy = pipeline "legacy" {
+      tags "inferred:ci"
+      test = stage "Node.js ${{ matrix.node-version }} - ${{matrix.os}}" {
+        tags "inferred:ci"
+      }
+      coverage = stage "coverage" {
+        needs test
+        tags "inferred:ci"
+      }
+    }
+  }
+
+  views {
+    system-context-view project-system "SystemContext" {
+      include *
+      auto-layout lr
+      title "System Context"
+    }
+    container-view project-system "Containers" {
+      include *
+      auto-layout tb
+      title "Containers"
+    }
+    pipeline-view ci "Pipeline" {
+      include *
+      auto-layout lr
+      title "CI/CD Pipeline"
+    }
+    branching-view trunk "Branching" {
+      include *
+      auto-layout tb
+      title "Branching Strategy"
+    }
+    tech-stack-view "TechStack" {
+      include *
+      auto-layout tb
+      title "Technology Stack"
+    }
+    team-view "Teams" {
+      include *
+      auto-layout tb
+      title "Team Ownership"
+    }
+    api-catalog-view "APICatalog" {
+      include *
+      auto-layout tb
+      title "API Catalog"
+    }
+  }
+
+  tech-stack {
+    category "Node.js" {
+      tech "Node.js" {
+        purpose "language"
+      }
+      tech "Express" {
+        purpose "framework"
+      }
+    }
+  }
+}

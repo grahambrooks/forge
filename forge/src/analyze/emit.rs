@@ -266,6 +266,19 @@ fn emit_pipeline(o: &mut String, model: &Model, pipeline: &Element, indent: usiz
 
     let inner = " ".repeat(indent + 2);
 
+    // Pipeline-level tags (skip the bare "inferred" marker — the scoped
+    // `inferred:<scanner>` carries the same provenance and survives round-trip).
+    let pipeline_tags: Vec<&str> = pipeline
+        .tags
+        .iter()
+        .filter(|t| t.as_str() != "inferred")
+        .map(|t| t.as_str())
+        .collect();
+    if !pipeline_tags.is_empty() {
+        let tags_str: Vec<String> = pipeline_tags.iter().map(|t| format!("\"{}\"", t)).collect();
+        o.push_str(&format!("{}tags {}\n", inner, tags_str.join(" ")));
+    }
+
     // Emit stages
     let stages: Vec<&Element> = model
         .elements
@@ -293,8 +306,14 @@ fn emit_pipeline(o: &mut String, model: &Model, pipeline: &Element, indent: usiz
             .values()
             .filter(|e| e.kind == ElementKind::Gate && e.parent.as_deref() == Some(&stage.id))
             .collect();
+        let stage_tags: Vec<&str> = stage
+            .tags
+            .iter()
+            .filter(|t| t.as_str() != "inferred")
+            .map(|t| t.as_str())
+            .collect();
 
-        if !needs.is_empty() || has_env || !gates.is_empty() {
+        if !needs.is_empty() || has_env || !gates.is_empty() || !stage_tags.is_empty() {
             o.push_str(" {\n");
             let deep = " ".repeat(indent + 4);
 
@@ -304,6 +323,11 @@ fn emit_pipeline(o: &mut String, model: &Model, pipeline: &Element, indent: usiz
             }
             if let Some(env) = stage.properties.get("environment") {
                 o.push_str(&format!("{}environment {}\n", deep, env));
+            }
+            if !stage_tags.is_empty() {
+                let tags_str: Vec<String> =
+                    stage_tags.iter().map(|t| format!("\"{}\"", t)).collect();
+                o.push_str(&format!("{}tags {}\n", deep, tags_str.join(" ")));
             }
             for gate in &gates {
                 o.push_str(&format!("{}gate \"{}\"\n", deep, escape(&gate.name)));

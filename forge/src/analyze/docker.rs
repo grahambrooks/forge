@@ -6,7 +6,10 @@ use walkdir::WalkDir;
 
 use crate::model::*;
 
+use super::provenance::mark_inferred;
 use super::{slugify, AnalyzeConfig};
+
+const SCANNER: &str = "docker";
 
 pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     scan_dockerfiles(model, root, config);
@@ -54,20 +57,20 @@ fn parse_dockerfile(model: &mut Model, path: &Path, text: &str, root: &Path) {
 
     // Skip if already exists (e.g., detected by code scanner)
     if model.elements.contains_key(&container_id) {
-        // Enrich existing element with Docker info
+        // Enrich existing element with Docker info, including provenance so
+        // the downstream model records that docker scanner contributed.
         if let Some(el) = model.elements.get_mut(&container_id) {
             let rel_path = path.strip_prefix(root).unwrap_or(path);
             el.properties
                 .insert("dockerfile".into(), rel_path.display().to_string());
+            mark_inferred(el, SCANNER, Some(rel_path));
         }
         return;
     }
 
     let mut el = Element::new(&container_id, ElementKind::Container, container_name);
-    el.tags.push("inferred".into());
-    el.tags.push("docker".into());
-
     let rel_path = path.strip_prefix(root).unwrap_or(path);
+    mark_inferred(&mut el, SCANNER, Some(rel_path));
     el.properties
         .insert("dockerfile".into(), rel_path.display().to_string());
 
@@ -230,8 +233,7 @@ fn parse_compose(model: &mut Model, text: &str) {
             }
         } else {
             let mut el = Element::new(&svc_id, ElementKind::Container, svc_name);
-            el.tags.push("inferred".into());
-            el.tags.push("docker".into());
+            mark_inferred(&mut el, SCANNER, None);
 
             if let Some(img) = image {
                 el.properties.insert("image".into(), img.into());
@@ -340,7 +342,7 @@ CMD ["myapp"]
 
         let api = model.elements.get("api").expect("api container");
         assert_eq!(api.kind, ElementKind::Container);
-        assert!(api.tags.contains(&"docker".to_string()));
+        assert!(api.tags.contains(&"inferred:docker".to_string()));
         // Should not pick up the builder stage's rust image
         assert!(api.technology.is_none() || !api.technology.as_ref().unwrap().contains("Rust"));
         assert_eq!(

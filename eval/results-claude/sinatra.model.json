@@ -1,0 +1,234 @@
+{
+  "dataEntities": [],
+  "description": "",
+  "elements": [
+    {
+      "children": [],
+      "description": "Ruby project at rack-protection",
+      "id": "project-system.rack-protection",
+      "kind": "Container",
+      "name": "rack-protection",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Ruby"
+    },
+    {
+      "children": [
+        "project-system.rack-protection",
+        "project-system.project",
+        "project-system.sinatra-contrib"
+      ],
+      "description": "Inferred system wrapper for project",
+      "id": "project-system",
+      "kind": "System",
+      "name": "project",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "testing.sinatra",
+      "kind": "Stage",
+      "name": "${{ matrix.ruby }}\n(Rack ${{ matrix.rack }}, Rack::Session ${{ matrix.rack_session }}, Puma ${{ matrix.puma }}, Tilt ${{ matrix.tilt }}, Zeitwerk ${{ matrix.zeitwerk }})\n",
+      "parent": "testing",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "testing.rack-protection",
+      "kind": "Stage",
+      "name": "rack-protection (${{ matrix.ruby }}, rack ${{ matrix.rack }})",
+      "parent": "testing",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "testing.sinatra",
+        "testing.rack-protection"
+      ],
+      "description": null,
+      "id": "testing",
+      "kind": "Pipeline",
+      "name": "Testing",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "End user inferred from a web-facing container",
+      "id": "user",
+      "kind": "Person",
+      "name": "User",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Ruby project at sinatra-contrib",
+      "id": "project-system.sinatra-contrib",
+      "kind": "Container",
+      "name": "sinatra-contrib",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Ruby / Sinatra"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "release.release",
+      "kind": "Stage",
+      "name": "release",
+      "parent": "release",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "release.release"
+      ],
+      "description": null,
+      "id": "release",
+      "kind": "Pipeline",
+      "name": "Release",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Ruby project at ",
+      "id": "project-system.project",
+      "kind": "Container",
+      "name": "project",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Ruby / Sinatra"
+    },
+    {
+      "children": [],
+      "description": "Engineer inferred from CI pipeline presence",
+      "id": "developer",
+      "kind": "Person",
+      "name": "Developer",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    }
+  ],
+  "name": "project",
+  "relationships": [
+    {
+      "from": "user",
+      "label": "uses",
+      "technology": null,
+      "to": "project-system.project"
+    },
+    {
+      "from": "developer",
+      "label": "triggers",
+      "technology": null,
+      "to": "release"
+    }
+  ],
+  "teams": [],
+  "tech-stack": [
+    {
+      "category": "Ruby",
+      "entries": [
+        {
+          "name": "Ruby",
+          "purpose": "language",
+          "version": null
+        },
+        {
+          "name": "Sinatra",
+          "purpose": "framework",
+          "version": null
+        }
+      ]
+    }
+  ],
+  "trust-boundaries": [],
+  "views": [
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "SystemContext",
+      "kind": "SystemContext",
+      "scope": "project-system",
+      "title": "System Context"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Containers",
+      "kind": "Container",
+      "scope": "project-system",
+      "title": "Containers"
+    },
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "Pipeline",
+      "kind": "PipelineView",
+      "scope": "release.release",
+      "title": "CI/CD Pipeline"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "TechStack",
+      "kind": "TechStack",
+      "scope": null,
+      "title": "Technology Stack"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Teams",
+      "kind": "TeamMap",
+      "scope": null,
+      "title": "Team Ownership"
+    }
+  ]
+}

@@ -1,0 +1,150 @@
+forge "project" {
+
+  model {
+    project-system = system "project" {
+      description "Inferred system wrapper for project"
+      tags "inferred:synth"
+
+      _inferred_redis = container "Redis" {
+        technology "Redis"
+        tags "database" "inferred:semantic"
+      }
+
+      celery = container "celery" {
+        description "Python project at examples/celery"
+        technology "Python / Flask"
+        tags "inferred:code"
+      }
+
+      flask-example-celery = container "flask-example-celery" {
+        description "Python project at examples/celery"
+        technology "Python / Flask"
+        tags "inferred:code"
+      }
+
+      js-example = container "js_example" {
+        description "Python project at examples/javascript"
+        technology "Python / Flask"
+        tags "inferred:code"
+      }
+
+      flaskr = container "flaskr" {
+        description "Python project at examples/tutorial"
+        technology "Python / Flask"
+        tags "inferred:code"
+      }
+
+      flask = container "Flask" {
+        description "Python project at "
+        technology "Python"
+        tags "inferred:code"
+      }
+      flask-example-celery -> _inferred_redis "reads/writes"
+    }
+    user = person "User" {
+      description "End user inferred from a web-facing container"
+      tags "inferred:synth"
+    }
+    developer = person "Developer" {
+      description "Engineer inferred from CI pipeline presence"
+      tags "inferred:synth"
+    }
+    flask-example-celery -> _inferred_redis "reads/writes"
+    user -> celery "uses"
+    developer -> publish "triggers"
+  }
+
+  process {
+    publish = pipeline "Publish" {
+      tags "inferred:ci"
+      provenance = stage "provenance" {
+        needs build
+        tags "inferred:ci"
+      }
+      publish-pypi = stage "publish-pypi" {
+        needs provenance
+        environment publish
+        tags "inferred:ci"
+        gate "environment-protection"
+      }
+      create-release = stage "create-release" {
+        needs provenance
+        tags "inferred:ci"
+      }
+      build = stage "build" {
+        tags "inferred:ci"
+      }
+    }
+    pre-commit = pipeline "pre-commit" {
+      tags "inferred:ci"
+      main = stage "main" {
+        tags "inferred:ci"
+      }
+    }
+    lock-inactive-closed-issues = pipeline "Lock inactive closed issues" {
+      tags "inferred:ci"
+      lock = stage "lock" {
+        tags "inferred:ci"
+      }
+    }
+    tests = pipeline "Tests" {
+      tags "inferred:ci"
+      tests = stage "${{ matrix.name || matrix.python }}" {
+        tags "inferred:ci"
+      }
+      typing = stage "typing" {
+        needs tests
+        tags "inferred:ci"
+      }
+    }
+  }
+
+  views {
+    system-context-view project-system "SystemContext" {
+      include *
+      auto-layout lr
+      title "System Context"
+    }
+    container-view project-system "Containers" {
+      include *
+      auto-layout tb
+      title "Containers"
+    }
+    pipeline-view lock-inactive-closed-issues "Pipeline" {
+      include *
+      auto-layout lr
+      title "CI/CD Pipeline"
+    }
+    tech-stack-view "TechStack" {
+      include *
+      auto-layout tb
+      title "Technology Stack"
+    }
+    team-view "Teams" {
+      include *
+      auto-layout tb
+      title "Team Ownership"
+    }
+    api-catalog-view "APICatalog" {
+      include *
+      auto-layout tb
+      title "API Catalog"
+    }
+  }
+
+  tech-stack {
+    category "Python" {
+      tech "Python" {
+        purpose "language"
+      }
+      tech "Flask" {
+        purpose "framework"
+      }
+    }
+    category "Redis" {
+      tech "Redis" {
+        purpose "language"
+      }
+    }
+  }
+}

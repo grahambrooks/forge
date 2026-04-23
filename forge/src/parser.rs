@@ -621,6 +621,18 @@ impl Parser {
                 continue;
             }
 
+            if first == "tags" {
+                // Quoted-string list; attach to the pipeline element.
+                let mut tags: Vec<String> = Vec::new();
+                while self.peek_after_ws() == Some('"') {
+                    tags.push(self.parse_string()?);
+                }
+                if let Some(el) = self.model.elements.get_mut(&pipeline_id) {
+                    el.tags.extend(tags);
+                }
+                continue;
+            }
+
             if self.peek() == Some('=') {
                 self.advance();
                 let kind_str = self.parse_ident()?;
@@ -658,6 +670,11 @@ impl Parser {
                                 "environment" => {
                                     let env = self.parse_ident()?;
                                     el.properties.insert("environment".into(), env);
+                                }
+                                "tags" => {
+                                    while self.peek_after_ws() == Some('"') {
+                                        el.tags.push(self.parse_string()?);
+                                    }
                                 }
                                 "gate" => {
                                     let gate_name = self.parse_string()?;

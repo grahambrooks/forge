@@ -6,7 +6,10 @@ use std::path::Path;
 
 use crate::model::*;
 
+use super::provenance::mark_inferred;
 use super::AnalyzeConfig;
+
+const SCANNER: &str = "git";
 
 pub fn scan(model: &mut Model, root: &Path, _config: &AnalyzeConfig) {
     // CODEOWNERS doesn't require a git repo to be useful — parse it first so
@@ -85,7 +88,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
     trunk
         .properties
         .insert("strategy".into(), strategy_id.clone());
-    trunk.tags.push("inferred".into());
+    mark_inferred(&mut trunk, SCANNER, None);
     trunk.tags.push("trunk".into());
     model.add_element(trunk);
 
@@ -99,7 +102,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
             .insert("branches-from".into(), trunk_id.clone());
         feat.properties
             .insert("merges-into".into(), trunk_id.clone());
-        feat.tags.push("inferred".into());
+        mark_inferred(&mut feat, SCANNER, None);
         model.add_element(feat);
         model.add_relationship(Relationship {
             frm: trunk_id.clone(),
@@ -130,7 +133,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
             .insert("strategy".into(), strategy_id.clone());
         dev.properties
             .insert("branches-from".into(), trunk_id.clone());
-        dev.tags.push("inferred".into());
+        mark_inferred(&mut dev, SCANNER, None);
         model.add_element(dev);
     }
 
@@ -140,7 +143,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
         let mut rel = Element::new(&rel_id, ElementKind::Branch, "release/*");
         rel.properties
             .insert("strategy".into(), strategy_id.clone());
-        rel.tags.push("inferred".into());
+        mark_inferred(&mut rel, SCANNER, None);
         model.add_element(rel);
     }
 }

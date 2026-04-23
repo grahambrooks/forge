@@ -1,0 +1,86 @@
+forge "project" {
+
+  model {
+    developer = person "Developer" {
+      description "Engineer inferred from CI pipeline presence"
+      tags "inferred:synth"
+    }
+    project-system = system "project" {
+      description "Inferred system wrapper for project"
+      tags "inferred:synth"
+
+      gin = container "gin" {
+        description "Go module at "
+        technology "Go"
+        tags "inferred:code"
+      }
+    }
+    developer -> codeql "triggers"
+  }
+
+  process {
+    codeql = pipeline "CodeQL" {
+      tags "inferred:ci"
+      analyze = stage "Analyze" {
+        tags "inferred:ci"
+      }
+    }
+    goreleaser = pipeline "Goreleaser" {
+      tags "inferred:ci"
+      goreleaser = stage "goreleaser" {
+        tags "inferred:ci"
+      }
+    }
+    run-tests = pipeline "Run Tests" {
+      tags "inferred:ci"
+      test = stage "${{ matrix.os }} @ Go ${{ matrix.go }} ${{ matrix.test-tags }}" {
+        needs lint
+        tags "inferred:ci"
+      }
+      lint = stage "lint" {
+        tags "inferred:ci"
+      }
+    }
+  }
+
+  views {
+    system-context-view project-system "SystemContext" {
+      include *
+      auto-layout lr
+      title "System Context"
+    }
+    container-view project-system "Containers" {
+      include *
+      auto-layout tb
+      title "Containers"
+    }
+    pipeline-view codeql "Pipeline" {
+      include *
+      auto-layout lr
+      title "CI/CD Pipeline"
+    }
+    tech-stack-view "TechStack" {
+      include *
+      auto-layout tb
+      title "Technology Stack"
+    }
+    team-view "Teams" {
+      include *
+      auto-layout tb
+      title "Team Ownership"
+    }
+    api-catalog-view "APICatalog" {
+      include *
+      auto-layout tb
+      title "API Catalog"
+    }
+  }
+
+  tech-stack {
+    category "Go" {
+      tech "Go" {
+        purpose "language"
+      }
+    }
+  }
+}

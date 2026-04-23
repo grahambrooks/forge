@@ -6,7 +6,10 @@ use walkdir::WalkDir;
 
 use crate::model::*;
 
+use super::provenance::mark_inferred;
 use super::{slugify, AnalyzeConfig};
+
+const SCANNER: &str = "infra";
 
 pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     scan_cloudformation(model, root, config);
@@ -77,7 +80,7 @@ fn parse_cft(model: &mut Model, text: &str) {
         let el_id = format!("cft.{}", slugify(resource_name));
         let mut el = Element::new(&el_id, kind.unwrap(), resource_name);
         el.technology = Some(technology);
-        el.tags.push("inferred".into());
+        mark_inferred(&mut el, SCANNER, None);
         el.tags.push("aws".into());
         for tag in tags {
             el.tags.push(tag.into());
@@ -188,7 +191,7 @@ fn parse_terraform(model: &mut Model, text: &str) {
                         let el_id = format!("tf.{}", slugify(&rn));
                         let mut el = Element::new(&el_id, k, &rn);
                         el.technology = Some(technology);
-                        el.tags.push("inferred".into());
+                        mark_inferred(&mut el, SCANNER, None);
                         el.tags.push("terraform".into());
                         for tag in tags {
                             el.tags.push(tag.into());
@@ -383,7 +386,7 @@ fn parse_openapi(model: &mut Model, text: &str, _path: &Path, _root: &Path) {
     let container_id = format!("openapi.{}", slugify(api_title));
     if !model.elements.contains_key(&container_id) {
         let mut el = Element::new(&container_id, ElementKind::Container, api_title);
-        el.tags.push("inferred".into());
+        mark_inferred(&mut el, SCANNER, None);
         el.tags.push("openapi".into());
         let desc = doc
             .get("info")

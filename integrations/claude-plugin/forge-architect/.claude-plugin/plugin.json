@@ -1,0 +1,15 @@
+{
+  "name": "forge-architect",
+  "description": "Architectural skills backed by Forge — analyze a repository, produce a C4/process model, and review it. Use when the user asks to model, diagram, or audit the architecture of a codebase.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Graham Brooks"
+  },
+  "homepage": "https://github.com/grahambrooks/forge",
+  "mcpServers": {
+    "forge": {
+      "command": "forge",
+      "args": ["mcp"]
+    }
+  }
+}

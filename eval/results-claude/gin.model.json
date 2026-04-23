@@ -1,0 +1,218 @@
+{
+  "dataEntities": [],
+  "description": "",
+  "elements": [
+    {
+      "children": [],
+      "description": null,
+      "id": "goreleaser.goreleaser",
+      "kind": "Stage",
+      "name": "goreleaser",
+      "parent": "goreleaser",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "codeql.analyze",
+      "kind": "Stage",
+      "name": "Analyze",
+      "parent": "codeql",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "run-tests.test",
+      "kind": "Stage",
+      "name": "${{ matrix.os }} @ Go ${{ matrix.go }} ${{ matrix.test-tags }}",
+      "parent": "run-tests",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "project-system.gin"
+      ],
+      "description": "Inferred system wrapper for project",
+      "id": "project-system",
+      "kind": "System",
+      "name": "project",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Engineer inferred from CI pipeline presence",
+      "id": "developer",
+      "kind": "Person",
+      "name": "Developer",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "goreleaser.goreleaser"
+      ],
+      "description": null,
+      "id": "goreleaser",
+      "kind": "Pipeline",
+      "name": "Goreleaser",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "run-tests.test",
+        "run-tests.lint"
+      ],
+      "description": null,
+      "id": "run-tests",
+      "kind": "Pipeline",
+      "name": "Run Tests",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "codeql.analyze"
+      ],
+      "description": null,
+      "id": "codeql",
+      "kind": "Pipeline",
+      "name": "CodeQL",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Go module at ",
+      "id": "project-system.gin",
+      "kind": "Container",
+      "name": "gin",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Go"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "run-tests.lint",
+      "kind": "Stage",
+      "name": "lint",
+      "parent": "run-tests",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    }
+  ],
+  "name": "project",
+  "relationships": [
+    {
+      "from": "developer",
+      "label": "triggers",
+      "technology": null,
+      "to": "codeql"
+    }
+  ],
+  "teams": [],
+  "tech-stack": [
+    {
+      "category": "Go",
+      "entries": [
+        {
+          "name": "Go",
+          "purpose": "language",
+          "version": null
+        }
+      ]
+    }
+  ],
+  "trust-boundaries": [],
+  "views": [
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "SystemContext",
+      "kind": "SystemContext",
+      "scope": "project-system",
+      "title": "System Context"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Containers",
+      "kind": "Container",
+      "scope": "project-system",
+      "title": "Containers"
+    },
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "Pipeline",
+      "kind": "PipelineView",
+      "scope": "codeql",
+      "title": "CI/CD Pipeline"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "TechStack",
+      "kind": "TechStack",
+      "scope": null,
+      "title": "Technology Stack"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Teams",
+      "kind": "TeamMap",
+      "scope": null,
+      "title": "Team Ownership"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "APICatalog",
+      "kind": "ApiCatalogView",
+      "scope": null,
+      "title": "API Catalog"
+    }
+  ]
+}

@@ -4,7 +4,10 @@ use std::path::Path;
 
 use crate::model::*;
 
+use super::provenance::mark_inferred;
 use super::{slugify, AnalyzeConfig};
+
+const SCANNER: &str = "ci";
 
 pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     scan_github_actions(model, root, config);
@@ -57,8 +60,7 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
     let pipeline_id = slugify(workflow_name);
 
     let mut pipeline = Element::new(&pipeline_id, ElementKind::Pipeline, workflow_name);
-    pipeline.tags.push("inferred".into());
-    pipeline.tags.push("github-actions".into());
+    mark_inferred(&mut pipeline, SCANNER, Some(path));
 
     // Extract trigger info
     // YAML parses bare `on:` as boolean true, so check both string and bool keys
@@ -100,7 +102,7 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
         let stage_id = format!("{}.{}", pipeline_id, job_id_str);
         let mut stage = Element::new(&stage_id, ElementKind::Stage, job_name);
         stage.parent = Some(pipeline_id.clone());
-        stage.tags.push("inferred".into());
+        mark_inferred(&mut stage, SCANNER, None);
 
         // Extract environment
         if let Some(env) = job_val.get("environment") {
@@ -153,7 +155,7 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
                     let mut gate =
                         Element::new(&gate_id, ElementKind::Gate, "environment-protection");
                     gate.parent = Some(stage_id.clone());
-                    gate.tags.push("inferred".into());
+                    mark_inferred(&mut gate, SCANNER, None);
                     model.add_element(gate);
                 }
             }

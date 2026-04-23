@@ -1,0 +1,418 @@
+{
+  "dataEntities": [],
+  "description": "",
+  "elements": [
+    {
+      "children": [],
+      "description": "End user inferred from a web-facing container",
+      "id": "user",
+      "kind": "Person",
+      "name": "User",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "pre-commit.main",
+      "kind": "Stage",
+      "name": "main",
+      "parent": "pre-commit",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "tests.tests",
+        "tests.typing"
+      ],
+      "description": null,
+      "id": "tests",
+      "kind": "Pipeline",
+      "name": "Tests",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "project-system._inferred_redis",
+      "kind": "Container",
+      "name": "Redis",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "database",
+        "inferred:semantic"
+      ],
+      "technology": "Redis"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "tests.tests",
+      "kind": "Stage",
+      "name": "${{ matrix.name || matrix.python }}",
+      "parent": "tests",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "publish.publish-pypi",
+      "kind": "Stage",
+      "name": "publish-pypi",
+      "parent": "publish",
+      "properties": {
+        "environment": "publish"
+      },
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Python project at examples/celery",
+      "id": "project-system.celery",
+      "kind": "Container",
+      "name": "celery",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Python / Flask"
+    },
+    {
+      "children": [
+        "pre-commit.main"
+      ],
+      "description": null,
+      "id": "pre-commit",
+      "kind": "Pipeline",
+      "name": "pre-commit",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "lock-inactive-closed-issues.lock",
+      "kind": "Stage",
+      "name": "lock",
+      "parent": "lock-inactive-closed-issues",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Python project at examples/javascript",
+      "id": "project-system.js-example",
+      "kind": "Container",
+      "name": "js_example",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Python / Flask"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "publish.create-release",
+      "kind": "Stage",
+      "name": "create-release",
+      "parent": "publish",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "publish.provenance",
+      "kind": "Stage",
+      "name": "provenance",
+      "parent": "publish",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "project-system._inferred_redis",
+        "project-system.celery",
+        "project-system.flask-example-celery",
+        "project-system.js-example",
+        "project-system.flaskr",
+        "project-system.flask"
+      ],
+      "description": "Inferred system wrapper for project",
+      "id": "project-system",
+      "kind": "System",
+      "name": "project",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [
+        "publish.provenance",
+        "publish.publish-pypi",
+        "publish.create-release",
+        "publish.build"
+      ],
+      "description": null,
+      "id": "publish",
+      "kind": "Pipeline",
+      "name": "Publish",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "publish.publish-pypi.gate",
+      "kind": "Gate",
+      "name": "environment-protection",
+      "parent": "publish.publish-pypi",
+      "properties": {},
+      "tags": [],
+      "technology": null
+    },
+    {
+      "children": [
+        "lock-inactive-closed-issues.lock"
+      ],
+      "description": null,
+      "id": "lock-inactive-closed-issues",
+      "kind": "Pipeline",
+      "name": "Lock inactive closed issues",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Python project at examples/tutorial",
+      "id": "project-system.flaskr",
+      "kind": "Container",
+      "name": "flaskr",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Python / Flask"
+    },
+    {
+      "children": [],
+      "description": "Engineer inferred from CI pipeline presence",
+      "id": "developer",
+      "kind": "Person",
+      "name": "Developer",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "publish.build",
+      "kind": "Stage",
+      "name": "build",
+      "parent": "publish",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "tests.typing",
+      "kind": "Stage",
+      "name": "typing",
+      "parent": "tests",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Python project at ",
+      "id": "project-system.flask",
+      "kind": "Container",
+      "name": "Flask",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Python"
+    },
+    {
+      "children": [],
+      "description": "Python project at examples/celery",
+      "id": "project-system.flask-example-celery",
+      "kind": "Container",
+      "name": "flask-example-celery",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Python / Flask"
+    }
+  ],
+  "name": "project",
+  "relationships": [
+    {
+      "from": "project-system.flask-example-celery",
+      "label": "reads/writes",
+      "technology": null,
+      "to": "project-system._inferred_redis"
+    },
+    {
+      "from": "project-system.flask-example-celery",
+      "label": "reads/writes",
+      "technology": null,
+      "to": "project-system._inferred_redis"
+    },
+    {
+      "from": "user",
+      "label": "uses",
+      "technology": null,
+      "to": "project-system.celery"
+    },
+    {
+      "from": "developer",
+      "label": "triggers",
+      "technology": null,
+      "to": "publish"
+    }
+  ],
+  "teams": [],
+  "tech-stack": [
+    {
+      "category": "Python",
+      "entries": [
+        {
+          "name": "Python",
+          "purpose": "language",
+          "version": null
+        },
+        {
+          "name": "Flask",
+          "purpose": "framework",
+          "version": null
+        }
+      ]
+    },
+    {
+      "category": "Redis",
+      "entries": [
+        {
+          "name": "Redis",
+          "purpose": "language",
+          "version": null
+        }
+      ]
+    }
+  ],
+  "trust-boundaries": [],
+  "views": [
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "SystemContext",
+      "kind": "SystemContext",
+      "scope": "project-system",
+      "title": "System Context"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Containers",
+      "kind": "Container",
+      "scope": "project-system",
+      "title": "Containers"
+    },
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "Pipeline",
+      "kind": "PipelineView",
+      "scope": "lock-inactive-closed-issues",
+      "title": "CI/CD Pipeline"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "TechStack",
+      "kind": "TechStack",
+      "scope": null,
+      "title": "Technology Stack"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Teams",
+      "kind": "TeamMap",
+      "scope": null,
+      "title": "Team Ownership"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "APICatalog",
+      "kind": "ApiCatalogView",
+      "scope": null,
+      "title": "API Catalog"
+    }
+  ]
+}

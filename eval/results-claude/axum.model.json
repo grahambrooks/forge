@@ -1,0 +1,1247 @@
+{
+  "dataEntities": [],
+  "description": "",
+  "elements": [
+    {
+      "children": [],
+      "description": "Rust crate at examples/validator",
+      "id": "project-system.example-validator",
+      "kind": "Container",
+      "name": "example-validator",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/form",
+      "id": "project-system.example-form",
+      "kind": "Container",
+      "name": "example-form",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/multipart-form",
+      "id": "project-system.example-multipart-form",
+      "kind": "Container",
+      "name": "example-multipart-form",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/readme",
+      "id": "project-system.example-readme",
+      "kind": "Container",
+      "name": "example-readme",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/customize-extractor-error",
+      "id": "project-system.example-customize-extractor-error",
+      "kind": "Container",
+      "name": "example-customize-extractor-error",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/testing-websockets",
+      "id": "project-system.example-testing-websockets",
+      "kind": "Container",
+      "name": "example-testing-websockets",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [
+        "ci.deny-check",
+        "ci.wasm32-unknown-unknown",
+        "ci.test-msrv",
+        "ci.typos",
+        "ci.external-types",
+        "ci.cargo-hack",
+        "ci.check-docs",
+        "ci.test-nightly",
+        "ci.dependencies-are-sorted",
+        "ci.check",
+        "ci.test-versions",
+        "ci.armv5te-unknown-linux-musleabi"
+      ],
+      "description": null,
+      "id": "ci",
+      "kind": "Pipeline",
+      "name": "CI",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/prometheus-metrics",
+      "id": "project-system.example-prometheus-metrics",
+      "kind": "Container",
+      "name": "example-prometheus-metrics",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/jwt",
+      "id": "project-system.example-jwt",
+      "kind": "Container",
+      "name": "example-jwt",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.typos",
+      "kind": "Stage",
+      "name": "Spell Check with Typos",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/key-value-store",
+      "id": "project-system.example-key-value-store",
+      "kind": "Container",
+      "name": "example-key-value-store",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/request-id",
+      "id": "project-system.example-request-id",
+      "kind": "Container",
+      "name": "example-request-id",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/todos",
+      "id": "project-system.example-todos",
+      "kind": "Container",
+      "name": "example-todos",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/cors",
+      "id": "project-system.example-cors",
+      "kind": "Container",
+      "name": "example-cors",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/stream-to-file",
+      "id": "project-system.example-stream-to-file",
+      "kind": "Container",
+      "name": "example-stream-to-file",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/low-level-rustls",
+      "id": "project-system.example-low-level-rustls",
+      "kind": "Container",
+      "name": "example-low-level-rustls",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [
+        "project-system.example-customize-extractor-error",
+        "project-system.example-customize-path-rejection",
+        "project-system._inferred_mongodb",
+        "project-system.example-tracing-aka-logging",
+        "project-system.example-websockets",
+        "project-system.example-compression",
+        "project-system.example-static-file-server",
+        "project-system.example-templates",
+        "project-system.example-low-level-openssl",
+        "project-system.example-prometheus-metrics",
+        "project-system.example-tokio-redis",
+        "project-system.example-versioning",
+        "project-system.example-mongodb",
+        "project-system.example-reqwest-response",
+        "project-system.example-tokio-postgres",
+        "project-system.example-low-level-rustls",
+        "project-system.example-readme",
+        "project-system.example-tls-rustls",
+        "project-system.example-testing-websockets",
+        "project-system.example-anyhow-error-response",
+        "project-system.example-chat",
+        "project-system.example-low-level-native-tls",
+        "project-system.example-sqlx-postgres",
+        "project-system.example-cors",
+        "project-system.example-key-value-store",
+        "project-system.example-templates-minijinja",
+        "project-system.auto-reload",
+        "project-system.example-graceful-shutdown",
+        "project-system.axum-macros",
+        "project-system.example-validator",
+        "project-system.example-routes-and-handlers-close-together",
+        "project-system.example-tls-graceful-shutdown",
+        "project-system.example-websockets-http2",
+        "project-system.example-simple-router-wasm",
+        "project-system.example-jwt",
+        "project-system.example-multipart-form",
+        "project-system.axum-core",
+        "project-system.example-testing",
+        "project-system.example-stream-to-file",
+        "project-system.example-todos",
+        "project-system.example-handle-head-request",
+        "project-system.example-error-handling",
+        "project-system.example-consume-body-in-extractor-or-middleware",
+        "project-system.axum-extra",
+        "project-system.example-http-proxy",
+        "project-system.example-request-id",
+        "project-system._inferred_redis",
+        "project-system._inferred_postgresql",
+        "project-system.example-global-404-handler",
+        "project-system.example-hello-world",
+        "project-system.example-unix-domain-socket",
+        "project-system.example-dependency-injection",
+        "project-system.example-sse",
+        "project-system.example-diesel-postgres",
+        "project-system.example-reverse-proxy",
+        "project-system.examples",
+        "project-system.axum",
+        "project-system.example-oauth",
+        "project-system.example-diesel-async-postgres",
+        "project-system.example-serve-with-hyper",
+        "project-system.example-form",
+        "project-system.example-parse-body-based-on-content-type",
+        "project-system.example-print-request-response"
+      ],
+      "description": "Inferred system wrapper for project",
+      "id": "project-system",
+      "kind": "System",
+      "name": "project",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/versioning",
+      "id": "project-system.example-versioning",
+      "kind": "Container",
+      "name": "example-versioning",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/hello-world",
+      "id": "project-system.example-hello-world",
+      "kind": "Container",
+      "name": "example-hello-world",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples",
+      "id": "project-system.examples",
+      "kind": "Container",
+      "name": "examples",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.armv5te-unknown-linux-musleabi",
+      "kind": "Stage",
+      "name": "armv5te-unknown-linux-musleabi",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.dependencies-are-sorted",
+      "kind": "Stage",
+      "name": "dependencies-are-sorted",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/templates",
+      "id": "project-system.example-templates",
+      "kind": "Container",
+      "name": "example-templates",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/websockets-http2",
+      "id": "project-system.example-websockets-http2",
+      "kind": "Container",
+      "name": "example-websockets-http2",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.deny-check",
+      "kind": "Stage",
+      "name": "cargo-deny check",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.test-msrv",
+      "kind": "Stage",
+      "name": "test-msrv",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/sse",
+      "id": "project-system.example-sse",
+      "kind": "Container",
+      "name": "example-sse",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at axum-extra",
+      "id": "project-system.axum-extra",
+      "kind": "Container",
+      "name": "axum-extra",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.test-nightly",
+      "kind": "Stage",
+      "name": "test-nightly",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/tracing-aka-logging",
+      "id": "project-system.example-tracing-aka-logging",
+      "kind": "Container",
+      "name": "example-tracing-aka-logging",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/global-404-handler",
+      "id": "project-system.example-global-404-handler",
+      "kind": "Container",
+      "name": "example-global-404-handler",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/compression",
+      "id": "project-system.example-compression",
+      "kind": "Container",
+      "name": "example-compression",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/http-proxy",
+      "id": "project-system.example-http-proxy",
+      "kind": "Container",
+      "name": "example-http-proxy",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/error-handling",
+      "id": "project-system.example-error-handling",
+      "kind": "Container",
+      "name": "example-error-handling",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "project-system._inferred_redis",
+      "kind": "Container",
+      "name": "Redis",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "database",
+        "inferred:semantic"
+      ],
+      "technology": "Redis"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/parse-body-based-on-content-type",
+      "id": "project-system.example-parse-body-based-on-content-type",
+      "kind": "Container",
+      "name": "example-parse-body-based-on-content-type",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.test-versions",
+      "kind": "Stage",
+      "name": "test-versions",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at axum-core",
+      "id": "project-system.axum-core",
+      "kind": "Container",
+      "name": "axum-core",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.cargo-hack",
+      "kind": "Stage",
+      "name": "cargo-hack",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/tokio-redis",
+      "id": "project-system.example-tokio-redis",
+      "kind": "Container",
+      "name": "example-tokio-redis",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.wasm32-unknown-unknown",
+      "kind": "Stage",
+      "name": "wasm32-unknown-unknown",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/tokio-postgres",
+      "id": "project-system.example-tokio-postgres",
+      "kind": "Container",
+      "name": "example-tokio-postgres",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/handle-head-request",
+      "id": "project-system.example-handle-head-request",
+      "kind": "Container",
+      "name": "example-handle-head-request",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/reqwest-response",
+      "id": "project-system.example-reqwest-response",
+      "kind": "Container",
+      "name": "example-reqwest-response",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/graceful-shutdown",
+      "id": "project-system.example-graceful-shutdown",
+      "kind": "Container",
+      "name": "example-graceful-shutdown",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/low-level-native-tls",
+      "id": "project-system.example-low-level-native-tls",
+      "kind": "Container",
+      "name": "example-low-level-native-tls",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/consume-body-in-extractor-or-middleware",
+      "id": "project-system.example-consume-body-in-extractor-or-middleware",
+      "kind": "Container",
+      "name": "example-consume-body-in-extractor-or-middleware",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at axum-macros",
+      "id": "project-system.axum-macros",
+      "kind": "Container",
+      "name": "axum-macros",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/oauth",
+      "id": "project-system.example-oauth",
+      "kind": "Container",
+      "name": "example-oauth",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/serve-with-hyper",
+      "id": "project-system.example-serve-with-hyper",
+      "kind": "Container",
+      "name": "example-serve-with-hyper",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.check",
+      "kind": "Stage",
+      "name": "check",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/routes-and-handlers-close-together",
+      "id": "project-system.example-routes-and-handlers-close-together",
+      "kind": "Container",
+      "name": "example-routes-and-handlers-close-together",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "project-system._inferred_postgresql",
+      "kind": "Container",
+      "name": "PostgreSQL",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "database",
+        "inferred:semantic"
+      ],
+      "technology": "PostgreSQL"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/unix-domain-socket",
+      "id": "project-system.example-unix-domain-socket",
+      "kind": "Container",
+      "name": "example-unix-domain-socket",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/print-request-response",
+      "id": "project-system.example-print-request-response",
+      "kind": "Container",
+      "name": "example-print-request-response",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/diesel-postgres",
+      "id": "project-system.example-diesel-postgres",
+      "kind": "Container",
+      "name": "example-diesel-postgres",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/sqlx-postgres",
+      "id": "project-system.example-sqlx-postgres",
+      "kind": "Container",
+      "name": "example-sqlx-postgres",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/templates-minijinja",
+      "id": "project-system.example-templates-minijinja",
+      "kind": "Container",
+      "name": "example-templates-minijinja",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/chat",
+      "id": "project-system.example-chat",
+      "kind": "Container",
+      "name": "example-chat",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "End user inferred from a web-facing container",
+      "id": "user",
+      "kind": "Person",
+      "name": "User",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/anyhow-error-response",
+      "id": "project-system.example-anyhow-error-response",
+      "kind": "Container",
+      "name": "example-anyhow-error-response",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/low-level-openssl",
+      "id": "project-system.example-low-level-openssl",
+      "kind": "Container",
+      "name": "example-low-level-openssl",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/tls-graceful-shutdown",
+      "id": "project-system.example-tls-graceful-shutdown",
+      "kind": "Container",
+      "name": "example-tls-graceful-shutdown",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/mongodb",
+      "id": "project-system.example-mongodb",
+      "kind": "Container",
+      "name": "example-mongodb",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/auto-reload",
+      "id": "project-system.auto-reload",
+      "kind": "Container",
+      "name": "auto-reload",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "project-system._inferred_mongodb",
+      "kind": "Container",
+      "name": "MongoDB",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "database",
+        "inferred:semantic"
+      ],
+      "technology": "MongoDB"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at axum",
+      "id": "project-system.axum",
+      "kind": "Container",
+      "name": "axum",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.check-docs",
+      "kind": "Stage",
+      "name": "check-docs",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/customize-path-rejection",
+      "id": "project-system.example-customize-path-rejection",
+      "kind": "Container",
+      "name": "example-customize-path-rejection",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/testing",
+      "id": "project-system.example-testing",
+      "kind": "Container",
+      "name": "example-testing",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/reverse-proxy",
+      "id": "project-system.example-reverse-proxy",
+      "kind": "Container",
+      "name": "example-reverse-proxy",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Engineer inferred from CI pipeline presence",
+      "id": "developer",
+      "kind": "Person",
+      "name": "Developer",
+      "parent": null,
+      "properties": {},
+      "tags": [
+        "inferred:synth"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/diesel-async-postgres",
+      "id": "project-system.example-diesel-async-postgres",
+      "kind": "Container",
+      "name": "example-diesel-async-postgres",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/websockets",
+      "id": "project-system.example-websockets",
+      "kind": "Container",
+      "name": "example-websockets",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": null,
+      "id": "ci.external-types",
+      "kind": "Stage",
+      "name": "external-types",
+      "parent": "ci",
+      "properties": {},
+      "tags": [
+        "inferred:ci"
+      ],
+      "technology": null
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/dependency-injection",
+      "id": "project-system.example-dependency-injection",
+      "kind": "Container",
+      "name": "example-dependency-injection",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/static-file-server",
+      "id": "project-system.example-static-file-server",
+      "kind": "Container",
+      "name": "example-static-file-server",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/simple-router-wasm",
+      "id": "project-system.example-simple-router-wasm",
+      "kind": "Container",
+      "name": "example-simple-router-wasm",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    },
+    {
+      "children": [],
+      "description": "Rust crate at examples/tls-rustls",
+      "id": "project-system.example-tls-rustls",
+      "kind": "Container",
+      "name": "example-tls-rustls",
+      "parent": "project-system",
+      "properties": {},
+      "tags": [
+        "inferred:code"
+      ],
+      "technology": "Rust / Axum"
+    }
+  ],
+  "name": "project",
+  "relationships": [
+    {
+      "from": "project-system.example-tokio-redis",
+      "label": "reads/writes",
+      "technology": null,
+      "to": "project-system._inferred_redis"
+    },
+    {
+      "from": "project-system.example-tokio-redis",
+      "label": "reads/writes",
+      "technology": null,
+      "to": "project-system._inferred_redis"
+    },
+    {
+      "from": "user",
+      "label": "uses",
+      "technology": null,
+      "to": "project-system.example-customize-extractor-error"
+    },
+    {
+      "from": "developer",
+      "label": "triggers",
+      "technology": null,
+      "to": "ci"
+    }
+  ],
+  "teams": [],
+  "tech-stack": [
+    {
+      "category": "MongoDB",
+      "entries": [
+        {
+          "name": "MongoDB",
+          "purpose": "language",
+          "version": null
+        }
+      ]
+    },
+    {
+      "category": "PostgreSQL",
+      "entries": [
+        {
+          "name": "PostgreSQL",
+          "purpose": "language",
+          "version": null
+        }
+      ]
+    },
+    {
+      "category": "Redis",
+      "entries": [
+        {
+          "name": "Redis",
+          "purpose": "language",
+          "version": null
+        }
+      ]
+    },
+    {
+      "category": "Rust",
+      "entries": [
+        {
+          "name": "Rust",
+          "purpose": "language",
+          "version": null
+        },
+        {
+          "name": "Axum",
+          "purpose": "framework",
+          "version": null
+        }
+      ]
+    }
+  ],
+  "trust-boundaries": [],
+  "views": [
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "SystemContext",
+      "kind": "SystemContext",
+      "scope": "project-system",
+      "title": "System Context"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Containers",
+      "kind": "Container",
+      "scope": "project-system",
+      "title": "Containers"
+    },
+    {
+      "animated": false,
+      "auto-layout": "LeftRight",
+      "key": "Pipeline",
+      "kind": "PipelineView",
+      "scope": "ci",
+      "title": "CI/CD Pipeline"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Branching",
+      "kind": "Branching",
+      "scope": "trunk",
+      "title": "Branching Strategy"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "TechStack",
+      "kind": "TechStack",
+      "scope": null,
+      "title": "Technology Stack"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "Teams",
+      "kind": "TeamMap",
+      "scope": null,
+      "title": "Team Ownership"
+    },
+    {
+      "animated": false,
+      "auto-layout": "TopBottom",
+      "key": "APICatalog",
+      "kind": "ApiCatalogView",
+      "scope": null,
+      "title": "API Catalog"
+    }
+  ]
+}

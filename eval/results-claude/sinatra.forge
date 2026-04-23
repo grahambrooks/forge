@@ -1,0 +1,97 @@
+forge "project" {
+
+  model {
+    project-system = system "project" {
+      description "Inferred system wrapper for project"
+      tags "inferred:synth"
+
+      rack-protection = container "rack-protection" {
+        description "Ruby project at rack-protection"
+        technology "Ruby"
+        tags "inferred:code"
+      }
+
+      project = container "project" {
+        description "Ruby project at "
+        technology "Ruby / Sinatra"
+        tags "inferred:code"
+      }
+
+      sinatra-contrib = container "sinatra-contrib" {
+        description "Ruby project at sinatra-contrib"
+        technology "Ruby / Sinatra"
+        tags "inferred:code"
+      }
+    }
+    developer = person "Developer" {
+      description "Engineer inferred from CI pipeline presence"
+      tags "inferred:synth"
+    }
+    user = person "User" {
+      description "End user inferred from a web-facing container"
+      tags "inferred:synth"
+    }
+    user -> project "uses"
+    developer -> release "triggers"
+  }
+
+  process {
+    release = pipeline "Release" {
+      tags "inferred:ci"
+      release = stage "release" {
+        tags "inferred:ci"
+      }
+    }
+    testing = pipeline "Testing" {
+      tags "inferred:ci"
+      sinatra = stage "${{ matrix.ruby }}
+(Rack ${{ matrix.rack }}, Rack::Session ${{ matrix.rack_session }}, Puma ${{ matrix.puma }}, Tilt ${{ matrix.tilt }}, Zeitwerk ${{ matrix.zeitwerk }})
+" {
+        needs rack-protection
+        tags "inferred:ci"
+      }
+      rack-protection = stage "rack-protection (${{ matrix.ruby }}, rack ${{ matrix.rack }})" {
+        tags "inferred:ci"
+      }
+    }
+  }
+
+  views {
+    system-context-view project-system "SystemContext" {
+      include *
+      auto-layout lr
+      title "System Context"
+    }
+    container-view project-system "Containers" {
+      include *
+      auto-layout tb
+      title "Containers"
+    }
+    pipeline-view release "Pipeline" {
+      include *
+      auto-layout lr
+      title "CI/CD Pipeline"
+    }
+    tech-stack-view "TechStack" {
+      include *
+      auto-layout tb
+      title "Technology Stack"
+    }
+    team-view "Teams" {
+      include *
+      auto-layout tb
+      title "Team Ownership"
+    }
+  }
+
+  tech-stack {
+    category "Ruby" {
+      tech "Ruby" {
+        purpose "language"
+      }
+      tech "Sinatra" {
+        purpose "framework"
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "flask",
+  "tier": 1,
+  "repo": "https://github.com/pallets/flask.git",
+  "ref": "3.1.0",
+  "status": "pass",
+  "error": "",
+  "metrics": {
+    "input_files": 0,
+    "input_bytes": 0,
+    "output_bytes": 3599,
+    "element_counts": {
+      "Person": 2,
+      "Stage": 8,
+      "Pipeline": 4,
+      "Container": 6,
+      "System": 1,
+      "Gate": 1
+    },
+    "relationships": 4,
+    "views": 6,
+    "tech_stack_entries": 3,
+    "api_endpoints": 0,
+    "provenance": {
+      "synth": 3,
+      "ci": 12,
+      "semantic": 1,
+      "code": 5
+    }
+  },
+  "timings": {
+    "clone_seconds": 0.0,
+    "claude_seconds": 63.014,
+    "export_seconds": 0.0
+  },
+  "usage": {
+    "input_tokens": 36,
+    "output_tokens": 2483,
+    "cache_read_tokens": 252272,
+    "cache_write_tokens": 12262,
+    "cost_usd": 0.1597471,
+    "turns": 14
+  },
+  "checks": [],
+  "violations": [],
+  "model": "sonnet",
+  "summary": "`forge_check` returned zero violations (empty array `[]`), and the model file is readable. The MCP server's in-memory state doesn't survive between calls in this session, but the file was correctly written.\n\nHere is what the model captures about this repo:\n\n- **Language / framework**: Python with Flask as the primary framework; Redis detected semantically as an infrastructure dependency.\n- **Containers (6)**: The core `Flask` library itself, plus four example sub-projects (`celery`, `flask-example-celery`, `js_example`, `flaskr`) and an inferred Redis container \u2014 the analyzer correctly identified this is a library repo with bundled examples.\n- **CI/CD pipelines (4)**: `Publish` (build \u2192 provenance \u2192 publish-pypi / create-release, with a PyPI environment gate), `Tests` (matrix + typing), `pre-commit`, and `Lock inactive closed issues`.\n- **Relationships (4)**: User \u2192 celery app, Developer \u2192 Publish pipeline, flask-example-celery \u2192 Redis (\u00d72, one inside the system boundary and one duplicated outside \u2014 a minor model artifact).\n- **Gaps / observations**: No HTTP/API relationships between containers are modelled; the \"User \u2192 celery\" relationship is inferred synthetically and may not ref"
+}

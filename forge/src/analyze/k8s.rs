@@ -6,7 +6,10 @@ use walkdir::WalkDir;
 
 use crate::model::*;
 
+use super::provenance::mark_inferred;
 use super::{slugify, AnalyzeConfig};
+
+const SCANNER: &str = "k8s";
 
 pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     for entry in WalkDir::new(root)
@@ -129,8 +132,7 @@ fn parse_k8s_workload(
 
     let mut el = Element::new(&node_id, ElementKind::DeploymentNode, name);
     el.technology = Some(format!("{} ({} replicas)", kind, replicas));
-    el.tags.push("inferred".into());
-    el.tags.push("kubernetes".into());
+    mark_inferred(&mut el, SCANNER, None);
     el.properties.insert("namespace".into(), namespace.into());
     el.properties
         .insert("replicas".into(), replicas.to_string());

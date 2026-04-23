@@ -1,0 +1,6 @@
+$ forge generate /Users/graham/dev/projects/forge/eval/results-claude/sinatra.forge --out /Users/graham/dev/projects/forge/eval/results/site/sinatra-claude
+
+
+Generating site from "project"...
+  17 pages, 5 diagrams → /Users/graham/dev/projects/forge/eval/results/site/sinatra-claude
+Done.
