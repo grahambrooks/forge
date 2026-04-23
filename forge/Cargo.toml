@@ -21,14 +21,14 @@ serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 serde_json = "1"
 walkdir = "2"
-pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 tower-lsp = "0.20"
 tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util", "time", "sync", "fs"] }
-notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
-gix = { version = "0.80", default-features = false, features = ["max-performance-safe"] }
+notify = { version = "8", default-features = false, features = ["macos_kqueue"] }
+gix = { version = "0.81", default-features = false, features = ["max-performance-safe", "sha1"] }
 ab_glyph = "0.2"
 symgraph = { version = "2026.4.13", default-features = false }
-toml = "0.8"
+toml = "1"
 
 [dev-dependencies]
 tempfile = "3"

@@ -327,7 +327,7 @@ fn detect_workspace_members(filename: &str, text: &str, path: &Path) -> Option<V
 }
 
 fn detect_cargo_workspace(text: &str, parent: &Path) -> Option<Vec<PathBuf>> {
-    let parsed: toml::Value = text.parse().ok()?;
+    let parsed: toml::Value = toml::from_str(text).ok()?;
     let members = parsed.get("workspace")?.get("members")?.as_array()?;
 
     let mut out = Vec::new();
