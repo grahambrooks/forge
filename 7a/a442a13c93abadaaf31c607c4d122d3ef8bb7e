@@ -1,0 +1,116 @@
+eval/results-claude/express.json
+  e0d981aa512e002d 4-45
+integrations/claude-plugin/forge-architect/skills/forge-dsl/SKILL.md
+  e0d981aa512e002d 1-214
+.github/workflows/pages.yml
+  bc471b72c55cf98b 1-86
+forge/src/parser.rs
+  bc471b72c55cf98b 624-635,674-678
+eval/compare.py
+  e0d981aa512e002d 1-257
+forge/src/analyze/synth.rs
+  bc471b72c55cf98b 1-111,113-540
+  e0d981aa512e002d 112
+eval/results-claude/express.generate.log
+  e0d981aa512e002d 1-6
+eval/results-claude/sinatra.generate.log
+  e0d981aa512e002d 1-6
+integrations/claude-plugin/forge-architect/skills/forge-dsl/references/examples.md
+  e0d981aa512e002d 1-219
+forge/src/main.rs
+  e0d981aa512e002d 207-210,271-283
+forge/src/analyze/git.rs
+  bc471b72c55cf98b 9,12-13,91,105,136,146
+eval/results-claude/flask.generate.log
+  e0d981aa512e002d 1-6
+integrations/claude-plugin/forge-architect/skills/architecture-review/SKILL.md
+  e0d981aa512e002d 1-85
+eval/sitegen.py
+  e0d981aa512e002d 1-821
+eval/corpus.json
+  bc471b72c55cf98b 1-242
+eval/results-claude/sinatra.json
+  e0d981aa512e002d 1-46
+integrations/claude-plugin/forge-architect/skills/forge-dsl/references/grammar.md
+  e0d981aa512e002d 1-204
+eval/_lib.py
+  e0d981aa512e002d 1-322
+forge/src/analyze/infra.rs
+  bc471b72c55cf98b 9,12-13,83,194,389
+forge/src/mcp.rs
+  e0d981aa512e002d 4-5,8,14,21-27,29-33,37-53,85-88,95-128,136,165,205-208,227-422,428-429,464-466,468,477,487-488,505-506,511,518,525,551-552,615-621,630-639,641-646,687,704-722,824-919
+eval/run.py
+  bc471b72c55cf98b 1-37,40-575,578-579,585-602,604-610
+  e0d981aa512e002d 38-39,576-577,580-584,603
+integrations/claude-plugin/forge-architect/README.md
+  e0d981aa512e002d 1-58
+forge/src/analyze/emit.rs
+  bc471b72c55cf98b 269-277,279-281,309-314,316,327,330
+  e0d981aa512e002d 278,328-329
+eval/results-claude/axum.generate.log
+  e0d981aa512e002d 1-6
+.github/scripts/build_docs.py
+  bc471b72c55cf98b 1-373
+eval/run_claude.py
+  e0d981aa512e002d 1-642
+integrations/claude-plugin/forge-architect/.claude-plugin/plugin.json
+  e0d981aa512e002d 1-15
+forge/src/analyze/mod.rs
+  bc471b72c55cf98b 19,138-142
+integrations/claude-plugin/forge-architect/skills/model-repository/references/analyze-options.md
+  e0d981aa512e002d 1-43
+eval/results-claude/flask.json
+  e0d981aa512e002d 1-5,8-21,23-48
+eval/.gitignore
+  bc471b72c55cf98b 1-8
+forge/src/analyze/docker.rs
+  bc471b72c55cf98b 9,12-13,60-61,66,73,236,345
+integrations/claude-plugin/forge-architect/skills/model-repository/SKILL.md
+  e0d981aa512e002d 1-99
+forge/src/analyze/k8s.rs
+  bc471b72c55cf98b 9,12-13,135
+eval/README.md
+  e0d981aa512e002d 1-18,26,35-44,129-147,152-164,169-179,181-242,260-266
+  bc471b72c55cf98b 19-25,27-34,45-128,148-151,165-168,180,243-259
+forge/src/analyze/ci.rs
+  bc471b72c55cf98b 7,10-11,63,105,158
+eval/results-claude/gin.generate.log
+  e0d981aa512e002d 1-6
+integrations/claude-plugin/forge-architect/skills/architecture-review/references/check-rules.md
+  e0d981aa512e002d 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "7aa442a13c93abadaaf31c607c4d122d3ef8bb7e",
+  "prompts": {
+    "bc471b72c55cf98b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44309e85-c588-4ea5-9565-ae12178453d3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 3185,
+      "total_deletions": 33,
+      "accepted_lines": 2050,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/2b6e1e8056588dccb2f75d7c4f6327f07b2fb39a71cab2cdaf4da6512bc560ff"
+    },
+    "e0d981aa512e002d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59617206-9477-499d-a28c-69336a33f77c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 5585,
+      "total_deletions": 948,
+      "accepted_lines": 4510,
+      "overriden_lines": 9,
+      "messages_url": "https://usegitai.com/cas/8eaf611255508aed5eef9e7f5cecad10119334f9b8c7a14f70094f58f126ffe5"
+    }
+  }
+}
