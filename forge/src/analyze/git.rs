@@ -85,6 +85,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
 
     let trunk_id = format!("{}.trunk", strategy_id);
     let mut trunk = Element::new(&trunk_id, ElementKind::Branch, trunk_name);
+    trunk.parent = Some(strategy_id.clone());
     trunk
         .properties
         .insert("strategy".into(), strategy_id.clone());
@@ -96,6 +97,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
     if has_feature {
         let feat_id = format!("{}.feature", strategy_id);
         let mut feat = Element::new(&feat_id, ElementKind::Branch, "feature/*");
+        feat.parent = Some(strategy_id.clone());
         feat.properties
             .insert("strategy".into(), strategy_id.clone());
         feat.properties
@@ -129,6 +131,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
         };
         let dev_id = format!("{}.develop", strategy_id);
         let mut dev = Element::new(&dev_id, ElementKind::Branch, dev_name);
+        dev.parent = Some(strategy_id.clone());
         dev.properties
             .insert("strategy".into(), strategy_id.clone());
         dev.properties
@@ -141,6 +144,7 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
     if has_release {
         let rel_id = format!("{}.release", strategy_id);
         let mut rel = Element::new(&rel_id, ElementKind::Branch, "release/*");
+        rel.parent = Some(strategy_id.clone());
         rel.properties
             .insert("strategy".into(), strategy_id.clone());
         mark_inferred(&mut rel, SCANNER, None);
@@ -380,7 +384,7 @@ fn scan_contributors(model: &mut Model, repo: &gix::Repository, _root: &Path) {
     // Create team entries from top contributors
     if !author_commits.is_empty() {
         let mut sorted: Vec<(String, usize)> = author_commits.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|e| std::cmp::Reverse(e.1));
 
         for (author, _) in sorted.iter().take(5) {
             model.teams.push(Team {

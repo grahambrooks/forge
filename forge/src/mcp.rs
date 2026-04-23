@@ -589,7 +589,7 @@ impl McpServer {
                 }
             })
             .collect();
-        results.sort_by(|a, b| b.0.cmp(&a.0));
+        results.sort_by_key(|r| std::cmp::Reverse(r.0));
         let results: Vec<Value> = results.into_iter().map(|(_, v)| v).collect();
         serde_json::to_string_pretty(&results).unwrap_or_default()
     }

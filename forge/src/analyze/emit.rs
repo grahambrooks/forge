@@ -72,12 +72,17 @@ pub fn emit(model: &Model) -> String {
         .values()
         .filter(|e| e.kind == ElementKind::Repository)
         .collect();
+    let strategies = group_branches_by_strategy(model);
 
-    if !pipelines.is_empty() || !repos.is_empty() {
+    if !pipelines.is_empty() || !repos.is_empty() || !strategies.is_empty() {
         o.push_str("\n  process {\n");
 
         for repo in &repos {
             emit_repository(&mut o, repo, 4);
+        }
+
+        for (strategy_id, branches) in &strategies {
+            emit_strategy(&mut o, strategy_id, branches, 4);
         }
 
         for pipeline in &pipelines {
@@ -251,6 +256,98 @@ fn emit_repository(o: &mut String, el: &Element, indent: usize) {
         o.push_str(&format!("{}}}\n", pad));
     } else {
         o.push('\n');
+    }
+}
+
+/// Group Branch elements by their `strategy` property. Returns a stable,
+/// lexically-ordered list so emit output is deterministic across runs.
+fn group_branches_by_strategy(model: &Model) -> Vec<(String, Vec<&Element>)> {
+    use std::collections::BTreeMap;
+    let mut map: BTreeMap<String, Vec<&Element>> = BTreeMap::new();
+    for el in model.elements.values() {
+        if el.kind != ElementKind::Branch {
+            continue;
+        }
+        let strategy = match el.properties.get("strategy") {
+            Some(s) if !s.is_empty() => s.clone(),
+            _ => continue,
+        };
+        map.entry(strategy).or_default().push(el);
+    }
+    let mut out: Vec<(String, Vec<&Element>)> = map.into_iter().collect();
+    for (_, branches) in &mut out {
+        // Trunk first, then lexical — keeps the human-meaningful branch at the top.
+        branches.sort_by(|a, b| {
+            let a_trunk = a.tags.iter().any(|t| t == "trunk");
+            let b_trunk = b.tags.iter().any(|t| t == "trunk");
+            b_trunk.cmp(&a_trunk).then_with(|| a.id.cmp(&b.id))
+        });
+    }
+    out
+}
+
+fn emit_strategy(o: &mut String, strategy_id: &str, branches: &[&Element], indent: usize) {
+    let pad = " ".repeat(indent);
+    let inner = " ".repeat(indent + 2);
+    o.push_str(&format!(
+        "{}{} = strategy \"{}\" {{\n",
+        pad,
+        strategy_id,
+        escape(&humanize_strategy(strategy_id))
+    ));
+
+    for branch in branches {
+        let local_id = branch.id.split('.').next_back().unwrap_or(&branch.id);
+        o.push_str(&format!(
+            "{}{} = branch \"{}\"",
+            inner,
+            local_id,
+            escape(&branch.name)
+        ));
+
+        let protection = branch.properties.get("protection");
+        let branches_from = branch.properties.get("branches-from");
+        let merges_into = branch.properties.get("merges-into");
+        let has_body = protection.is_some() || branches_from.is_some() || merges_into.is_some();
+
+        if has_body {
+            o.push_str(" {\n");
+            let deep = " ".repeat(indent + 4);
+            if let Some(p) = protection {
+                let parts: Vec<String> = p
+                    .split(", ")
+                    .filter(|s| !s.is_empty())
+                    .map(|s| format!("\"{}\"", escape(s)))
+                    .collect();
+                if !parts.is_empty() {
+                    o.push_str(&format!("{}protection {}\n", deep, parts.join(" ")));
+                }
+            }
+            if let Some(bf) = branches_from {
+                let local = bf.split('.').next_back().unwrap_or(bf);
+                o.push_str(&format!("{}branches-from {}\n", deep, local));
+            }
+            if let Some(mi) = merges_into {
+                let local = mi.split('.').next_back().unwrap_or(mi);
+                o.push_str(&format!("{}merges-into {}\n", deep, local));
+            }
+            o.push_str(&format!("{}}}\n", inner));
+        } else {
+            o.push('\n');
+        }
+    }
+
+    o.push_str(&format!("{}}}\n", pad));
+}
+
+/// "trunk-based" → "Trunk-based", "github-flow" → "Github-flow". Good enough
+/// for synthesised or heuristic-inferred strategies; hand-authored models pass
+/// through their display name via round-trip of the strategy id.
+fn humanize_strategy(id: &str) -> String {
+    let mut chars = id.chars();
+    match chars.next() {
+        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
     }
 }
 
@@ -513,6 +610,80 @@ mod tests {
         assert!(text.contains("svc = container \"My Service\""));
         assert!(text.contains("technology \"Rust\""));
         assert!(text.contains("description \"A service\""));
+    }
+
+    #[test]
+    fn emits_strategy_block_with_trunk_branch() {
+        let mut model = Model::default();
+        model.name = "svc".into();
+        let mut trunk = Element::new("github-flow.trunk", ElementKind::Branch, "main");
+        trunk.parent = Some("github-flow".into());
+        trunk
+            .properties
+            .insert("strategy".into(), "github-flow".into());
+        trunk.tags.push("trunk".into());
+        model.add_element(trunk);
+
+        let text = emit(&model);
+        assert!(
+            text.contains("github-flow = strategy"),
+            "expected strategy block in output, got:\n{text}"
+        );
+        assert!(
+            text.contains("trunk = branch \"main\""),
+            "expected trunk branch declaration, got:\n{text}"
+        );
+    }
+
+    #[test]
+    fn roundtrips_git_flow_strategy_through_emit_and_parse() {
+        let mut model = Model::default();
+        model.name = "svc".into();
+
+        let mut trunk = Element::new("git-flow.trunk", ElementKind::Branch, "main");
+        trunk.parent = Some("git-flow".into());
+        trunk
+            .properties
+            .insert("strategy".into(), "git-flow".into());
+        trunk.tags.push("trunk".into());
+        model.add_element(trunk);
+
+        let mut feature = Element::new("git-flow.feature", ElementKind::Branch, "feature/*");
+        feature.parent = Some("git-flow".into());
+        feature
+            .properties
+            .insert("strategy".into(), "git-flow".into());
+        feature
+            .properties
+            .insert("branches-from".into(), "git-flow.trunk".into());
+        feature
+            .properties
+            .insert("merges-into".into(), "git-flow.trunk".into());
+        model.add_element(feature);
+
+        let text = emit(&model);
+        let reparsed = parser::parse(&text).unwrap();
+
+        let branches: Vec<&Element> = reparsed
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Branch)
+            .collect();
+        assert_eq!(branches.len(), 2, "both branches should round-trip");
+
+        let feat = reparsed
+            .elements
+            .get("git-flow.feature")
+            .expect("feature branch re-parsed");
+        assert_eq!(
+            feat.properties.get("branches-from").map(|s| s.as_str()),
+            Some("git-flow.trunk"),
+            "branches-from pointer should resolve on re-parse"
+        );
+        assert_eq!(
+            feat.properties.get("merges-into").map(|s| s.as_str()),
+            Some("git-flow.trunk"),
+        );
     }
 
     #[test]

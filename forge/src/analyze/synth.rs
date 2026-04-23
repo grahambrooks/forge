@@ -33,8 +33,38 @@ const SCANNER: &str = "synth";
 pub fn run(model: &mut Model) {
     ensure_system(model);
     synthesize_persons(model);
+    synthesize_branching_strategy(model);
     synthesize_tech_stack(model);
     synthesize_views(model);
+}
+
+/// Every analysed project should carry at least a trunk branch and a strategy
+/// so the generated `.forge` renders a branching-view. When `git.rs` already
+/// found branches (any real repo) we leave them alone; otherwise we fall back
+/// to github-flow with a `main` trunk.
+fn synthesize_branching_strategy(model: &mut Model) {
+    let has_branch = model
+        .elements
+        .values()
+        .any(|e| e.kind == ElementKind::Branch);
+    if has_branch {
+        return;
+    }
+
+    let strategy_id = "github-flow";
+    let trunk_id = format!("{strategy_id}.trunk");
+    if model.elements.contains_key(&trunk_id) {
+        return;
+    }
+
+    let mut trunk = Element::new(&trunk_id, ElementKind::Branch, "main");
+    trunk.parent = Some(strategy_id.into());
+    trunk
+        .properties
+        .insert("strategy".into(), strategy_id.into());
+    trunk.tags.push("trunk".into());
+    mark_inferred(&mut trunk, SCANNER, None);
+    model.add_element(trunk);
 }
 
 /// Wrap top-level containers in a synthesized System when no System exists.
@@ -522,6 +552,67 @@ mod tests {
             .collect();
         assert_eq!(systems.len(), 1);
         assert_eq!(systems[0].id, "mySys");
+    }
+
+    #[test]
+    fn synthesises_default_branching_strategy_when_none_exists() {
+        let mut model = Model::default();
+        model.name = "example".into();
+        model.add_element(container("api", "Rust / Axum"));
+
+        run(&mut model);
+
+        let branches: Vec<&Element> = model
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Branch)
+            .collect();
+        assert_eq!(
+            branches.len(),
+            1,
+            "expected exactly one synthesised trunk branch"
+        );
+        let trunk = branches[0];
+        assert_eq!(trunk.name, "main");
+        assert_eq!(
+            trunk.properties.get("strategy").map(|s| s.as_str()),
+            Some("github-flow")
+        );
+        assert!(trunk.tags.iter().any(|t| t == "trunk"));
+
+        let has_branching_view = model.views.iter().any(|v| v.kind == ViewKind::Branching);
+        assert!(
+            has_branching_view,
+            "branching view should be synthesised alongside default branch"
+        );
+    }
+
+    #[test]
+    fn preserves_existing_branching_strategy() {
+        let mut model = Model::default();
+        model.name = "example".into();
+        model.add_element(container("api", "Rust / Axum"));
+
+        let mut trunk = Element::new("trunk-based.trunk", ElementKind::Branch, "main");
+        trunk.parent = Some("trunk-based".into());
+        trunk
+            .properties
+            .insert("strategy".into(), "trunk-based".into());
+        model.add_element(trunk);
+
+        run(&mut model);
+
+        let branches: Vec<&Element> = model
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Branch)
+            .collect();
+        assert_eq!(branches.len(), 1);
+        assert_eq!(
+            branches[0].properties.get("strategy").map(|s| s.as_str()),
+            Some("trunk-based"),
+            "existing strategy must not be overwritten"
+        );
     }
 
     #[test]
