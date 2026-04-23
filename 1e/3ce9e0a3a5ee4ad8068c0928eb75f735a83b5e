@@ -1,0 +1,28 @@
+forge/Cargo.toml
+  dfc0730809aa1e94 24,27-28,31
+forge/src/analyze/code.rs
+  dfc0730809aa1e94 330
+Makefile
+  dfc0730809aa1e94 1-24,64,66,69,72,74,83,86,89,91-93,95,97-98,100-110,112-113,115-125,131,134-136,140,144,148,152,156,160,164,166-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "1e3ce9e0a3a5ee4ad8068c0928eb75f735a83b5e",
+  "prompts": {
+    "dfc0730809aa1e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5862438e-33cf-48a2-a883-3b950e847097",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 93,
+      "total_deletions": 50,
+      "accepted_lines": 89,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/5b75504d30e8247911ece26cd5e06405622022600e9b9caf638b6b43f6398b9b"
+    }
+  }
+}
