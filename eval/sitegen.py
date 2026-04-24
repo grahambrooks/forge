@@ -43,6 +43,28 @@ def _pick_id(model: dict, kind: str) -> str | None:
     return None
 
 
+def _pick_strategy(model: dict) -> str | None:
+    """Return the inferred branching-strategy name (e.g. "github-flow") from
+    the first Branch element's `strategy` property, or None when no branches
+    were emitted."""
+    for e in model.get("elements") or []:
+        if e.get("kind") == "Branch":
+            strategy = (e.get("properties") or {}).get("strategy")
+            if strategy:
+                return strategy
+    return None
+
+
+def _load_strategy(results_dir: Path, name: str) -> str | None:
+    path = results_dir / f"{name}.model.json"
+    if not path.exists():
+        return None
+    try:
+        return _pick_strategy(json.loads(path.read_text()))
+    except json.JSONDecodeError:
+        return None
+
+
 def _views_block_for(model: dict) -> str:
     """Synthesize a `views { ... }` block targeting kinds present in `model`.
 
@@ -56,7 +78,7 @@ def _views_block_for(model: dict) -> str:
     pipeline_id = _pick_id(model, "Pipeline")
     deployment_id = _pick_id(model, "DeploymentNode")
     component_id = _pick_id(model, "Component")
-    branching_id = _pick_id(model, "BranchingStrategy")
+    branching_id = _pick_id(model, "Branch")
 
     if system_id:
         views.append(
@@ -404,6 +426,7 @@ def _render_summary_table(
     claude: dict[str, dict],
     baseline_sites: dict[str, Path | None],
     claude_sites: dict[str, Path | None],
+    strategies: dict[str, str | None],
 ) -> str:
     """Combined table with grouped Baseline / Claude columns."""
     has_claude = bool(claude)
@@ -411,6 +434,7 @@ def _render_summary_table(
     headers = [
         "<th rowspan='2'>Project</th>",
         "<th rowspan='2'>Tier</th>",
+        "<th rowspan='2'>Strategy</th>",
         "<th class='group-base' colspan='4'>Baseline (forge analyze)</th>",
     ]
     if has_claude:
@@ -445,7 +469,17 @@ def _render_summary_table(
         name_cell = _html_escape(name)
         if site_b:
             name_cell = f"<a href='./{name}/index.html'>{name_cell}</a>"
-        tr = [f"<td>{name_cell}</td>", f"<td>{tier}</td>"]
+        strategy = strategies.get(name)
+        strategy_cell = (
+            f"<code>{_html_escape(strategy)}</code>"
+            if strategy
+            else "<span class='delta-zero'>—</span>"
+        )
+        tr = [
+            f"<td>{name_cell}</td>",
+            f"<td>{tier}</td>",
+            f"<td>{strategy_cell}</td>",
+        ]
 
         # Baseline group
         tr.append(f"<td class='group-base'>{_status_badge(b.get('status') if b else None)}</td>")
@@ -611,6 +645,10 @@ def build_site(
     baseline_previews: dict[str, str | None] = {}
     claude_sites: dict[str, Path | None] = {}
     claude_previews: dict[str, str | None] = {}
+    # Strategy is a per-project property of the analyzer output, not of the
+    # run — both baseline and Claude analyse the same repo. Prefer the
+    # baseline strategy, falling back to Claude's when baseline didn't run.
+    strategies: dict[str, str | None] = {}
 
     forge_css: str | None = None  # captured from the first generated sub-site
 
@@ -622,6 +660,10 @@ def build_site(
     for name in all_names:
         b = baseline.get(name)
         c = claude.get(name)
+        strategies[name] = (
+            _load_strategy(baseline_dir, name)
+            or _load_strategy(claude_dir, name)
+        )
         if b is not None:
             if skip_regenerate:
                 existing = out_dir / name
@@ -686,6 +728,7 @@ def build_site(
         claude_sites=claude_sites,
         baseline_previews=baseline_previews,
         claude_previews=claude_previews,
+        strategies=strategies,
         forge_css=forge_css,
     )
     return out_dir
@@ -700,6 +743,7 @@ def _write_index(
     claude_sites: dict[str, Path | None],
     baseline_previews: dict[str, str | None],
     claude_previews: dict[str, str | None],
+    strategies: dict[str, str | None],
     forge_css: str | None,
 ) -> None:
     (out_dir / "styles.css").write_text(INDEX_CSS)
@@ -751,7 +795,12 @@ def _write_index(
     parts.append("<h2>Summary</h2>")
     parts.append(
         _render_summary_table(
-            all_names, baseline, claude, baseline_sites, claude_sites
+            all_names,
+            baseline,
+            claude,
+            baseline_sites,
+            claude_sites,
+            strategies,
         )
     )
 
