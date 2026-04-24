@@ -126,6 +126,14 @@ cargo run -- lsp
 - **Testing**: Unit tests in each module. Integration tests parse `examples/payments.forge`.
 - **Raw strings**: Use `r##"..."##` for strings containing `"#` (common in SVG color values).
 
+## Modularity Roadmap
+
+The crate stays a single Cargo package — a workspace split is explicitly rejected as too much overhead for the size of the project. Modularity is improved in-place via two phases:
+
+**Phase 1 — split fat files into directory modules** (in progress). Target files, in order of size: `parser.rs` (2.4K), `render.rs` (1.8K), `layout.rs` (1.8K), `generate.rs` (1.3K), `mcp.rs`, `check.rs`. Each becomes a `foo/` directory with a `mod.rs` that preserves the existing public API so call sites don't change. Follow the `analyze/` directory as the template.
+
+**Phase 2 — tighten module boundaries by view type**. Introduce a `views/` hierarchy where each view type (context, container, pipeline, deployment, tech stack, branching, data model, trust boundary, team, animated) owns its layout + render code together, instead of having per-view-type logic scattered across `layout.rs` and `render.rs`. Do this only after Phase 1 is done.
+
 ## What Needs to Be Built
 
 ### High Priority
@@ -140,10 +148,12 @@ cargo run -- lsp
 7. **Client-side search** — Search index for generated sites
 
 ### Lower Priority
-8. **Cargo workspace restructure** — Split into forge-parser, forge-model, etc. crates
-9. **Tree-sitter code analysis** — Full AST parsing for import graphs
-10. **Force-directed layout** — For landscape/overview diagrams
-11. **Cross-compilation** — Release binaries for Linux, macOS, Windows
+8. **Tree-sitter code analysis** — Full AST parsing for import graphs
+9. **Force-directed layout** — For landscape/overview diagrams
+10. **Cross-compilation** — Release binaries for Linux, macOS, Windows
+
+### Rejected
+- **Cargo workspace restructure** — Splitting into `forge-parser`, `forge-model`, etc. crates was considered and rejected: too much overhead for a single-team project at this size. See "Modularity Roadmap" above for the in-place alternative.
 
 ### Phase 6 (Future — documented in DESIGN.md)
 - API catalog, event/message flows, environment config, SLA/SLO definitions, data classification, on-call/runbook links
