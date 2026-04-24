@@ -1,0 +1,142 @@
+forge/src/render/edges.rs
+  8d76b10f5f3836b6 1-231
+forge/src/layout/container.rs
+  9497002b43600807 1-102
+forge/src/layout/event_flow.rs
+  9497002b43600807 1-128
+forge/src/generate/pages.rs
+  9497002b43600807 1-578
+forge/src/layout/deployment.rs
+  9497002b43600807 1-211
+forge/src/layout/component.rs
+  9497002b43600807 1-103
+forge/src/layout/branching.rs
+  9497002b43600807 1-123
+forge/src/render/composite.rs
+  8d76b10f5f3836b6 1-106
+forge/src/layout/data_model.rs
+  9497002b43600807 1-147
+forge/src/render/entity.rs
+  8d76b10f5f3836b6 1-88
+forge/src/render/tests.rs
+  8d76b10f5f3836b6 1-353
+forge/src/render.rs
+  8d76b10f5f3836b6 11-14,16-17,21-33,72-73,75,77,110,117,122,136
+forge/src/check.rs
+  8d76b10f5f3836b6 2-4,8-18
+forge/src/layout/team_map.rs
+  9497002b43600807 1-96
+forge/src/render/shapes.rs
+  8d76b10f5f3836b6 1-477
+forge/src/layout/flow.rs
+  9497002b43600807 1-44
+forge/src/parser/lexer.rs
+  8d76b10f5f3836b6 1-185
+forge/src/layout/tech_stack.rs
+  9497002b43600807 1-94
+forge/src/generate/json.rs
+  9497002b43600807 1-60
+forge/src/parser.rs
+  8d76b10f5f3836b6 2-5,12-21,38-42,99,101-104
+forge/src/mcp/tools.rs
+  9497002b43600807 1-400
+forge/src/render/util.rs
+  8d76b10f5f3836b6 1-65
+forge/src/generate/util.rs
+  9497002b43600807 1-56
+forge/src/generate/template.rs
+  9497002b43600807 1-29
+forge/src/check/rules.rs
+  9497002b43600807 1-429
+forge/src/parser/sections.rs
+  8d76b10f5f3836b6 1-544
+forge/src/layout.rs
+  8d76b10f5f3836b6 3-7,16-47,65-69,137-144,146
+forge/src/layout/trust.rs
+  9497002b43600807 1-122
+forge/src/parser/model_stmts.rs
+  8d76b10f5f3836b6 1-163
+forge/src/layout/tests.rs
+  8d76b10f5f3836b6 1-143
+forge/src/generate/css.rs
+  9497002b43600807 1-149
+forge/src/generate/tests.rs
+  9497002b43600807 1-245
+forge/src/mcp/tests.rs
+  9497002b43600807 1-238
+forge/src/parser/process.rs
+  8d76b10f5f3836b6 1-313
+forge/src/parser/deployment.rs
+  8d76b10f5f3836b6 1-98
+forge/src/render/branching.rs
+  8d76b10f5f3836b6 1-167
+CLAUDE.md
+  8d76b10f5f3836b6 129-136,151-156
+forge/src/check/tests.rs
+  9497002b43600807 1-322
+forge/src/mcp.rs
+  9497002b43600807 222,229,239,288,290-291
+forge/src/parser/views.rs
+  8d76b10f5f3836b6 1-365
+forge/src/generate.rs
+  8d76b10f5f3836b6 20,24-42,64-66
+forge/src/render/css.rs
+  8d76b10f5f3836b6 1-238
+forge/src/parser/tests.rs
+  8d76b10f5f3836b6 1-609
+forge/src/generate/diff_svg.rs
+  9497002b43600807 1-36
+forge/src/layout/system_context.rs
+  9497002b43600807 1-106
+forge/src/layout/api_catalog.rs
+  9497002b43600807 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "cfaaf3a63a22bdd7059e89045511448a04b0820c",
+  "prompts": {
+    "8d76b10f5f3836b6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c146f1b5-fce5-4cec-be74-3a566824732e",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 16799,
+      "total_deletions": 8987,
+      "accepted_lines": 4288,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/fc62f685502ef73fefcab7349b5c8995d19356dfaf4950dd6105114890fe0bd7"
+    },
+    "9497002b43600807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa26f3fd-1327-4a88-91d5-5197bd7b8171",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 4077,
+      "total_deletions": 650,
+      "accepted_lines": 4067,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/17bbed8b7005ad6c3d6a91103631c72ba2fc3f555f38862d7b5dc9b301f547fa"
+    },
+    "dfc0730809aa1e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5862438e-33cf-48a2-a883-3b950e847097",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 952,
+      "total_deletions": 3,
+      "accepted_lines": 52,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/e5e7747c8e6155535c5711d7e67f3d9d0bdd103db6d7f51b402c260b500684cc"
+    }
+  }
+}
