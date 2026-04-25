@@ -55,7 +55,7 @@ impl Default for GenerateConfig {
             out_dir: PathBuf::from("_site"),
             title: None,
             base_url: "/".into(),
-            style: "filled".into(),
+            style: "outline".into(),
             source_dir: PathBuf::from("."),
         }
     }

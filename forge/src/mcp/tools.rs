@@ -246,7 +246,7 @@ impl McpServer {
         let style = args
             .get("style")
             .and_then(|v| v.as_str())
-            .unwrap_or("filled");
+            .unwrap_or("outline");
 
         let state = self.state.borrow();
         let view = match state.model.views.iter().find(|v| v.key == view_key) {

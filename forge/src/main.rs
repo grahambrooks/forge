@@ -51,7 +51,7 @@ enum Commands {
         out: PathBuf,
 
         /// Rendering style: filled or outline
-        #[arg(long, default_value = "filled")]
+        #[arg(long, default_value = "outline")]
         style: String,
     },
 
@@ -127,7 +127,7 @@ enum Commands {
         base_url: String,
 
         /// Diagram rendering style: filled or outline
-        #[arg(long, default_value = "filled")]
+        #[arg(long, default_value = "outline")]
         style: String,
 
         /// Baseline .forge file to diff against (highlights changes)
@@ -172,7 +172,7 @@ enum Commands {
         out: PathBuf,
 
         /// Diagram rendering style
-        #[arg(long, default_value = "filled")]
+        #[arg(long, default_value = "outline")]
         style: String,
 
         /// Baseline .forge file for diff highlighting
@@ -191,7 +191,7 @@ enum Commands {
         out: PathBuf,
 
         /// Diagram rendering style
-        #[arg(long, default_value = "filled")]
+        #[arg(long, default_value = "outline")]
         style: String,
 
         /// HTTP port
