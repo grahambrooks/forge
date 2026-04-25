@@ -101,6 +101,11 @@ enum Commands {
         /// re-run in CI over a hand-authored model.
         #[arg(long)]
         merge: Option<PathBuf>,
+
+        /// External plugin command to run during analysis. Repeatable.
+        /// Whitespace splits argv: `--plugin "tsx ./plugin.ts"`.
+        #[arg(long)]
+        plugin: Vec<String>,
     },
 
     /// Generate a static documentation website
@@ -239,7 +244,16 @@ fn main() {
             exclude,
             dry_run,
             merge,
-        } => cmd_analyze(paths, &out, &scanners, exclude, dry_run, merge.as_deref()),
+            plugin,
+        } => cmd_analyze(
+            paths,
+            &out,
+            &scanners,
+            exclude,
+            dry_run,
+            merge.as_deref(),
+            plugin,
+        ),
         Commands::Generate {
             source,
             out,
@@ -364,13 +378,19 @@ fn cmd_analyze(
     exclude: Vec<String>,
     dry_run: bool,
     merge_into: Option<&Path>,
+    plugins: Vec<String>,
 ) {
     let scanner_list: Vec<String> = scanners.split(',').map(|s| s.trim().to_string()).collect();
+    let plugin_cmds: Vec<analyze::plugin::PluginCommand> = plugins
+        .iter()
+        .filter_map(|p| analyze::plugin::PluginCommand::from_cli(p))
+        .collect();
     let mut config = analyze::AnalyzeConfig {
         paths,
         scanners: scanner_list,
         out: out.to_path_buf(),
         dry_run,
+        plugins: plugin_cmds,
         ..Default::default()
     };
     config.exclude.extend(exclude);

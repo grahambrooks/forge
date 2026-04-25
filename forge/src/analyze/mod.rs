@@ -14,6 +14,7 @@ pub mod git;
 pub mod infra;
 pub mod k8s;
 pub mod merge;
+pub mod plugin;
 pub mod provenance;
 pub mod semantic;
 pub mod synth;
@@ -36,6 +37,7 @@ pub struct AnalyzeConfig {
     pub out: PathBuf,
     pub dry_run: bool,
     pub exclude: Vec<String>,
+    pub plugins: Vec<plugin::PluginCommand>,
 }
 
 impl Default for AnalyzeConfig {
@@ -61,6 +63,7 @@ impl Default for AnalyzeConfig {
                 "dist".into(),
                 "__pycache__".into(),
             ],
+            plugins: Vec::new(),
         }
     }
 }
@@ -134,6 +137,15 @@ pub fn analyze(config: &AnalyzeConfig) -> Model {
     // provides, etc.) into proper relationships now that every scanner has
     // had a chance to populate the model.
     correlate::run(&mut model);
+
+    // External plugins run after built-in scanners so they can reference
+    // discovered containers, but before synth so their additions participate
+    // in tech-stack aggregates and default views.
+    if !config.plugins.is_empty() {
+        for scan_path in &config.paths {
+            plugin::run(&config.plugins, scan_path, config, &mut model);
+        }
+    }
 
     // Synthesis post-pass: fill in high-level structure (System wrapper,
     // default Person actors, tech-stack aggregates, default Views) so that

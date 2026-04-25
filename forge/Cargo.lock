@@ -613,6 +613,7 @@ dependencies = [
  "gix",
  "notify",
  "pulldown-cmark",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml_ng",
