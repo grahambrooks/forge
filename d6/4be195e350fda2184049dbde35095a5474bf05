@@ -1,0 +1,36 @@
+tests/integration/install/Dockerfile.cargo
+  9497002b43600807 1
+tests/integration/install/run-cargo-test.sh
+  9497002b43600807 22
+.github/workflows/pages.yml
+  9497002b43600807 28,71,73,86
+.github/workflows/ci.yml
+  9497002b43600807 19,32,50,73,86
+.github/workflows/release.yml
+  9497002b43600807 39,82,92,95,107
+.github/workflows/homebrew.yml
+  9497002b43600807 18
+eval/corpus.json
+  9497002b43600807 34,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "d64be195e350fda2184049dbde35095a5474bf05",
+  "prompts": {
+    "9497002b43600807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa26f3fd-1327-4a88-91d5-5197bd7b8171",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 19,
+      "accepted_lines": 178,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/088bd900b44c4d735a4e55bfb24b452dd468172db6416543d6c8b790063b6e32"
+    }
+  }
+}
