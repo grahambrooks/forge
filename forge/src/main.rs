@@ -11,6 +11,7 @@ mod lsp;
 mod mcp;
 mod model;
 mod parser;
+mod png;
 mod preprocess;
 mod render;
 mod serve;
@@ -53,6 +54,14 @@ enum Commands {
         /// Rendering style: filled or outline
         #[arg(long, default_value = "outline")]
         style: String,
+
+        /// Output format: svg, png, both
+        #[arg(long, default_value = "svg")]
+        format: String,
+
+        /// PNG scale factor (1.0 = SVG-native pixels, 2.0 = retina)
+        #[arg(long, default_value = "2.0")]
+        scale: f32,
     },
 
     /// Lint and validate a model against architectural rules
@@ -230,7 +239,9 @@ fn main() {
             view,
             out,
             style,
-        } => cmd_build(&source, view.as_deref(), &out, &style),
+            format,
+            scale,
+        } => cmd_build(&source, view.as_deref(), &out, &style, &format, scale),
         Commands::Check {
             source,
             severity,
@@ -307,10 +318,16 @@ fn main() {
 
 // ─── Command Handlers ────────────────────────────────────────────
 
-fn cmd_build(source: &Path, view: Option<&str>, out: &Path, style: &str) {
+fn cmd_build(source: &Path, view: Option<&str>, out: &Path, style: &str, format: &str, scale: f32) {
     if style != "filled" && style != "outline" {
         die("--style must be 'filled' or 'outline'");
     }
+    let (write_svg, write_png) = match format {
+        "svg" => (true, false),
+        "png" => (false, true),
+        "both" => (true, true),
+        _ => die("--format must be 'svg', 'png', or 'both'"),
+    };
 
     let model = load_model(source);
     eprintln!("Parsed model: \"{}\"", model.name);
@@ -332,10 +349,20 @@ fn cmd_build(source: &Path, view: Option<&str>, out: &Path, style: &str) {
             svg = animate::animate_svg(&svg, v, &model);
         }
 
-        let path = out.join(format!("{}.svg", v.key));
-        fs::write(&path, &svg)
-            .unwrap_or_else(|e| die(&format!("writing {}: {}", path.display(), e)));
-        eprintln!("  Wrote: {}", path.display());
+        if write_svg {
+            let path = out.join(format!("{}.svg", v.key));
+            fs::write(&path, &svg)
+                .unwrap_or_else(|e| die(&format!("writing {}: {}", path.display(), e)));
+            eprintln!("  Wrote: {}", path.display());
+        }
+        if write_png {
+            let png = png::render(&svg, scale)
+                .unwrap_or_else(|e| die(&format!("rendering {} png: {}", v.key, e)));
+            let path = out.join(format!("{}.png", v.key));
+            fs::write(&path, &png)
+                .unwrap_or_else(|e| die(&format!("writing {}: {}", path.display(), e)));
+            eprintln!("  Wrote: {} ({} bytes)", path.display(), png.len());
+        }
     }
     eprintln!("Done.");
 }
