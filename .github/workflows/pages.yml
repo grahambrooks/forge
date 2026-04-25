@@ -51,6 +51,7 @@ jobs:
           "$FORGE_BIN" generate \
             --source forge/examples/payments.forge \
             --out _site/demo \
+            --style outline \
             --title "Forge — Payments reference model"
 
       - name: Run evaluation framework (tier 1)

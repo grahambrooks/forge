@@ -172,6 +172,8 @@ def _generate_subsite(
             str(forge_path),
             "--out",
             str(sub_out),
+            "--style",
+            "outline",
             "--title",
             title,
         ],
