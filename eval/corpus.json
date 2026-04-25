@@ -31,7 +31,7 @@
     {
       "name": "express",
       "repo": "https://github.com/expressjs/express.git",
-      "ref": "5.1.0",
+      "ref": "v5.1.0",
       "tier": 1,
       "description": "Node.js web framework (package.json, no TS)",
       "expect": {
@@ -57,7 +57,7 @@
     {
       "name": "axum",
       "repo": "https://github.com/tokio-rs/axum.git",
-      "ref": "axum-v0.8.1",
+      "ref": "axum-v0.8.2",
       "tier": 1,
       "description": "Rust web framework (Cargo workspace)",
       "expect": {

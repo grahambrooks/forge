@@ -19,7 +19,7 @@ echo ""
 
 echo "--- cargo install --path ---"
 
-if cargo install --path /build/forge 2>&1; then
+if cargo install --locked --path /build/forge 2>&1; then
     pass "cargo install --path succeeded"
 else
     fail "cargo install --path failed"
