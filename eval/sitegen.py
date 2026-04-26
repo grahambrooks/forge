@@ -269,63 +269,125 @@ def _status_label(s: str | None) -> str:
 
 
 # ── Styles (inline-friendly) ────────────────────────────────────
+#
+# Two themes driven by `prefers-color-scheme`. Every page uses CSS
+# custom properties so the same markup adapts to whatever the OS is set
+# to — a previous version of the site mixed light defaults with the
+# forge SVGs' dark-mode CSS, so dark-mode visitors saw light text on a
+# light background. The forge SVGs themselves already dark-adapt (see
+# `forge/src/render/css.rs`), so as long as our chrome follows suit
+# everything stays legible.
 INDEX_CSS = """\
+:root {
+    color-scheme: light dark;
+    --bg: #fafbfc;
+    --bg-card: #ffffff;
+    --bg-muted: #f7f8fa;
+    --bg-th: #f3f5f7;
+    --bg-group-base: #eef2f6;
+    --bg-group-claude: #ede9fe;
+    --bg-tag-default: #eef0f3;
+    --bg-preview: #ffffff;
+    --fg: #1f2430;
+    --fg-muted: #4b5563;
+    --fg-faint: #6b7280;
+    --fg-quiet: #9ca3af;
+    --border: #e4e7eb;
+    --border-claude: #ddd6fe;
+    --pass-bg: #d4edda;     --pass-fg: #155724;
+    --fail-bg: #fff3cd;     --fail-fg: #856404;
+    --error-bg: #f8d7da;    --error-fg: #721c24;
+    --claude-bg: #e0e7ff;   --claude-fg: #3730a3;
+    --claude-card: #f5f3ff;
+    --claude-h4: #5b21b6;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0d1117;
+        --bg-card: #161b22;
+        --bg-muted: #1c222b;
+        --bg-th: #1c222b;
+        --bg-group-base: #1c2330;
+        --bg-group-claude: #2a1f48;
+        --bg-tag-default: #21262d;
+        /* The SVG previews' own background is var(--svg-bg), which the
+           forge CSS already flips to a dark value in dark mode. Match
+           that here so the preview frame doesn't show as a light tile
+           around dark-themed diagrams. */
+        --bg-preview: #0d1117;
+        --fg: #e6e8ec;
+        --fg-muted: #c9d1da;
+        --fg-faint: #8b949e;
+        --fg-quiet: #6e7681;
+        --border: #30363d;
+        --border-claude: #4c1d95;
+        --pass-bg: #14361f;     --pass-fg: #7ee2a8;
+        --fail-bg: #3a2e10;     --fail-fg: #ffd97a;
+        --error-bg: #3b1418;    --error-fg: #f5a3aa;
+        --claude-bg: #2a2752;   --claude-fg: #c4b5fd;
+        --claude-card: #1f1840;
+        --claude-h4: #c4b5fd;
+    }
+}
 body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-       margin: 0; padding: 2rem; max-width: 1400px; color: #1f2430;
-       background: #fafbfc; }
+       margin: 0; padding: 2rem; max-width: 1400px;
+       color: var(--fg); background: var(--bg); }
+a { color: inherit; }
 h1 { margin-top: 0; }
-h2 { margin-top: 2.5rem; border-bottom: 1px solid #e4e7eb; padding-bottom: 0.3rem; }
+h2 { margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+.lede { color: var(--fg-muted); max-width: 900px; }
 .summary { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 2rem; }
 .summary .tag { padding: 0.3rem 0.8rem; border-radius: 4px; font-weight: 600;
-                background: #eef0f3; }
-.tag.pass { background: #d4edda; color: #155724; }
-.tag.fail { background: #fff3cd; color: #856404; }
-.tag.error { background: #f8d7da; color: #721c24; }
-.tag.claude { background: #e0e7ff; color: #3730a3; }
+                background: var(--bg-tag-default); color: var(--fg); }
+.tag.pass { background: var(--pass-bg); color: var(--pass-fg); }
+.tag.fail { background: var(--fail-bg); color: var(--fail-fg); }
+.tag.error { background: var(--error-bg); color: var(--error-fg); }
+.tag.claude { background: var(--claude-bg); color: var(--claude-fg); }
 table.summary-table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
 table.summary-table th, table.summary-table td {
-    border-bottom: 1px solid #e4e7eb; padding: 0.5rem 0.6rem; text-align: left;
+    border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; text-align: left;
     font-size: 13px;
 }
-table.summary-table th { background: #f3f5f7; font-weight: 600; }
-table.summary-table th.group-base { background: #eef2f6; border-left: 3px solid #6b7280; }
-table.summary-table th.group-claude { background: #ede9fe; border-left: 3px solid #6d28d9; }
-table.summary-table td.group-base { border-left: 3px solid #e4e7eb; }
-table.summary-table td.group-claude { border-left: 3px solid #ddd6fe; }
+table.summary-table th { background: var(--bg-th); font-weight: 600; }
+table.summary-table th.group-base { background: var(--bg-group-base); border-left: 3px solid var(--fg-faint); }
+table.summary-table th.group-claude { background: var(--bg-group-claude); border-left: 3px solid #6d28d9; }
+table.summary-table td.group-base { border-left: 3px solid var(--border); }
+table.summary-table td.group-claude { border-left: 3px solid var(--border-claude); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr));
          gap: 1.5rem; }
-.card { background: #fff; border: 1px solid #e4e7eb; border-radius: 8px;
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
         padding: 1rem 1.25rem; }
 .card > h3 { margin: 0 0 0.25rem; font-size: 1.05rem; }
-.card .meta { color: #6b7280; font-size: 0.85rem; margin-bottom: 0.75rem; }
+.card .meta { color: var(--fg-faint); font-size: 0.85rem; margin-bottom: 0.75rem; }
 .run-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.run-col { background: #f7f8fa; border-radius: 6px; padding: 0.6rem 0.7rem; }
-.run-col.claude { background: #f5f3ff; }
+.run-col { background: var(--bg-muted); border-radius: 6px; padding: 0.6rem 0.7rem; }
+.run-col.claude { background: var(--claude-card); }
 .run-col h4 { margin: 0 0 0.3rem; font-size: 0.85rem; font-weight: 600;
               text-transform: uppercase; letter-spacing: 0.05em;
-              color: #4b5563; }
-.run-col.claude h4 { color: #5b21b6; }
-.run-col .preview { background: #fff; border-radius: 4px; padding: 0.4rem;
+              color: var(--fg-muted); }
+.run-col.claude h4 { color: var(--claude-h4); }
+.run-col .preview { background: var(--bg-preview); border-radius: 4px; padding: 0.4rem;
                     max-height: 200px; overflow: hidden; display: flex;
                     justify-content: center; align-items: center;
                     margin-bottom: 0.4rem; }
 .run-col .preview svg { max-width: 100%; max-height: 180px; height: auto; }
-.run-col .no-preview { color: #9ca3af; font-style: italic; padding: 1.5rem 0;
+.run-col .no-preview { color: var(--fg-quiet); font-style: italic; padding: 1.5rem 0;
                        font-size: 0.85rem; text-align: center; }
-.run-col .stat { font-size: 0.8rem; color: #4b5563; }
+.run-col .stat { font-size: 0.8rem; color: var(--fg-muted); }
 .run-col .links { margin-top: 0.3rem; font-size: 0.8rem; }
 .run-col .links a { margin-right: 0.6rem; }
 .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 3px;
          font-size: 0.7rem; font-weight: 600; margin-left: 0.4rem;
          text-transform: uppercase; letter-spacing: 0.03em; }
-.badge.pass { background: #d4edda; color: #155724; }
-.badge.fail { background: #fff3cd; color: #856404; }
-.badge.error { background: #f8d7da; color: #721c24; }
-.badge.missing { background: #eef0f3; color: #6b7280; }
-.delta-pos { color: #155724; }
-.delta-neg { color: #721c24; }
-.delta-zero { color: #9ca3af; }
-footer { margin-top: 3rem; color: #9ca3af; font-size: 0.85rem; }
+.badge.pass { background: var(--pass-bg); color: var(--pass-fg); }
+.badge.fail { background: var(--fail-bg); color: var(--fail-fg); }
+.badge.error { background: var(--error-bg); color: var(--error-fg); }
+.badge.missing { background: var(--bg-tag-default); color: var(--fg-faint); }
+.delta-pos { color: var(--pass-fg); }
+.delta-neg { color: var(--error-fg); }
+.delta-zero { color: var(--fg-quiet); }
+code { background: var(--bg-muted); padding: 0.1rem 0.35rem; border-radius: 3px; }
+footer { margin-top: 3rem; color: var(--fg-quiet); font-size: 0.85rem; }
 """
 
 
@@ -767,7 +829,7 @@ def _write_index(
     if has_claude_run:
         parts.append("<h1>Forge — baseline vs Claude-driven evaluation</h1>")
         parts.append(
-            "<p style='color:#4b5563;max-width:900px'>"
+            "<p class='lede'>"
             "Two runs over the same corpus. "
             "<strong>Baseline</strong> invokes <code>forge analyze</code> directly. "
             "<strong>Claude</strong> invokes Claude Code headless with the "
@@ -779,7 +841,7 @@ def _write_index(
     else:
         parts.append("<h1>Forge — <code>forge analyze</code> evaluation</h1>")
         parts.append(
-            "<p style='color:#4b5563;max-width:900px'>"
+            "<p class='lede'>"
             "Results from running <code>forge analyze</code> against the pinned "
             "corpus. Click a project name for its drill-down site."
             "</p>"
