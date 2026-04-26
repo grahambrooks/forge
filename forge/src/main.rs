@@ -344,19 +344,25 @@ fn cmd_build(source: &Path, view: Option<&str>, out: &Path, style: &str, format:
             }
         }
 
-        let mut svg = render::render_view(&model, v, style);
-        if !v.animation.is_empty() || v.kind == model::ViewKind::Dynamic {
-            svg = animate::animate_svg(&svg, v, &model);
-        }
+        let static_svg = render::render_view(&model, v, style);
+        let is_animated = !v.animation.is_empty() || v.kind == model::ViewKind::Dynamic;
 
         if write_svg {
+            let svg = if is_animated {
+                animate::animate_svg(&static_svg, v, &model)
+            } else {
+                static_svg.clone()
+            };
             let path = out.join(format!("{}.svg", v.key));
             fs::write(&path, &svg)
                 .unwrap_or_else(|e| die(&format!("writing {}: {}", path.display(), e)));
             eprintln!("  Wrote: {}", path.display());
         }
         if write_png {
-            let png = png::render(&svg, scale)
+            // Always rasterise the static SVG. The animated wrapper hides
+            // every frame initially (opacity 0, toggled by JS at runtime),
+            // so an animated SVG → PNG would render a near-empty image.
+            let png = png::render(&static_svg, scale)
                 .unwrap_or_else(|e| die(&format!("rendering {} png: {}", v.key, e)));
             let path = out.join(format!("{}.png", v.key));
             fs::write(&path, &png)

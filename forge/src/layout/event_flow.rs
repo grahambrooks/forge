@@ -1,9 +1,26 @@
 use super::*;
 
-pub(super) fn layout_event_flow(model: &Model, view: &View, _tm: &TextMeasurer) -> Layout {
+pub(super) fn layout_event_flow(model: &Model, view: &View, tm: &TextMeasurer) -> Layout {
     let mut nodes = Vec::new();
     let mut edges = Vec::new();
-    let topic_w = 200.0;
+    // Pick a topic-box width that fits the widest topic name OR
+    // description across all flows, plus padding. Otherwise long
+    // descriptions overflow the box border.
+    let topic_w = model
+        .event_flows
+        .iter()
+        .map(|flow| {
+            let name = flow.topic.as_deref().unwrap_or(&flow.name);
+            let name_w = tm.measure(name, &FONT_NAME);
+            let desc_w = flow
+                .description
+                .as_deref()
+                .map(|d| tm.measure(&format!("[{}]", d), &FONT_TECH))
+                .unwrap_or(0.0);
+            name_w.max(desc_w)
+        })
+        .fold(200.0_f64, f64::max)
+        + 30.0;
     let topic_h = 50.0;
     let actor_w = 160.0;
     let actor_h = 50.0;
