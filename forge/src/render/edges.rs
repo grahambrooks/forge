@@ -21,8 +21,8 @@ pub(super) fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[Layou
         return;
     }
 
-    let is_data_entity_edge = frm.tags.iter().any(|t| t == "data-entity")
-        && to.tags.iter().any(|t| t == "data-entity");
+    let is_data_entity_edge =
+        frm.tags.iter().any(|t| t == "data-entity") && to.tags.iter().any(|t| t == "data-entity");
 
     let is_pipe = frm.kind == ElementKind::Stage || to.kind == ElementKind::Stage;
     let cls = if is_pipe {
