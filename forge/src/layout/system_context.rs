@@ -64,15 +64,22 @@ pub(super) fn layout_system_context(model: &Model, view: &View, tm: &TextMeasure
         });
     }
 
-    // Collapse edges to system level
+    // Collapse edges to system level. Drop purely-internal edges
+    // (both endpoints inside the scope) — they collapse to a self-loop
+    // and would render as a label stamped on top of the system box.
     let mut seen: HashSet<(String, String)> = HashSet::new();
     for r in &rels {
-        let frm = if scope_set.contains(&r.frm) {
+        let frm_internal = scope_set.contains(&r.frm);
+        let to_internal = scope_set.contains(&r.to);
+        if frm_internal && to_internal {
+            continue;
+        }
+        let frm = if frm_internal {
             scope_id.to_string()
         } else {
             r.frm.clone()
         };
-        let to = if scope_set.contains(&r.to) {
+        let to = if to_internal {
             scope_id.to_string()
         } else {
             r.to.clone()

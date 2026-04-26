@@ -78,7 +78,9 @@ pub(super) fn layout_data_model(model: &Model, view: &View, tm: &TextMeasurer) -
         let row = i / ENTITY_COLS;
         let x = PAD + col as f64 * (max_entity_w + ENTITY_GAP);
         let (_, ref fields_desc, _, h) = entity_data[i];
-        let y = TITLE_H + 10.0 + row as f64 * (200.0 + ENTITY_GAP);
+        // Leave 60px above the entity row for the U-routed relationship
+        // lines and their label pills (see render_edge / render_edge_label).
+        let y = TITLE_H + 60.0 + row as f64 * (200.0 + ENTITY_GAP);
 
         let sublabel = entity.owner.as_ref().map(|o| {
             let owner_name = model.elements.get(o).map(|e| e.name.as_str()).unwrap_or(o);

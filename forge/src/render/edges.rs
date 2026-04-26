@@ -7,27 +7,22 @@ use crate::layout::{Layout, LayoutEdge, LayoutNode, Rect};
 use crate::model::ElementKind;
 use crate::text::*;
 
+/// Draw the edge line + arrowhead. Labels and step badges are rendered
+/// separately by `render_edge_label` so they can sit *above* the nodes —
+/// otherwise node fills cover the label pills.
 pub(super) fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
-    let frm = nodes.iter().find(|n| n.id == edge.frm);
-    let to = nodes.iter().find(|n| n.id == edge.to);
-    let (frm, to) = match (frm, to) {
-        (Some(f), Some(t)) => (f, t),
-        _ => return,
+    let (frm, to) = match resolve_endpoints(edge, nodes) {
+        Some(p) => p,
+        None => return,
     };
 
-    // Gitgraph-style curved branch/merge paths
     if frm.kind == ElementKind::Branch && to.kind == ElementKind::Branch {
         render_gitgraph_edge(o, edge, frm, to);
         return;
     }
 
-    let fx = frm.rect.x + frm.rect.w / 2.0;
-    let fy = frm.rect.y + frm.rect.h / 2.0;
-    let tx = to.rect.x + to.rect.w / 2.0;
-    let ty = to.rect.y + to.rect.h / 2.0;
-
-    let (ex1, ey1) = edge_point(&frm.rect, tx, ty);
-    let (ex2, ey2) = edge_point(&to.rect, fx, fy);
+    let is_data_entity_edge = frm.tags.iter().any(|t| t == "data-entity")
+        && to.tags.iter().any(|t| t == "data-entity");
 
     let is_pipe = frm.kind == ElementKind::Stage || to.kind == ElementKind::Stage;
     let cls = if is_pipe {
@@ -47,21 +42,85 @@ pub(super) fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[Layou
         esc(&edge.frm),
         esc(&edge.to)
     ));
+
+    if is_data_entity_edge {
+        // Route ER edges through the entity tops with a U-shaped path
+        // that lifts above both entities — keeps lines off the field
+        // rows even when source and target are non-adjacent in the row.
+        let top_y = frm.rect.y.min(to.rect.y);
+        let lift = (top_y - 25.0).max(top_y - 25.0);
+        let x1 = frm.rect.x + frm.rect.w / 2.0;
+        let x2 = to.rect.x + to.rect.w / 2.0;
+        let y1 = frm.rect.y;
+        let y2 = to.rect.y;
+        o.push(format!(
+            r#"      <path d="M {x1:.1} {y1:.1} L {x1:.1} {lift:.1} L {x2:.1} {lift:.1} L {x2:.1} {y2:.1}" fill="none" marker-end="{marker}" />"#
+        ));
+    } else {
+        let (ex1, ey1, ex2, ey2) = edge_endpoints(frm, to);
+        o.push(format!(
+            r#"      <line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" marker-end="{}" />"#,
+            ex1, ey1, ex2, ey2, marker
+        ));
+    }
+    o.push("    </g>".into());
+}
+
+/// Draw the label pill, label text, and (for dynamic views) the step
+/// badge. Called *after* nodes so node fills don't cover them.
+pub(super) fn render_edge_label(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[LayoutNode]) {
+    let (frm, to) = match resolve_endpoints(edge, nodes) {
+        Some(p) => p,
+        None => return,
+    };
+
+    if frm.kind == ElementKind::Branch && to.kind == ElementKind::Branch {
+        // Gitgraph edges carry no separate label layer.
+        return;
+    }
+
+    let (ex1, ey1, ex2, ey2) = edge_endpoints(frm, to);
+    let is_pipe = frm.kind == ElementKind::Stage || to.kind == ElementKind::Stage;
+    let cls = if is_pipe {
+        "forge-connector"
+    } else {
+        "forge-relationship"
+    };
+
+    let has_label = !edge.label.is_empty();
+    let has_badge = edge.order.is_some();
+    if !has_label && !has_badge {
+        return;
+    }
+
     o.push(format!(
-        r#"      <line x1="{:.1}" y1="{:.1}" x2="{:.1}" y2="{:.1}" marker-end="{}" />"#,
-        ex1, ey1, ex2, ey2, marker
+        r#"    <g class="{}" data-from="{}" data-to="{}">"#,
+        cls,
+        esc(&edge.frm),
+        esc(&edge.to)
     ));
 
-    if !edge.label.is_empty() {
-        // Place label at the middle third of the edge to avoid node overlap
+    if has_label {
         let mx = (ex1 + ex2) / 2.0;
         let my = (ey1 + ey2) / 2.0;
 
-        // For near-vertical edges, offset the label horizontally to avoid overlap
         let dx = (ex2 - ex1).abs();
         let dy = (ey2 - ey1).abs();
-        let (mx, my) = if dy > dx * 2.0 {
-            // Near-vertical: offset label to the right
+
+        // ER edges: place the label *above* the higher of the two
+        // entities so it never lands on top of a field row. With three
+        // entities in a row, the source→target line can cross a third
+        // entity's interior, and a center-of-line label would sit on
+        // its fields.
+        let is_data_entity_edge = frm.tags.iter().any(|t| t == "data-entity")
+            && to.tags.iter().any(|t| t == "data-entity");
+
+        let (mx, my) = if is_data_entity_edge {
+            // Sit on the U-routed horizontal segment (lifted 25px above
+            // the higher entity in render_edge).
+            let top = frm.rect.y.min(to.rect.y);
+            (mx, top - 25.0)
+        } else if dy > dx * 2.0 {
             (mx + 40.0, my)
         } else {
             (mx, my)
@@ -104,17 +163,12 @@ pub(super) fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[Layou
         }
     }
 
-    // Dynamic-view step badge: a filled circle with the step number near
-    // the arrow's midpoint, offset to the side of the label so the two
-    // don't collide.
     if let Some(step) = edge.order {
         let mx = (ex1 + ex2) / 2.0;
         let my = (ey1 + ey2) / 2.0;
         let dx = ex2 - ex1;
         let dy = ey2 - ey1;
         let len = (dx * dx + dy * dy).sqrt().max(1.0);
-        // Offset the badge 14px perpendicular to the edge so it sits
-        // beside the arrow rather than on top of it.
         let nx = -dy / len;
         let ny = dx / len;
         let bx = mx + nx * 14.0;
@@ -129,6 +183,25 @@ pub(super) fn render_edge(o: &mut Vec<String>, edge: &LayoutEdge, nodes: &[Layou
     }
 
     o.push("    </g>".into());
+}
+
+fn resolve_endpoints<'a>(
+    edge: &LayoutEdge,
+    nodes: &'a [LayoutNode],
+) -> Option<(&'a LayoutNode, &'a LayoutNode)> {
+    let frm = nodes.iter().find(|n| n.id == edge.frm)?;
+    let to = nodes.iter().find(|n| n.id == edge.to)?;
+    Some((frm, to))
+}
+
+fn edge_endpoints(frm: &LayoutNode, to: &LayoutNode) -> (f64, f64, f64, f64) {
+    let fx = frm.rect.x + frm.rect.w / 2.0;
+    let fy = frm.rect.y + frm.rect.h / 2.0;
+    let tx = to.rect.x + to.rect.w / 2.0;
+    let ty = to.rect.y + to.rect.h / 2.0;
+    let (ex1, ey1) = edge_point(&frm.rect, tx, ty);
+    let (ex2, ey2) = edge_point(&to.rect, fx, fy);
+    (ex1, ey1, ex2, ey2)
 }
 
 fn edge_point(r: &Rect, tx: f64, ty: f64) -> (f64, f64) {

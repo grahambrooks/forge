@@ -104,7 +104,8 @@ pub fn render_svg(layout: &Layout, style: &str) -> String {
         ));
     }
 
-    // Edges first (under nodes)
+    // Edge lines first (under nodes) — the line+arrowhead get clipped
+    // visually by the node fills, which is the look we want.
     o.push(r#"  <g class="forge-relationships">"#.into());
     for e in &layout.edges {
         edges::render_edge(&mut o, e, &layout.nodes);
@@ -115,6 +116,14 @@ pub fn render_svg(layout: &Layout, style: &str) -> String {
     o.push(r#"  <g class="forge-elements">"#.into());
     for n in &layout.nodes {
         shapes::render_node(&mut o, n, style);
+    }
+    o.push("  </g>".into());
+
+    // Edge labels and step badges last, so the pill backgrounds sit on
+    // top of any node they pass over rather than being overpainted.
+    o.push(r#"  <g class="forge-relationship-labels">"#.into());
+    for e in &layout.edges {
+        edges::render_edge_label(&mut o, e, &layout.nodes);
     }
     o.push("  </g>".into());
 
