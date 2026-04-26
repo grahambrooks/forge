@@ -96,7 +96,7 @@ impl McpServer {
                         "properties": {
                             "path": {"type": "string", "description": "Directory to analyze (default: current working directory)"},
                             "out": {"type": "string", "description": "Optional path to write the emitted .forge file (e.g. architecture.forge)"},
-                            "scanners": {"type": "string", "description": "Comma-separated scanner list. Default: code,semantic,ci,docker,git,k8s,infra"},
+                            "scanners": {"type": "string", "description": "Comma-separated scanner list. Default: code,semantic,ci,docker,git,k8s,infra,diagrams"},
                             "exclude": {"type": "array", "items": {"type": "string"}, "description": "Additional directory names to exclude"},
                             "merge": {"type": "boolean", "description": "If true, merge into the current model instead of replacing (preserves hand-authored content)"}
                         }

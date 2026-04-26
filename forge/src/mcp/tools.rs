@@ -40,6 +40,7 @@ impl McpServer {
                     "git".into(),
                     "k8s".into(),
                     "infra".into(),
+                    "diagrams".into(),
                 ]
             });
 
