@@ -1,0 +1,30 @@
+forge/src/layout/data_model.rs
+  9497002b43600807 81-83
+forge/src/render/edges.rs
+  9497002b43600807 10-12,14-16,24-25,45-95,97-100,103,109-123,188-204
+forge/src/render.rs
+  9497002b43600807 107-108,122-126
+forge/src/layout/system_context.rs
+  9497002b43600807 67-69,72-77,82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "e48b33ae461e6902ff0715fabcd991f3f0cd48d5",
+  "prompts": {
+    "9497002b43600807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa26f3fd-1327-4a88-91d5-5197bd7b8171",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Graham Brooks",
+      "messages": [],
+      "total_additions": 130,
+      "total_deletions": 39,
+      "accepted_lines": 319,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/6408dc18f1d8d6e93dbe18a553dfb5eac4df15172ba690df7112bf5f91654c49"
+    }
+  }
+}
