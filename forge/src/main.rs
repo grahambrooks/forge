@@ -93,8 +93,8 @@ enum Commands {
         #[arg(short, long, default_value = "forge.forge")]
         out: PathBuf,
 
-        /// Comma-separated scanner list (code,semantic,ci,docker,git,k8s,infra)
-        #[arg(long, default_value = "code,semantic,ci,docker,git,k8s,infra")]
+        /// Comma-separated scanner list (code,semantic,ci,docker,git,k8s,infra,diagrams)
+        #[arg(long, default_value = "code,semantic,ci,docker,git,k8s,infra,diagrams")]
         scanners: String,
 
         /// Exclude directory names (repeatable)

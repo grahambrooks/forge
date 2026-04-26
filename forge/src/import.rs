@@ -260,8 +260,16 @@ fn import_mermaid(text: &str) -> Result<Model, String> {
 }
 
 fn parse_mermaid_node(s: &str) -> (String, String) {
-    // A[Label] or A(Label) or A{Label} or just A
-    let s = s.trim().trim_end_matches('|');
+    // A[Label] or A(Label) or A{Label} or just A. Edge-label syntax
+    // `-->|label|` lands the leading `|label|` on the right-hand node;
+    // strip it so the id doesn't end up as "|label| B".
+    let mut s = s.trim();
+    if let Some(rest) = s.strip_prefix('|') {
+        if let Some(end) = rest.find('|') {
+            s = rest[end + 1..].trim_start();
+        }
+    }
+    let s = s.trim_end_matches('|');
     if let Some(bracket) = s.find('[') {
         let id = s[..bracket].trim().to_string();
         let label = s[bracket + 1..].trim_end_matches(']').trim().to_string();

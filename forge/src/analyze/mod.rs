@@ -8,6 +8,7 @@ pub mod ci;
 pub mod code;
 pub mod container_index;
 pub mod correlate;
+pub mod diagrams;
 pub mod docker;
 pub mod emit;
 pub mod git;
@@ -52,6 +53,7 @@ impl Default for AnalyzeConfig {
                 "git".into(),
                 "k8s".into(),
                 "infra".into(),
+                "diagrams".into(),
             ],
             out: PathBuf::from("forge.forge"),
             dry_run: false,
@@ -126,6 +128,7 @@ pub fn analyze(config: &AnalyzeConfig) -> Model {
                 "git" => git::scan(&mut model, scan_path, config),
                 "k8s" => k8s::scan(&mut model, scan_path, config),
                 "infra" => infra::scan(&mut model, scan_path, config),
+                "diagrams" => diagrams::scan(&mut model, scan_path, config),
                 _ => {
                     eprintln!("  Warning: unknown scanner '{}'", scanner_name);
                 }
