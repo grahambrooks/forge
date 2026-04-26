@@ -323,19 +323,22 @@ fn render_deployment_node(o: &mut Vec<String>, n: &LayoutNode) {
         r#"      <rect x="{:.0}" y="{:.0}" width="{:.0}" height="{:.0}" />"#,
         r.x, r.y, r.w, r.h
     ));
-    // Header label (top-left, constrained to box width)
+    // Header label (top-left, constrained to box width). Use inline
+    // `style="text-anchor:start"` rather than the presentation attribute so
+    // it beats the broad `.forge-element text { text-anchor: middle }` CSS
+    // rule under strict cascading (matters for resvg/usvg PNG output).
     let lx = r.x + 10.0;
     let ly = r.y + 18.0;
     let max_label_w = r.w - 20.0;
     let name_w = TM.measure(&n.label, &FONT_DEPLOY_NAME);
     if name_w > max_label_w {
         o.push(format!(
-            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" style="text-anchor:start" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
             lx, ly, max_label_w, esc(&n.label)
         ));
     } else {
         o.push(format!(
-            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" text-anchor="start">{}</text>"#,
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name" style="text-anchor:start">{}</text>"#,
             lx, ly, esc(&n.label)
         ));
     }
@@ -343,12 +346,12 @@ fn render_deployment_node(o: &mut Vec<String>, n: &LayoutNode) {
         let sub_w = TM.measure(sub, &FONT_DEPLOY_TECH);
         if sub_w > max_label_w {
             o.push(format!(
-                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="start" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" style="text-anchor:start" textLength="{:.0}" lengthAdjust="spacingAndGlyphs">{}</text>"#,
                 lx, ly + 14.0, max_label_w, esc(sub)
             ));
         } else {
             o.push(format!(
-                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" text-anchor="start">{}</text>"#,
+                r#"      <text x="{:.0}" y="{:.0}" class="forge-label--tech" style="text-anchor:start">{}</text>"#,
                 lx, ly + 14.0, esc(sub)
             ));
         }
@@ -441,16 +444,21 @@ fn render_cylinder(o: &mut Vec<String>, n: &LayoutNode, style: &str) {
         ));
     }
 
-    // Center text vertically, only render lines that fit
+    // Center text vertically inside the *cylinder body* — i.e. between the
+    // top arc and the bottom arc, not the full bounding box. Each arc takes
+    // 2 * ry of vertical space (ry above the arc center + ry below), so the
+    // body interior is [r.y + 2*ry, r.y + r.h - 2*ry]. Without this the
+    // name baseline lands on the top arc and looks struck through.
     let mut text_lines: Vec<(&str, String)> = vec![("name", n.label.clone())];
     if let Some(ref sub) = n.sublabel {
         text_lines.push(("tech", sub.clone()));
     }
     text_lines.push(("kind", "[Database]".into()));
 
+    let usable_top = r.y + 2.0 * ry;
+    let usable_h = (r.h - 4.0 * ry).max(FONT_NAME.line_height);
     let total_h = text_lines.len() as f64 * FONT_NAME.line_height;
-    let usable_h = r.h - 24.0; // account for top/bottom ellipses
-    let mut ty = r.y + (r.h - total_h.min(usable_h)) / 2.0 + 12.0;
+    let mut ty = usable_top + (usable_h - total_h.min(usable_h)) / 2.0 + 12.0;
     let max_text_w = r.w - 20.0;
 
     for (cls, text) in &text_lines {
