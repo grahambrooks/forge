@@ -28,18 +28,25 @@ pub(super) fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
         r.w
     ));
 
-    // Entity name in header
+    // Entity name in header. Left-aligned so it doesn't collide with
+    // the right-aligned owner subtitle. (Same usvg / CSS-specificity
+    // rationale as below — inline `style` beats the broad
+    // `.forge-element text { text-anchor: middle }` rule.)
     o.push(format!(
-        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name forge-entity-header-text">{}</text>"#,
-        r.x + r.w / 2.0,
+        r#"      <text x="{:.0}" y="{:.0}" class="forge-label--name forge-entity-header-text" style="text-anchor:start">{}</text>"#,
+        r.x + pad,
         r.y + 21.0,
         esc(&n.label)
     ));
 
-    // Owner subtitle
+    // Owner subtitle. Inline `style="text-anchor:end"` rather than the
+    // presentation attribute — the broad `.forge-element text {
+    // text-anchor: middle }` CSS rule otherwise wins under strict CSS
+    // cascading (matters for resvg/usvg PNG output) and the right-
+    // aligned label spills past the box edge.
     if let Some(ref sub) = n.sublabel {
         o.push(format!(
-            r#"      <text x="{:.0}" y="{:.0}" class="forge-entity-sub" font-size="9" text-anchor="end">{}</text>"#,
+            r#"      <text x="{:.0}" y="{:.0}" class="forge-entity-sub" font-size="9" style="text-anchor:end">{}</text>"#,
             r.x + r.w - pad,
             r.y + 21.0,
             esc(sub)
@@ -66,17 +73,18 @@ pub(super) fn render_entity_table(o: &mut Vec<String>, n: &LayoutNode) {
                 ));
             }
 
-            // Field name (left-aligned, bold)
+            // Field name (left-aligned, bold). See note above on the
+            // owner subtitle for why we use an inline style here.
             o.push(format!(
-                r#"      <text class="forge-entity-field" x="{:.0}" y="{:.0}" text-anchor="start">{}</text>"#,
+                r#"      <text class="forge-entity-field" x="{:.0}" y="{:.0}" style="text-anchor:start">{}</text>"#,
                 r.x + pad,
                 fy,
                 esc(fname.trim())
             ));
 
-            // Field type + constraints (right-aligned)
+            // Field type + constraints (right-aligned).
             o.push(format!(
-                r#"      <text class="forge-entity-type" x="{:.0}" y="{:.0}" text-anchor="end">{}</text>"#,
+                r#"      <text class="forge-entity-type" x="{:.0}" y="{:.0}" style="text-anchor:end">{}</text>"#,
                 r.x + r.w - pad,
                 fy,
                 esc(frest)
