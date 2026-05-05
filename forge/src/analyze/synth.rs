@@ -289,7 +289,7 @@ fn synthesize_views(model: &mut Model) {
     let component_id = first_id(model, ElementKind::Component);
     let pipeline_id = first_id(model, ElementKind::Pipeline);
     let deployment_id = first_id(model, ElementKind::DeploymentNode);
-    let branch_id = first_id(model, ElementKind::Branch);
+    let strategy_id = first_strategy_id(model);
 
     let mut views: Vec<View> = Vec::new();
     let context_scope = system_id.clone().or_else(|| container_id.clone());
@@ -339,11 +339,11 @@ fn synthesize_views(model: &mut Model) {
             AutoLayout::TopBottom,
         ));
     }
-    if let Some(b) = branch_id {
+    if let Some(s) = strategy_id {
         views.push(make_view(
             ViewKind::Branching,
             "Branching",
-            Some(b),
+            Some(s),
             "Branching Strategy",
             AutoLayout::TopBottom,
         ));
@@ -407,6 +407,22 @@ fn first_id(model: &Model, kind: ElementKind) -> Option<String> {
         .collect();
     ids.sort();
     ids.first().map(|s| s.to_string())
+}
+
+/// Extract the strategy ID from branch elements. Branches carry a `strategy`
+/// property pointing to their parent strategy (e.g. "github-flow", "trunk-based").
+/// Returns the first strategy ID found, in stable lexical order.
+fn first_strategy_id(model: &Model) -> Option<String> {
+    let mut strategies: Vec<&str> = model
+        .elements
+        .values()
+        .filter(|e| e.kind == ElementKind::Branch)
+        .filter_map(|e| e.properties.get("strategy"))
+        .map(|s| s.as_str())
+        .collect();
+    strategies.sort();
+    strategies.dedup();
+    strategies.first().map(|s| s.to_string())
 }
 
 fn make_view(
@@ -585,6 +601,18 @@ mod tests {
             has_branching_view,
             "branching view should be synthesised alongside default branch"
         );
+
+        // Branching view must be scoped to the strategy ID, not the branch ID
+        let branching_view = model
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Branching)
+            .expect("branching view must exist");
+        assert_eq!(
+            branching_view.scope.as_deref(),
+            Some("github-flow"),
+            "branching view must be scoped to strategy ID, not branch ID"
+        );
     }
 
     #[test]
@@ -612,6 +640,18 @@ mod tests {
             branches[0].properties.get("strategy").map(|s| s.as_str()),
             Some("trunk-based"),
             "existing strategy must not be overwritten"
+        );
+
+        // Branching view must be scoped to the existing strategy ID
+        let branching_view = model
+            .views
+            .iter()
+            .find(|v| v.kind == ViewKind::Branching)
+            .expect("branching view must exist");
+        assert_eq!(
+            branching_view.scope.as_deref(),
+            Some("trunk-based"),
+            "branching view must be scoped to strategy ID"
         );
     }
 
