@@ -21,6 +21,7 @@ use crate::diff::DiffResult;
 use crate::model::*;
 use crate::render;
 
+mod catalog;
 mod css;
 mod diff_svg;
 mod json;
@@ -30,6 +31,8 @@ mod util;
 
 #[cfg(test)]
 mod tests;
+
+pub use catalog::{generate_catalog, CatalogGenerateConfig};
 
 use css::CSS;
 use diff_svg::inject_diff_highlights;
