@@ -39,6 +39,18 @@ pub struct AnalyzeConfig {
     pub dry_run: bool,
     pub exclude: Vec<String>,
     pub plugins: Vec<plugin::PluginCommand>,
+    pub branch_patterns: Vec<BranchPattern>,
+}
+
+/// User-defined pattern for detecting branching strategies.
+#[derive(Debug, Clone)]
+pub struct BranchPattern {
+    /// The role/type of branch (e.g., "trunk", "feature", "develop", "release")
+    pub role: String,
+    /// Pattern to match branch names (supports exact names and glob patterns like "feature/*")
+    pub pattern: String,
+    /// The strategy this pattern belongs to (e.g., "trunk-based", "git-flow")
+    pub strategy: String,
 }
 
 impl Default for AnalyzeConfig {
@@ -66,6 +78,7 @@ impl Default for AnalyzeConfig {
                 "__pycache__".into(),
             ],
             plugins: Vec::new(),
+            branch_patterns: Vec::new(),
         }
     }
 }
