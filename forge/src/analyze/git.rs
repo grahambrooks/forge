@@ -11,7 +11,7 @@ use super::AnalyzeConfig;
 
 const SCANNER: &str = "git";
 
-pub fn scan(model: &mut Model, root: &Path, _config: &AnalyzeConfig) {
+pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     // CODEOWNERS doesn't require a git repo to be useful — parse it first so
     // team attribution works even in non-repo scan targets (e.g. fixtures).
     let codeowners_matched = scan_codeowners(model, root);
@@ -21,7 +21,7 @@ pub fn scan(model: &mut Model, root: &Path, _config: &AnalyzeConfig) {
         Err(_) => return, // not a git repo, skip the rest silently
     };
 
-    scan_branches(model, &repo);
+    scan_branches(model, &repo, config);
     // Only fall back to contributor-derived teams when CODEOWNERS didn't
     // assign anyone. A real CODEOWNERS file is strictly better signal than
     // "who committed most recently".
@@ -30,7 +30,7 @@ pub fn scan(model: &mut Model, root: &Path, _config: &AnalyzeConfig) {
     }
 }
 
-fn scan_branches(model: &mut Model, repo: &gix::Repository) {
+fn scan_branches(model: &mut Model, repo: &gix::Repository, config: &AnalyzeConfig) {
     let refs = match repo.references() {
         Ok(r) => r,
         Err(_) => return,
@@ -55,6 +55,147 @@ fn scan_branches(model: &mut Model, repo: &gix::Repository) {
         return;
     }
 
+    // If user provided custom patterns, use them for strategy detection
+    if !config.branch_patterns.is_empty() {
+        use_custom_patterns(model, &branch_names, config);
+        return;
+    }
+
+    // Fall back to built-in pattern detection
+    use_builtin_patterns(model, &branch_names);
+}
+
+/// Use user-configured branch patterns to detect strategy and create branches
+fn use_custom_patterns(model: &mut Model, branch_names: &[String], config: &AnalyzeConfig) {
+    use std::collections::HashMap;
+
+    // Group patterns by strategy
+    let mut strategies: HashMap<String, Vec<&super::BranchPattern>> = HashMap::new();
+    for pattern in &config.branch_patterns {
+        strategies
+            .entry(pattern.strategy.clone())
+            .or_default()
+            .push(pattern);
+    }
+
+    // Process each detected strategy
+    for (strategy_name, patterns) in strategies {
+        let strategy_id = strategy_name.clone();
+        let mut found_any = false;
+
+        // Track which patterns match which branches
+        let mut pattern_matches: HashMap<String, Vec<String>> = HashMap::new();
+
+        for pattern in &patterns {
+            let matching_branches: Vec<String> = branch_names
+                .iter()
+                .filter(|b| matches_pattern(b, &pattern.pattern))
+                .cloned()
+                .collect();
+
+            if !matching_branches.is_empty() {
+                found_any = true;
+                pattern_matches.insert(pattern.role.clone(), matching_branches);
+            }
+        }
+
+        if !found_any {
+            continue;
+        }
+
+        // Find trunk pattern
+        let trunk_role = patterns
+            .iter()
+            .find(|p| p.role == "trunk" || p.role == "main")
+            .map(|p| &p.role);
+
+        // Create branch elements for each role
+        for pattern in &patterns {
+            if let Some(matched_branches) = pattern_matches.get(&pattern.role) {
+                let is_trunk = trunk_role.map(|t| t == &pattern.role).unwrap_or(false);
+
+                // For exact match patterns (no wildcards), create exact branch
+                // For glob patterns, create pattern-based branch
+                let branch_name = if pattern.pattern.contains('*') {
+                    pattern.pattern.clone()
+                } else {
+                    // Use the first matching branch name
+                    matched_branches.first().unwrap_or(&pattern.pattern).clone()
+                };
+
+                let branch_id = format!("{}.{}", strategy_id, pattern.role);
+                let mut branch = Element::new(&branch_id, ElementKind::Branch, &branch_name);
+                branch.parent = Some(strategy_id.clone());
+                branch
+                    .properties
+                    .insert("strategy".into(), strategy_id.clone());
+                mark_inferred(&mut branch, SCANNER, None);
+
+                if is_trunk {
+                    branch.tags.push("trunk".into());
+                }
+
+                model.add_element(branch);
+            }
+        }
+
+        // Create relationships based on role connections
+        let trunk_id = trunk_role.map(|role| format!("{}.{}", strategy_id, role));
+
+        for pattern in &patterns {
+            if pattern.role != "trunk" && pattern.role != "main" {
+                if let Some(trunk) = &trunk_id {
+                    let branch_id = format!("{}.{}", strategy_id, pattern.role);
+
+                    // Feature/dev branches typically branch from and merge to trunk
+                    if pattern.role == "feature"
+                        || pattern.role == "develop"
+                        || pattern.role == "bugfix"
+                        || pattern.role == "hotfix"
+                        || pattern.role == "task"
+                    {
+                        model.add_relationship(Relationship {
+                            frm: trunk.clone(),
+                            to: branch_id.clone(),
+                            label: "branches from".into(),
+                            technology: None,
+                            order: None,
+                        });
+                        model.add_relationship(Relationship {
+                            frm: branch_id,
+                            to: trunk.clone(),
+                            label: "merges into".into(),
+                            technology: None,
+                            order: None,
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Check if a branch name matches a pattern (supports exact match and glob with *)
+fn matches_pattern(branch_name: &str, pattern: &str) -> bool {
+    if pattern == branch_name {
+        return true; // Exact match
+    }
+
+    if let Some(prefix) = pattern.strip_suffix("/*") {
+        // Pattern like "feature/*"
+        return branch_name.starts_with(&format!("{}/", prefix));
+    }
+
+    if let Some(suffix) = pattern.strip_prefix("*/") {
+        // Pattern like "*/bugfix"
+        return branch_name.ends_with(&format!("/{}", suffix));
+    }
+
+    false
+}
+
+/// Use built-in pattern detection (original behavior)
+fn use_builtin_patterns(model: &mut Model, branch_names: &[String]) {
     // Infer branching strategy
     let has_main = branch_names.iter().any(|b| b == "main" || b == "master");
     let has_develop = branch_names.iter().any(|b| b == "develop" || b == "dev");
@@ -527,5 +668,94 @@ mod tests {
             .iter()
             .any(|b| b.properties.contains_key("strategy"));
         assert!(has_strategy, "should infer a branching strategy");
+    }
+
+    #[test]
+    fn test_matches_pattern() {
+        // Exact matches
+        assert!(matches_pattern("main", "main"));
+        assert!(matches_pattern("develop", "develop"));
+        assert!(!matches_pattern("main", "master"));
+
+        // Glob patterns with /*
+        assert!(matches_pattern("feature/login", "feature/*"));
+        assert!(matches_pattern("feature/signup", "feature/*"));
+        assert!(matches_pattern("bugfix/fix-123", "bugfix/*"));
+        assert!(!matches_pattern("feature-branch", "feature/*"));
+        assert!(!matches_pattern("main", "feature/*"));
+
+        // Glob patterns with */
+        assert!(matches_pattern("team/bugfix", "*/bugfix"));
+        assert!(matches_pattern("user/feature", "*/feature"));
+        assert!(!matches_pattern("bugfix", "*/bugfix"));
+    }
+
+    #[test]
+    fn test_custom_branch_patterns() {
+        let mut model = Model::default();
+        let branch_names = vec![
+            "main".to_string(),
+            "task/ABC-123".to_string(),
+            "task/DEF-456".to_string(),
+            "bugfix/urgent-fix".to_string(),
+        ];
+
+        let mut config = AnalyzeConfig::default();
+        config.branch_patterns = vec![
+            super::super::BranchPattern {
+                role: "trunk".to_string(),
+                pattern: "main".to_string(),
+                strategy: "custom-strategy".to_string(),
+            },
+            super::super::BranchPattern {
+                role: "task".to_string(),
+                pattern: "task/*".to_string(),
+                strategy: "custom-strategy".to_string(),
+            },
+            super::super::BranchPattern {
+                role: "bugfix".to_string(),
+                pattern: "bugfix/*".to_string(),
+                strategy: "custom-strategy".to_string(),
+            },
+        ];
+
+        use_custom_patterns(&mut model, &branch_names, &config);
+
+        // Should create branches for each detected pattern
+        let branches: Vec<_> = model
+            .elements
+            .values()
+            .filter(|e| e.kind == ElementKind::Branch)
+            .collect();
+
+        assert_eq!(branches.len(), 3, "should create 3 branch elements");
+
+        // Check trunk branch
+        let trunk = branches
+            .iter()
+            .find(|b| b.tags.contains(&"trunk".to_string()))
+            .expect("should have trunk branch");
+        assert_eq!(trunk.name, "main");
+        assert_eq!(trunk.properties.get("strategy").unwrap(), "custom-strategy");
+
+        // Check task branch pattern
+        let task = branches
+            .iter()
+            .find(|b| b.id.contains("task"))
+            .expect("should have task branch");
+        assert_eq!(task.name, "task/*");
+
+        // Check bugfix branch pattern
+        let bugfix = branches
+            .iter()
+            .find(|b| b.id.contains("bugfix"))
+            .expect("should have bugfix branch");
+        assert_eq!(bugfix.name, "bugfix/*");
+
+        // Should create relationships
+        assert!(
+            !model.relationships.is_empty(),
+            "should create branch relationships"
+        );
     }
 }
