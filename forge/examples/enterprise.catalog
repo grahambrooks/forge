@@ -1,0 +1,11 @@
+catalog "Enterprise Architecture Example" {
+  description "Sample multi-project catalog demonstrating enterprise-scale documentation"
+
+  project "payments" {
+    name "Payment Platform"
+    description "Card and bank payment processing system"
+    source "./examples/payments.forge"
+    repository "github.com/acme/payments"
+    tags "core" "pci"
+  }
+}

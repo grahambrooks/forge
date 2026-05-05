@@ -1,0 +1,21 @@
+// Sample multi-repository catalog for demonstrating enterprise-scale documentation
+
+catalog "Enterprise Architecture" {
+  description "Complete architecture documentation across all organizational systems"
+
+  project "payments" {
+    name "Payment Processing Platform"
+    description "Card and bank payment processing with PCI compliance"
+    source "./examples/payments.forge"
+    repository "github.com/enterprise/payments-platform"
+    tags "core" "pci" "fintech"
+  }
+
+  project "payments-api" {
+    name "Payments API (Secondary Project)"
+    description "Alternative view of the payment system showing additional API details"
+    source "./examples/payments.forge"
+    repository "github.com/enterprise/payments-platform"
+    tags "api" "pci"
+  }
+}

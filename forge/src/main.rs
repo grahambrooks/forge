@@ -1,5 +1,6 @@
 mod analyze;
 mod animate;
+mod catalog_parser;
 mod check;
 mod custom_rules;
 mod diff;
@@ -144,6 +145,33 @@ enum Commands {
         baseline: Option<PathBuf>,
     },
 
+    /// Generate a multi-project catalog documentation website
+    GenerateCatalog {
+        /// Input .forge-catalog file
+        #[arg(short, long, default_value = "forge.catalog")]
+        source: PathBuf,
+
+        /// Output directory
+        #[arg(short, long, default_value = "_site")]
+        out: PathBuf,
+
+        /// Site title (defaults to catalog name)
+        #[arg(long)]
+        title: Option<String>,
+
+        /// Base URL for deployment (e.g. /docs/ for subdirectory)
+        #[arg(long, default_value = "/")]
+        base_url: String,
+
+        /// Diagram rendering style: filled or outline
+        #[arg(long, default_value = "outline")]
+        style: String,
+
+        /// Disable incremental builds (regenerate all projects)
+        #[arg(long)]
+        no_incremental: bool,
+    },
+
     /// Export model as JSON or YAML
     Export {
         /// Input .forge file
@@ -273,6 +301,14 @@ fn main() {
             style,
             baseline,
         } => cmd_generate(&source, &out, title, &base_url, &style, baseline.as_deref()),
+        Commands::GenerateCatalog {
+            source,
+            out,
+            title,
+            base_url,
+            style,
+            no_incremental,
+        } => cmd_generate_catalog(&source, &out, title, &base_url, &style, !no_incremental),
         Commands::Export {
             source,
             format,
@@ -505,6 +541,53 @@ fn cmd_generate(
             eprintln!("Done.");
         }
         Err(e) => die(&format!("generate: {}", e)),
+    }
+}
+
+fn cmd_generate_catalog(
+    source: &Path,
+    out: &Path,
+    title: Option<String>,
+    base_url: &str,
+    style: &str,
+    incremental: bool,
+) {
+    // Load and parse the catalog file
+    let catalog_text = fs::read_to_string(source)
+        .unwrap_or_else(|e| die(&format!("reading {}: {}", source.display(), e)));
+
+    let catalog = catalog_parser::parse_catalog(&catalog_text)
+        .unwrap_or_else(|e| die(&format!("parsing catalog: {}", e)));
+
+    eprintln!("Generating catalog site from \"{}\"...", catalog.name);
+    eprintln!("  {} projects", catalog.projects.len());
+    if incremental {
+        eprintln!("  Incremental mode: skipping unchanged projects");
+    }
+
+    let config = generate::CatalogGenerateConfig {
+        out_dir: out.to_path_buf(),
+        title,
+        base_url: base_url.into(),
+        style: style.into(),
+        incremental,
+    };
+
+    match generate::generate_catalog(&catalog, &config, None) {
+        Ok(report) => {
+            eprintln!(
+                "  Processed: {} projects ({} skipped)",
+                report.projects_processed, report.projects_skipped
+            );
+            eprintln!(
+                "  Generated: {} pages, {} diagrams → {}",
+                report.total_pages,
+                report.total_diagrams,
+                out.display()
+            );
+            eprintln!("Done.");
+        }
+        Err(e) => die(&format!("generate-catalog: {}", e)),
     }
 }
 

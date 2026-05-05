@@ -290,6 +290,30 @@ pub struct ExternalDependency {
     pub description: Option<String>,
 }
 
+// ── Catalog (Multi-Project Support) ──
+
+/// A project entry in a catalog, linking to a separate .forge model.
+#[derive(Debug, Clone)]
+pub struct CatalogProject {
+    pub key: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub source: String,
+    pub repository: Option<String>,
+    pub tags: Vec<String>,
+    /// Cached modification time of the source file for incremental builds
+    #[allow(dead_code)]
+    pub mtime: Option<u64>,
+}
+
+/// A catalog aggregates multiple projects into one documentation site.
+#[derive(Debug, Clone, Default)]
+pub struct Catalog {
+    pub name: String,
+    pub description: String,
+    pub projects: Vec<CatalogProject>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Model {
     pub name: String,
