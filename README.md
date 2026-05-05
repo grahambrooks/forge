@@ -33,6 +33,9 @@ forge build -s architecture.forge
 # Generate a documentation site
 forge generate -s architecture.forge -o _site
 
+# Generate a multi-project catalog (enterprise scale)
+forge generate-catalog -s enterprise.catalog -o _site
+
 # Start a live-reload preview
 forge serve -s architecture.forge
 
@@ -42,6 +45,17 @@ forge check -s architecture.forge
 # Scan a codebase to generate a model
 forge analyze ./my-project -o discovered.forge
 ```
+
+## Features
+
+- **11 view types**: System context, container, component, deployment, pipeline, branching, data model, trust boundaries, team ownership, tech stack, animated
+- **Multi-project catalogs**: Aggregate 1000s of models into one site with incremental builds ([CATALOG.md](./CATALOG.md))
+- **Living documentation**: `forge analyze` scans code → generates models → `forge generate` publishes sites
+- **Diff highlighting**: Compare models and highlight changes in green/amber
+- **Architecture linting**: 8 built-in rules + custom `.forge-rules` files with SARIF output
+- **LSP integration**: VS Code, Neovim, Emacs, Zed — autocomplete, diagnostics, hover ([EDITORS.md](./forge/EDITORS.md))
+- **MCP server**: AI agent access via Model Context Protocol (`forge mcp`)
+- **Single binary**: No JVM, no Node, no Python — one statically-linked Rust binary
 
 ## Install
 
