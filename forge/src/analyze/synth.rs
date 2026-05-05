@@ -228,14 +228,17 @@ fn is_web_tech(tech: Option<&str>) -> bool {
     }
 }
 
-/// Aggregate container technology labels into tech_stack categories.
+/// Aggregate container technology labels into tech_stack categories organised by
+/// architectural layer: App → Service → Persistence → Infrastructure.
 fn synthesize_tech_stack(model: &mut Model) {
     if !model.tech_stack.is_empty() {
         return;
     }
 
     use std::collections::BTreeMap;
-    let mut by_language: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    // layer → deduplicated list of (tech_name, purpose_label)
+    let mut by_layer: BTreeMap<&'static str, Vec<(String, String)>> = BTreeMap::new();
+
     for el in model.elements.values() {
         if el.kind != ElementKind::Container {
             continue;
@@ -244,36 +247,136 @@ fn synthesize_tech_stack(model: &mut Model) {
             Some(t) if !t.is_empty() => t,
             _ => continue,
         };
-        let (language, framework) = match tech.split_once(" / ") {
-            Some((l, f)) => (l.trim().to_string(), Some(f.trim().to_string())),
-            None => (tech.trim().to_string(), None),
-        };
-        let entry = by_language.entry(language).or_default();
-        if let Some(f) = framework {
-            if !entry.iter().any(|e| e == &f) {
-                entry.push(f);
+
+        // Technology labels produced by the code scanner use "Language / Framework".
+        // Docker/infra scanners emit bare names like "PostgreSQL" or "Redis".
+        match tech.split_once(" / ") {
+            Some((language, framework)) => {
+                let language = language.trim();
+                let framework = framework.trim();
+                let layer = classify_tech_layer(framework);
+                let entries = by_layer.entry(layer).or_default();
+                if !entries.iter().any(|(n, _)| n == framework) {
+                    entries.push((framework.to_string(), format!("{language} framework")));
+                }
+            }
+            None => {
+                // Bare technology name (database image, platform tool, language only)
+                let name = tech.trim();
+                let layer = classify_tech_layer(name);
+                let entries = by_layer.entry(layer).or_default();
+                if !entries.iter().any(|(n, _)| n == name) {
+                    entries.push((name.to_string(), layer_purpose_label(layer)));
+                }
             }
         }
     }
 
-    for (language, frameworks) in by_language {
-        let mut entries: Vec<TechEntry> = Vec::new();
-        entries.push(TechEntry {
-            name: language.clone(),
-            version: None,
-            purpose: Some("language".into()),
-        });
-        for f in frameworks {
-            entries.push(TechEntry {
-                name: f,
-                version: None,
-                purpose: Some("framework".into()),
+    // Emit categories in a stable, meaningful order.
+    for layer in ["App", "Service", "Persistence", "Infrastructure"] {
+        if let Some(entries) = by_layer.get(layer) {
+            model.tech_stack.push(TechCategory {
+                name: layer.to_string(),
+                entries: entries
+                    .iter()
+                    .map(|(name, purpose)| TechEntry {
+                        name: name.clone(),
+                        version: None,
+                        purpose: Some(purpose.clone()),
+                    })
+                    .collect(),
             });
         }
-        model.tech_stack.push(TechCategory {
-            name: language,
-            entries,
-        });
+    }
+}
+
+/// Classify a technology name into one of the four architectural layers.
+fn classify_tech_layer(tech: &str) -> &'static str {
+    // Frontend / UI frameworks → App
+    const APP_TECHS: &[&str] = &[
+        "React", "Angular", "Vue", "Svelte", "Next.js", "Nuxt", "Remix", "Gatsby", "Astro",
+        "Ember", "Solid", "Lit", "Preact", "Flutter", "Blazor",
+    ];
+    // Databases, caches, message queues → Persistence
+    const PERSISTENCE_TECHS: &[&str] = &[
+        "PostgreSQL",
+        "MySQL",
+        "MariaDB",
+        "SQLite",
+        "Oracle",
+        "MSSQL",
+        "SQL Server",
+        "MongoDB",
+        "Cassandra",
+        "CouchDB",
+        "DynamoDB",
+        "Firestore",
+        "Cosmos DB",
+        "Redis",
+        "Memcached",
+        "Apache Kafka",
+        "Kafka",
+        "RabbitMQ",
+        "NATS",
+        "ActiveMQ",
+        "SQS",
+        "Elasticsearch",
+        "OpenSearch",
+        "InfluxDB",
+        "TimescaleDB",
+        "Neo4j",
+    ];
+    // Platform, cloud, container runtime, IaC, reverse proxies → Infrastructure
+    const INFRA_TECHS: &[&str] = &[
+        "Docker",
+        "Kubernetes",
+        "K8s",
+        "Helm",
+        "AWS",
+        "GCP",
+        "Azure",
+        "Terraform",
+        "Pulumi",
+        "Ansible",
+        "Chef",
+        "Puppet",
+        "Nginx",
+        "Traefik",
+        "HAProxy",
+        "Envoy",
+        "Linkerd",
+        "Istio",
+        "Prometheus",
+        "Grafana",
+        "Datadog",
+        "CloudWatch",
+        "Jaeger",
+        "Zipkin",
+        "OpenTelemetry",
+    ];
+
+    if APP_TECHS.iter().any(|a| tech.contains(a)) {
+        return "App";
+    }
+    if PERSISTENCE_TECHS.iter().any(|p| tech.contains(p)) {
+        return "Persistence";
+    }
+    if INFRA_TECHS.iter().any(|i| tech.contains(i)) {
+        return "Infrastructure";
+    }
+    // Backend service frameworks and plain languages default to Service.
+    "Service"
+}
+
+/// A short human-readable purpose label for bare technology names placed
+/// in a layer by `classify_tech_layer`.
+fn layer_purpose_label(layer: &str) -> String {
+    match layer {
+        "App" => "frontend".into(),
+        "Service" => "service".into(),
+        "Persistence" => "data store".into(),
+        "Infrastructure" => "infrastructure".into(),
+        _ => "technology".into(),
     }
 }
 
@@ -656,16 +759,75 @@ mod tests {
     }
 
     #[test]
-    fn aggregates_tech_stack_from_containers() {
+    fn aggregates_tech_stack_by_layer() {
         let mut model = Model::default();
         model.add_element(container("api", "Rust / Axum"));
         model.add_element(container("worker", "Rust / Tokio"));
         model.add_element(container("web", "TypeScript / Next.js"));
+        model.add_element(container("db", "PostgreSQL"));
 
         run(&mut model);
 
         let categories: Vec<&str> = model.tech_stack.iter().map(|c| c.name.as_str()).collect();
-        assert!(categories.contains(&"Rust"));
-        assert!(categories.contains(&"TypeScript"));
+
+        // Next.js is a frontend framework → App layer
+        assert!(categories.contains(&"App"), "expected an App layer");
+        // Axum and Tokio are backend frameworks → Service layer
+        assert!(categories.contains(&"Service"), "expected a Service layer");
+        // PostgreSQL is a database → Persistence layer
+        assert!(
+            categories.contains(&"Persistence"),
+            "expected a Persistence layer"
+        );
+
+        // Verify specific tech entries land in the correct layer
+        let app_layer = model.tech_stack.iter().find(|c| c.name == "App").unwrap();
+        assert!(
+            app_layer.entries.iter().any(|e| e.name == "Next.js"),
+            "Next.js should be in App layer"
+        );
+
+        let service_layer = model
+            .tech_stack
+            .iter()
+            .find(|c| c.name == "Service")
+            .unwrap();
+        assert!(
+            service_layer.entries.iter().any(|e| e.name == "Axum"),
+            "Axum should be in Service layer"
+        );
+
+        let persistence_layer = model
+            .tech_stack
+            .iter()
+            .find(|c| c.name == "Persistence")
+            .unwrap();
+        assert!(
+            persistence_layer
+                .entries
+                .iter()
+                .any(|e| e.name == "PostgreSQL"),
+            "PostgreSQL should be in Persistence layer"
+        );
+    }
+
+    #[test]
+    fn classify_tech_layer_routes_correctly() {
+        assert_eq!(classify_tech_layer("React"), "App");
+        assert_eq!(classify_tech_layer("Next.js"), "App");
+        assert_eq!(classify_tech_layer("Vue"), "App");
+        assert_eq!(classify_tech_layer("Axum"), "Service");
+        assert_eq!(classify_tech_layer("Flask"), "Service");
+        assert_eq!(classify_tech_layer("Gin"), "Service");
+        assert_eq!(classify_tech_layer("Rust"), "Service");
+        assert_eq!(classify_tech_layer("Go"), "Service");
+        assert_eq!(classify_tech_layer("PostgreSQL"), "Persistence");
+        assert_eq!(classify_tech_layer("Redis"), "Persistence");
+        assert_eq!(classify_tech_layer("MongoDB"), "Persistence");
+        assert_eq!(classify_tech_layer("Apache Kafka"), "Persistence");
+        assert_eq!(classify_tech_layer("Docker"), "Infrastructure");
+        assert_eq!(classify_tech_layer("Kubernetes"), "Infrastructure");
+        assert_eq!(classify_tech_layer("Terraform"), "Infrastructure");
+        assert_eq!(classify_tech_layer("Nginx"), "Infrastructure");
     }
 }
