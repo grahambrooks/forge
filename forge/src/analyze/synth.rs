@@ -273,7 +273,12 @@ fn synthesize_tech_stack(model: &mut Model) {
     }
 
     // Emit categories in a stable, meaningful order.
-    for layer in ["App", "Service", "Persistence", "Infrastructure"] {
+    for layer in [
+        LAYER_APP,
+        LAYER_SERVICE,
+        LAYER_PERSISTENCE,
+        LAYER_INFRASTRUCTURE,
+    ] {
         if let Some(entries) = by_layer.get(layer) {
             model.tech_stack.push(TechCategory {
                 name: layer.to_string(),
@@ -289,6 +294,12 @@ fn synthesize_tech_stack(model: &mut Model) {
         }
     }
 }
+
+// ── Layer name constants ─────────────────────────────────────────
+const LAYER_APP: &str = "App";
+const LAYER_SERVICE: &str = "Service";
+const LAYER_PERSISTENCE: &str = "Persistence";
+const LAYER_INFRASTRUCTURE: &str = "Infrastructure";
 
 /// Classify a technology name into one of the four architectural layers.
 fn classify_tech_layer(tech: &str) -> &'static str {
@@ -355,27 +366,47 @@ fn classify_tech_layer(tech: &str) -> &'static str {
         "OpenTelemetry",
     ];
 
-    if APP_TECHS.iter().any(|a| tech.contains(a)) {
-        return "App";
+    if APP_TECHS.iter().any(|a| tech_name_matches(tech, a)) {
+        return LAYER_APP;
     }
-    if PERSISTENCE_TECHS.iter().any(|p| tech.contains(p)) {
-        return "Persistence";
+    if PERSISTENCE_TECHS.iter().any(|p| tech_name_matches(tech, p)) {
+        return LAYER_PERSISTENCE;
     }
-    if INFRA_TECHS.iter().any(|i| tech.contains(i)) {
-        return "Infrastructure";
+    if INFRA_TECHS.iter().any(|i| tech_name_matches(tech, i)) {
+        return LAYER_INFRASTRUCTURE;
     }
     // Backend service frameworks and plain languages default to Service.
-    "Service"
+    LAYER_SERVICE
+}
+
+/// Match a technology label against a known pattern using whole-word semantics.
+///
+/// Exact equality is checked first. Versioned labels like "PostgreSQL 16" or
+/// "Redis 7" are matched by checking that `tech` starts with `pattern` and the
+/// next character (if any) is a space — this avoids false-positive substring
+/// matches such as "MyReactiveService" matching "React".
+fn tech_name_matches(tech: &str, pattern: &str) -> bool {
+    if tech.eq_ignore_ascii_case(pattern) {
+        return true;
+    }
+    // Allow "Pattern <version-or-extra>" (e.g. "PostgreSQL 16" matches "PostgreSQL")
+    if tech.len() > pattern.len() {
+        let (prefix, rest) = tech.split_at(pattern.len());
+        if prefix.eq_ignore_ascii_case(pattern) && rest.starts_with(' ') {
+            return true;
+        }
+    }
+    false
 }
 
 /// A short human-readable purpose label for bare technology names placed
 /// in a layer by `classify_tech_layer`.
 fn layer_purpose_label(layer: &str) -> String {
     match layer {
-        "App" => "frontend".into(),
-        "Service" => "service".into(),
-        "Persistence" => "data store".into(),
-        "Infrastructure" => "infrastructure".into(),
+        LAYER_APP => "frontend".into(),
+        LAYER_SERVICE => "service".into(),
+        LAYER_PERSISTENCE => "data store".into(),
+        LAYER_INFRASTRUCTURE => "infrastructure".into(),
         _ => "technology".into(),
     }
 }
@@ -773,21 +804,39 @@ mod tests {
 
     #[test]
     fn classify_tech_layer_routes_correctly() {
-        assert_eq!(classify_tech_layer("React"), "App");
-        assert_eq!(classify_tech_layer("Next.js"), "App");
-        assert_eq!(classify_tech_layer("Vue"), "App");
-        assert_eq!(classify_tech_layer("Axum"), "Service");
-        assert_eq!(classify_tech_layer("Flask"), "Service");
-        assert_eq!(classify_tech_layer("Gin"), "Service");
-        assert_eq!(classify_tech_layer("Rust"), "Service");
-        assert_eq!(classify_tech_layer("Go"), "Service");
-        assert_eq!(classify_tech_layer("PostgreSQL"), "Persistence");
-        assert_eq!(classify_tech_layer("Redis"), "Persistence");
-        assert_eq!(classify_tech_layer("MongoDB"), "Persistence");
-        assert_eq!(classify_tech_layer("Apache Kafka"), "Persistence");
-        assert_eq!(classify_tech_layer("Docker"), "Infrastructure");
-        assert_eq!(classify_tech_layer("Kubernetes"), "Infrastructure");
-        assert_eq!(classify_tech_layer("Terraform"), "Infrastructure");
-        assert_eq!(classify_tech_layer("Nginx"), "Infrastructure");
+        assert_eq!(classify_tech_layer("React"), LAYER_APP);
+        assert_eq!(classify_tech_layer("Next.js"), LAYER_APP);
+        assert_eq!(classify_tech_layer("Vue"), LAYER_APP);
+        assert_eq!(classify_tech_layer("Axum"), LAYER_SERVICE);
+        assert_eq!(classify_tech_layer("Flask"), LAYER_SERVICE);
+        assert_eq!(classify_tech_layer("Gin"), LAYER_SERVICE);
+        assert_eq!(classify_tech_layer("Rust"), LAYER_SERVICE);
+        assert_eq!(classify_tech_layer("Go"), LAYER_SERVICE);
+        assert_eq!(classify_tech_layer("PostgreSQL"), LAYER_PERSISTENCE);
+        assert_eq!(classify_tech_layer("Redis"), LAYER_PERSISTENCE);
+        assert_eq!(classify_tech_layer("MongoDB"), LAYER_PERSISTENCE);
+        assert_eq!(classify_tech_layer("Apache Kafka"), LAYER_PERSISTENCE);
+        assert_eq!(classify_tech_layer("Docker"), LAYER_INFRASTRUCTURE);
+        assert_eq!(classify_tech_layer("Kubernetes"), LAYER_INFRASTRUCTURE);
+        assert_eq!(classify_tech_layer("Terraform"), LAYER_INFRASTRUCTURE);
+        assert_eq!(classify_tech_layer("Nginx"), LAYER_INFRASTRUCTURE);
+    }
+
+    #[test]
+    fn classify_tech_layer_no_false_positives() {
+        // "MyReactiveService" must NOT match "React"
+        assert_eq!(
+            classify_tech_layer("MyReactiveService"),
+            LAYER_SERVICE,
+            "substring match on 'React' inside 'MyReactiveService' should not classify as App"
+        );
+        // "PostgreSQL 16" (versioned) should still resolve to Persistence
+        assert_eq!(
+            classify_tech_layer("PostgreSQL 16"),
+            LAYER_PERSISTENCE,
+            "versioned name 'PostgreSQL 16' should be Persistence"
+        );
+        // "Redis 7" should be Persistence
+        assert_eq!(classify_tech_layer("Redis 7"), LAYER_PERSISTENCE);
     }
 }
