@@ -109,6 +109,9 @@ fn use_custom_patterns(model: &mut Model, branch_names: &[String], config: &Anal
             .find(|p| p.role == "trunk" || p.role == "main")
             .map(|p| &p.role);
 
+        // Calculate trunk_id for relationship properties
+        let trunk_id = trunk_role.map(|role| format!("{}.{}", strategy_id, role));
+
         // Create branch elements for each role
         for pattern in &patterns {
             if let Some(matched_branches) = pattern_matches.get(&pattern.role) {
@@ -129,6 +132,27 @@ fn use_custom_patterns(model: &mut Model, branch_names: &[String], config: &Anal
                 branch
                     .properties
                     .insert("strategy".into(), strategy_id.clone());
+
+                // Set branch relationship properties if this is a non-trunk branch
+                if !is_trunk {
+                    if let Some(trunk) = &trunk_id {
+                        // Feature/dev branches typically branch from and merge to trunk
+                        if pattern.role == "feature"
+                            || pattern.role == "develop"
+                            || pattern.role == "bugfix"
+                            || pattern.role == "hotfix"
+                            || pattern.role == "task"
+                        {
+                            branch
+                                .properties
+                                .insert("branches-from".into(), trunk.clone());
+                            branch
+                                .properties
+                                .insert("merges-into".into(), trunk.clone());
+                        }
+                    }
+                }
+
                 mark_inferred(&mut branch, SCANNER, None);
 
                 if is_trunk {
@@ -140,8 +164,6 @@ fn use_custom_patterns(model: &mut Model, branch_names: &[String], config: &Anal
         }
 
         // Create relationships based on role connections
-        let trunk_id = trunk_role.map(|role| format!("{}.{}", strategy_id, role));
-
         for pattern in &patterns {
             if pattern.role != "trunk" && pattern.role != "main" {
                 if let Some(trunk) = &trunk_id {
