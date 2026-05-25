@@ -28,3 +28,5 @@ dist/forge-musl
 
 # Local development scratch
 prompts.db
+.symgraph-index.log
+.symgraph
