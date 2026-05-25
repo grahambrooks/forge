@@ -123,6 +123,27 @@ impl Parser {
         c
     }
 
+    /// Parse a `{ … }` block, invoking `body` once per inner element until the
+    /// matching `}` is reached. `context` is used in the "unexpected EOF" error
+    /// message. Replaces ~30 hand-rolled copies of the same brace loop.
+    pub(super) fn parse_braced<F>(&mut self, context: &str, mut body: F) -> Result<(), ParseError>
+    where
+        F: FnMut(&mut Self) -> Result<(), ParseError>,
+    {
+        self.expect('{')?;
+        loop {
+            self.skip_ws();
+            if self.peek() == Some('}') {
+                self.advance();
+                return Ok(());
+            }
+            if self.at_end() {
+                return Err(self.error(format!("unexpected EOF in {}", context)));
+            }
+            body(self)?;
+        }
+    }
+
     pub(super) fn skip_block(&mut self) -> Result<(), ParseError> {
         self.expect('{')?;
         let mut depth = 1;

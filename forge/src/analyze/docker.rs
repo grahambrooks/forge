@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use walkdir::WalkDir;
+use super::iter_source_files;
 
 use crate::model::*;
 
@@ -19,15 +19,8 @@ pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
 // ── Dockerfile scanning ──────────────────────────────────────────
 
 fn scan_dockerfiles(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
-    for entry in WalkDir::new(root)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, None) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if name == "Dockerfile" || name.starts_with("Dockerfile.") {
             if let Ok(text) = std::fs::read_to_string(path) {

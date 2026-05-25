@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use walkdir::WalkDir;
+use super::iter_source_files;
 
 use crate::import;
 use crate::model::*;
@@ -26,16 +26,8 @@ const DIAGRAM_EXTS: &[&str] = &["puml", "plantuml", "iuml", "mmd", "mermaid"];
 const SCANNER_NAME: &str = "diagrams";
 
 pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
-    for entry in WalkDir::new(root)
-        .max_depth(10)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, Some(10)) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
 
         let ext = path
             .extension()

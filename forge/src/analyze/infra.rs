@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use walkdir::WalkDir;
+use super::iter_source_files;
 
 use crate::model::*;
 
@@ -20,16 +20,8 @@ pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
 // ─── CloudFormation ──────────────────────────────────────────────
 
 fn scan_cloudformation(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
-    for entry in WalkDir::new(root)
-        .max_depth(5)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, Some(5)) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         let _name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let ext = path.extension().and_then(|e| e.to_str());
         // CFT files are usually named template.yaml, cfn-*.yaml, or have AWSTemplateFormatVersion
@@ -151,16 +143,8 @@ fn classify_aws_resource(resource_type: &str) -> (Option<ElementKind>, String, V
 // ─── Terraform ───────────────────────────────────────────────────
 
 fn scan_terraform(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
-    for entry in WalkDir::new(root)
-        .max_depth(5)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, Some(5)) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         if path.extension().and_then(|e| e.to_str()) != Some("tf") {
             continue;
         }
@@ -338,16 +322,8 @@ fn classify_tf_resource(resource_type: &str) -> (Option<ElementKind>, String, Ve
 // ─── OpenAPI / Swagger ───────────────────────────────────────────
 
 fn scan_openapi(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
-    for entry in WalkDir::new(root)
-        .max_depth(5)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, Some(5)) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if name.starts_with("openapi") || name.starts_with("swagger") {
             if let Ok(text) = std::fs::read_to_string(path) {

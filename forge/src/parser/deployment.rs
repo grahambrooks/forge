@@ -10,22 +10,17 @@ impl Parser {
         let env_id = self.parse_ident()?;
         let _display_name = self.parse_string()?;
         self.id_map.insert(env_id.clone(), env_id.clone());
-        self.expect('{')?;
-        while self.peek_after_ws() != Some('}') {
-            if self.at_end() {
-                return Err(self.error("unexpected EOF in deployment"));
-            }
-            let kw = self.parse_ident()?;
+        self.parse_braced("deployment", |this| {
+            let kw = this.parse_ident()?;
             if kw == "node" {
-                self.parse_deployment_node(&env_id, &env_id)?;
-            } else if self.peek_after_ws() == Some('"') {
-                self.parse_string()?;
-            } else if self.peek_after_ws() == Some('{') {
-                self.skip_block()?;
+                this.parse_deployment_node(&env_id, &env_id)?;
+            } else if this.peek_after_ws() == Some('"') {
+                this.parse_string()?;
+            } else if this.peek_after_ws() == Some('{') {
+                this.skip_block()?;
             }
-        }
-        self.expect('}')?;
-        Ok(())
+            Ok(())
+        })
     }
 
     fn parse_deployment_node(&mut self, env_id: &str, parent_id: &str) -> Result<(), ParseError> {
@@ -40,42 +35,38 @@ impl Parser {
         el.parent = Some(parent_id.into());
         el.properties.insert("environment".into(), env_id.into());
 
-        self.expect('{')?;
         // First pass: gather properties, then recurse for children
-        while self.peek_after_ws() != Some('}') {
-            if self.at_end() {
-                return Err(self.error("unexpected EOF in deployment node"));
-            }
-            let kw = self.parse_ident()?;
+        let node_id_for_body = node_id.clone();
+        self.parse_braced("deployment node", |this| {
+            let kw = this.parse_ident()?;
             match kw.as_str() {
                 "technology" => {
-                    el.technology = Some(self.parse_string()?);
+                    el.technology = Some(this.parse_string()?);
                 }
                 "description" => {
-                    el.description = Some(self.parse_string()?);
+                    el.description = Some(this.parse_string()?);
                 }
                 "tags" => {
-                    while self.peek_after_ws() == Some('"') {
-                        el.tags.push(self.parse_string()?);
+                    while this.peek_after_ws() == Some('"') {
+                        el.tags.push(this.parse_string()?);
                     }
                 }
                 "instances" => {
-                    let count = self.parse_ident()?;
+                    let count = this.parse_ident()?;
                     el.properties.insert("instances".into(), count);
                 }
                 "node" => {
                     // Save element before recursing so parent exists
-                    self.model.add_element(el.clone());
-                    self.parse_deployment_node(env_id, &node_id)?;
+                    this.model.add_element(el.clone());
+                    this.parse_deployment_node(env_id, &node_id_for_body)?;
                     // Refresh el from model (children may have been added)
-                    if let Some(updated) = self.model.elements.get(&node_id) {
+                    if let Some(updated) = this.model.elements.get(&node_id_for_body) {
                         el = updated.clone();
                     }
-                    continue;
                 }
                 "instance" => {
-                    let container_ref = self.parse_ident()?;
-                    let resolved = self.resolve_ref(&container_ref);
+                    let container_ref = this.parse_ident()?;
+                    let resolved = this.resolve_ref(&container_ref);
                     // Store instance refs as comma-separated in property
                     let existing = el
                         .properties
@@ -87,11 +78,11 @@ impl Parser {
                     existing.push_str(&resolved);
                 }
                 _ => {
-                    return Err(self.error(format!("unknown deployment-node keyword '{}'", kw)));
+                    return Err(this.error(format!("unknown deployment-node keyword '{}'", kw)));
                 }
             }
-        }
-        self.expect('}')?;
+            Ok(())
+        })?;
         self.model.add_element(el);
         Ok(())
     }

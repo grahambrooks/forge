@@ -60,40 +60,32 @@ impl Parser {
             return Err(self.error("expected 'forge'"));
         }
         self.model.name = self.parse_string()?;
-        self.expect('{')?;
-        loop {
-            self.skip_ws();
-            if self.peek() == Some('}') {
-                self.advance();
-                break;
-            }
-            if self.at_end() {
-                return Err(self.error("unexpected EOF"));
-            }
-            let kw = self.parse_ident()?;
+        self.parse_braced("forge", |this| {
+            let kw = this.parse_ident()?;
             match kw.as_str() {
                 "description" => {
-                    self.model.description = self.parse_string()?;
+                    this.model.description = this.parse_string()?;
                 }
-                "model" => self.parse_model()?,
-                "process" => self.parse_process()?,
-                "deployment" => self.parse_deployment()?,
-                "tech-stack" => self.parse_tech_stack()?,
-                "data-model" => self.parse_data_model()?,
-                "trust-boundaries" => self.parse_trust_boundaries()?,
-                "teams" => self.parse_teams()?,
-                "apis" => self.parse_apis()?,
-                "event-flows" => self.parse_event_flows()?,
-                "env-config" => self.parse_env_config()?,
-                "slos" => self.parse_slos()?,
-                "dependencies" => self.parse_dependencies()?,
-                "views" => self.parse_views()?,
-                "docs" => self.parse_docs()?,
+                "model" => this.parse_model()?,
+                "process" => this.parse_process()?,
+                "deployment" => this.parse_deployment()?,
+                "tech-stack" => this.parse_tech_stack()?,
+                "data-model" => this.parse_data_model()?,
+                "trust-boundaries" => this.parse_trust_boundaries()?,
+                "teams" => this.parse_teams()?,
+                "apis" => this.parse_apis()?,
+                "event-flows" => this.parse_event_flows()?,
+                "env-config" => this.parse_env_config()?,
+                "slos" => this.parse_slos()?,
+                "dependencies" => this.parse_dependencies()?,
+                "views" => this.parse_views()?,
+                "docs" => this.parse_docs()?,
                 _ => {
-                    return Err(self.error(format!("unknown top-level block '{}'", kw)));
+                    return Err(this.error(format!("unknown top-level block '{}'", kw)));
                 }
             }
-        }
+            Ok(())
+        })?;
         Ok(self.model)
     }
 }

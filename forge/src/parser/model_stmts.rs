@@ -5,18 +5,7 @@ use crate::model::*;
 
 impl Parser {
     pub(super) fn parse_model(&mut self) -> Result<(), ParseError> {
-        self.expect('{')?;
-        loop {
-            self.skip_ws();
-            if self.peek() == Some('}') {
-                self.advance();
-                return Ok(());
-            }
-            if self.at_end() {
-                return Err(self.error("unexpected EOF in model"));
-            }
-            self.parse_model_stmt()?;
-        }
+        self.parse_braced("model", |this| this.parse_model_stmt())
     }
 
     fn parse_model_stmt(&mut self) -> Result<(), ParseError> {
@@ -47,66 +36,56 @@ impl Parser {
             self.id_map.insert(first.clone(), full_id.clone());
 
             if self.peek_after_ws() == Some('{') {
-                self.expect('{')?;
                 let scope_entry = if self.scope.is_empty() {
                     first.clone()
                 } else {
                     full_id.clone()
                 };
                 self.scope.push(scope_entry);
-                loop {
-                    self.skip_ws();
-                    if self.peek() == Some('}') {
-                        self.advance();
-                        break;
-                    }
-                    if self.at_end() {
-                        return Err(self.error("unexpected EOF in element"));
-                    }
-
-                    let saved2 = self.pos;
-                    let inner = self.parse_ident()?;
-                    self.skip_ws();
+                let full_id_for_body = full_id.clone();
+                self.parse_braced("element", |this| {
+                    let saved2 = this.pos;
+                    let inner = this.parse_ident()?;
+                    this.skip_ws();
 
                     match inner.as_str() {
                         "description" => {
-                            el.description = Some(self.parse_string()?);
+                            el.description = Some(this.parse_string()?);
                         }
                         "technology" => {
-                            el.technology = Some(self.parse_string()?);
+                            el.technology = Some(this.parse_string()?);
                         }
                         "tags" => {
-                            while self.peek_after_ws() == Some('"') {
-                                el.tags.push(self.parse_string()?);
+                            while this.peek_after_ws() == Some('"') {
+                                el.tags.push(this.parse_string()?);
                             }
                         }
                         "data-class" => {
-                            while self.peek_after_ws() == Some('"') {
-                                el.data_classes.push(self.parse_string()?);
+                            while this.peek_after_ws() == Some('"') {
+                                el.data_classes.push(this.parse_string()?);
                             }
                         }
                         _ => {
-                            if self.peek() == Some('=') {
+                            if this.peek() == Some('=') {
                                 // Child element
-                                self.model.add_element(el.clone());
-                                self.pos = saved2;
-                                self.parse_model_stmt()?;
-                                if let Some(updated) = self.model.elements.get(&full_id) {
+                                this.model.add_element(el.clone());
+                                this.pos = saved2;
+                                this.parse_model_stmt()?;
+                                if let Some(updated) = this.model.elements.get(&full_id_for_body) {
                                     el = updated.clone();
                                 }
-                                continue;
-                            } else if self.peek() == Some('-') {
-                                self.pos = saved2;
-                                self.parse_relationship()?;
-                                continue;
-                            } else if self.peek_after_ws() == Some('"') {
-                                self.parse_string()?;
-                            } else if self.peek_after_ws() == Some('{') {
-                                self.skip_block()?;
+                            } else if this.peek() == Some('-') {
+                                this.pos = saved2;
+                                this.parse_relationship()?;
+                            } else if this.peek_after_ws() == Some('"') {
+                                this.parse_string()?;
+                            } else if this.peek_after_ws() == Some('{') {
+                                this.skip_block()?;
                             }
                         }
                     }
-                }
+                    Ok(())
+                })?;
                 self.scope.pop();
             }
             self.model.add_element(el);

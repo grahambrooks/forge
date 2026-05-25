@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use walkdir::WalkDir;
+use super::iter_source_files;
 
 use symgraph::extraction::Extractor;
 use symgraph::types::{ExtractionResult, Language, NodeKind};
@@ -45,16 +45,8 @@ pub fn scan(model: &mut Model, index: &mut ContainerIndex, root: &Path, config: 
     // container.
     let mut workspace_handled: HashSet<PathBuf> = HashSet::new();
 
-    for entry in WalkDir::new(root)
-        .max_depth(6)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, Some(6)) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         let name = match path.file_name().and_then(|n| n.to_str()) {
             Some(n) => n,
             None => continue,

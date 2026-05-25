@@ -20,8 +20,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{ChildStdin, ChildStdout, Command, Stdio};
 
+use super::iter_source_files;
 use serde::{Deserialize, Serialize};
-use walkdir::WalkDir;
 
 use crate::model::{Element, ElementKind, Model, Relationship};
 
@@ -311,18 +311,10 @@ fn run_one(
     );
 
     let mut files_processed = 0usize;
-    let walker = WalkDir::new(scan_root)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file());
-
     let mut patches_to_apply: Vec<(PatchMsg, Option<PathBuf>)> = Vec::new();
 
-    for entry in walker {
+    for entry in iter_source_files(scan_root, config, None) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         let relative = path.strip_prefix(scan_root).unwrap_or(path);
         let rel_str = relative.to_string_lossy().replace('\\', "/");
 

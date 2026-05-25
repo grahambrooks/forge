@@ -2,26 +2,16 @@
 
 use std::path::Path;
 
-use walkdir::WalkDir;
-
 use crate::model::*;
 
 use super::provenance::mark_inferred;
-use super::{slugify, AnalyzeConfig};
+use super::{iter_source_files, slugify, AnalyzeConfig};
 
 const SCANNER: &str = "k8s";
 
 pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
-    for entry in WalkDir::new(root)
-        .max_depth(8)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-    {
+    for entry in iter_source_files(root, config, Some(8)) {
         let path = entry.path();
-        if config.should_exclude(path) {
-            continue;
-        }
         let ext = path.extension().and_then(|e| e.to_str());
         if !matches!(ext, Some("yml") | Some("yaml")) {
             continue;

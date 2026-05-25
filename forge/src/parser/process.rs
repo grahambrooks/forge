@@ -5,18 +5,7 @@ use crate::model::*;
 
 impl Parser {
     pub(super) fn parse_process(&mut self) -> Result<(), ParseError> {
-        self.expect('{')?;
-        loop {
-            self.skip_ws();
-            if self.peek() == Some('}') {
-                self.advance();
-                return Ok(());
-            }
-            if self.at_end() {
-                return Err(self.error("unexpected EOF in process"));
-            }
-            self.parse_process_stmt()?;
-        }
+        self.parse_braced("process", |this| this.parse_process_stmt())
     }
 
     fn parse_process_stmt(&mut self) -> Result<(), ParseError> {
@@ -40,30 +29,25 @@ impl Parser {
                 let mut el = Element::new(&first, ElementKind::Repository, &name);
                 self.id_map.insert(first.clone(), first.clone());
                 if self.peek_after_ws() == Some('{') {
-                    self.expect('{')?;
-                    loop {
-                        self.skip_ws();
-                        if self.peek() == Some('}') {
-                            self.advance();
-                            break;
-                        }
-                        let prop = self.parse_ident()?;
+                    self.parse_braced("repository", |this| {
+                        let prop = this.parse_ident()?;
                         match prop.as_str() {
                             "url" => {
-                                el.properties.insert("url".into(), self.parse_string()?);
+                                el.properties.insert("url".into(), this.parse_string()?);
                             }
                             "system" => {
-                                let sys = self.parse_ident()?;
+                                let sys = this.parse_ident()?;
                                 el.properties
-                                    .insert("system".into(), self.resolve_ref(&sys));
+                                    .insert("system".into(), this.resolve_ref(&sys));
                             }
                             _ => {
                                 return Err(
-                                    self.error(format!("unknown repository keyword '{}'", prop))
+                                    this.error(format!("unknown repository keyword '{}'", prop))
                                 );
                             }
                         }
-                    }
+                        Ok(())
+                    })?;
                 }
                 self.model.add_element(el);
                 Ok(())
@@ -80,65 +64,53 @@ impl Parser {
     fn parse_strategy(&mut self, strategy_id: String) -> Result<(), ParseError> {
         let _display_name = self.parse_string()?;
 
-        self.expect('{')?;
-        while self.peek_after_ws() != Some('}') {
-            if self.at_end() {
-                return Err(self.error("unexpected EOF in strategy"));
-            }
-            let first = self.parse_ident()?;
-            self.skip_ws();
+        self.parse_braced("strategy", |this| {
+            let first = this.parse_ident()?;
+            this.skip_ws();
 
-            if self.peek() == Some('=') {
-                self.advance();
-                let kind_str = self.parse_ident()?;
+            if this.peek() == Some('=') {
+                this.advance();
+                let kind_str = this.parse_ident()?;
                 if kind_str == "branch" {
-                    let branch_name = self.parse_string()?;
+                    let branch_name = this.parse_string()?;
                     let branch_id = format!("{}.{}", strategy_id, first);
                     let mut el = Element::new(&branch_id, ElementKind::Branch, &branch_name);
                     el.parent = Some(strategy_id.clone());
                     el.properties.insert("strategy".into(), strategy_id.clone());
-                    self.id_map.insert(first.clone(), branch_id.clone());
+                    this.id_map.insert(first.clone(), branch_id.clone());
 
-                    if self.peek_after_ws() == Some('{') {
-                        self.expect('{')?;
-                        loop {
-                            self.skip_ws();
-                            if self.peek() == Some('}') {
-                                self.advance();
-                                break;
-                            }
-                            if self.at_end() {
-                                return Err(self.error("unexpected EOF in branch"));
-                            }
-                            let prop = self.parse_ident()?;
+                    if this.peek_after_ws() == Some('{') {
+                        let branch_id_for_body = branch_id.clone();
+                        this.parse_braced("branch", |this| {
+                            let prop = this.parse_ident()?;
                             match prop.as_str() {
                                 "protection" => {
                                     let mut protections = Vec::new();
-                                    while self.peek_after_ws() == Some('"') {
-                                        protections.push(self.parse_string()?);
+                                    while this.peek_after_ws() == Some('"') {
+                                        protections.push(this.parse_string()?);
                                     }
                                     el.properties
                                         .insert("protection".into(), protections.join(", "));
                                 }
                                 "branches-from" => {
-                                    let target = self.parse_ident()?;
-                                    let resolved = self.resolve_ref(&target);
+                                    let target = this.parse_ident()?;
+                                    let resolved = this.resolve_ref(&target);
                                     el.properties
                                         .insert("branches-from".into(), resolved.clone());
-                                    self.model.add_relationship(Relationship {
+                                    this.model.add_relationship(Relationship {
                                         frm: resolved,
-                                        to: branch_id.clone(),
+                                        to: branch_id_for_body.clone(),
                                         label: "branches from".into(),
                                         technology: None,
                                         order: None,
                                     });
                                 }
                                 "merges-into" => {
-                                    let target = self.parse_ident()?;
-                                    let resolved = self.resolve_ref(&target);
+                                    let target = this.parse_ident()?;
+                                    let resolved = this.resolve_ref(&target);
                                     el.properties.insert("merges-into".into(), resolved.clone());
-                                    self.model.add_relationship(Relationship {
-                                        frm: branch_id.clone(),
+                                    this.model.add_relationship(Relationship {
+                                        frm: branch_id_for_body.clone(),
                                         to: resolved,
                                         label: "merges into".into(),
                                         technology: None,
@@ -146,35 +118,35 @@ impl Parser {
                                     });
                                 }
                                 _ => {
-                                    if self.peek_after_ws() == Some('"') {
-                                        self.parse_string()?;
-                                    } else if self.peek_after_ws() == Some('{') {
-                                        self.skip_block()?;
+                                    if this.peek_after_ws() == Some('"') {
+                                        this.parse_string()?;
+                                    } else if this.peek_after_ws() == Some('{') {
+                                        this.skip_block()?;
                                     }
                                 }
                             }
-                        }
+                            Ok(())
+                        })?;
                     }
-                    self.model.add_element(el);
+                    this.model.add_element(el);
                 } else {
-                    if self.peek_after_ws() == Some('"') {
-                        self.parse_string()?;
+                    if this.peek_after_ws() == Some('"') {
+                        this.parse_string()?;
                     }
-                    if self.peek_after_ws() == Some('{') {
-                        self.skip_block()?;
+                    if this.peek_after_ws() == Some('{') {
+                        this.skip_block()?;
                     }
                 }
             } else {
-                if self.peek_after_ws() == Some('"') {
-                    self.parse_string()?;
+                if this.peek_after_ws() == Some('"') {
+                    this.parse_string()?;
                 }
-                if self.peek_after_ws() == Some('{') {
-                    self.skip_block()?;
+                if this.peek_after_ws() == Some('{') {
+                    this.skip_block()?;
                 }
             }
-        }
-        self.expect('}')?;
-        Ok(())
+            Ok(())
+        })
     }
 
     fn parse_pipeline(&mut self, pipeline_id: String) -> Result<(), ParseError> {
@@ -186,128 +158,106 @@ impl Parser {
         ));
         self.id_map.insert(pipeline_id.clone(), pipeline_id.clone());
 
-        self.expect('{')?;
-        loop {
-            self.skip_ws();
-            if self.peek() == Some('}') {
-                self.advance();
-                return Ok(());
-            }
-            if self.at_end() {
-                return Err(self.error("unexpected EOF in pipeline"));
-            }
-
-            let first = self.parse_ident()?;
-            self.skip_ws();
+        self.parse_braced("pipeline", |this| {
+            let first = this.parse_ident()?;
+            this.skip_ws();
 
             if first == "triggers" {
                 // `triggers <repo-ref> "event"`. Tokenised properly rather
                 // than the line-scan hack of v1.
-                let repo_ref = self.parse_ident()?;
-                let _event = self.parse_string()?;
-                let resolved = self.resolve_ref(&repo_ref);
-                if let Some(el) = self.model.elements.get_mut(&pipeline_id) {
+                let repo_ref = this.parse_ident()?;
+                let _event = this.parse_string()?;
+                let resolved = this.resolve_ref(&repo_ref);
+                if let Some(el) = this.model.elements.get_mut(&pipeline_id) {
                     el.properties.insert("triggered_by".into(), resolved);
                 }
-                continue;
+                return Ok(());
             }
 
             if first == "tags" {
                 // Quoted-string list; attach to the pipeline element.
                 let mut tags: Vec<String> = Vec::new();
-                while self.peek_after_ws() == Some('"') {
-                    tags.push(self.parse_string()?);
+                while this.peek_after_ws() == Some('"') {
+                    tags.push(this.parse_string()?);
                 }
-                if let Some(el) = self.model.elements.get_mut(&pipeline_id) {
+                if let Some(el) = this.model.elements.get_mut(&pipeline_id) {
                     el.tags.extend(tags);
                 }
-                continue;
+                return Ok(());
             }
 
-            if self.peek() == Some('=') {
-                self.advance();
-                let kind_str = self.parse_ident()?;
+            if this.peek() == Some('=') {
+                this.advance();
+                let kind_str = this.parse_ident()?;
                 if kind_str == "stage" {
-                    let stage_name = self.parse_string()?;
+                    let stage_name = this.parse_string()?;
                     let stage_id = format!("{}.{}", pipeline_id, first);
                     let mut el = Element::new(&stage_id, ElementKind::Stage, &stage_name);
                     el.parent = Some(pipeline_id.clone());
-                    self.id_map.insert(first.clone(), stage_id.clone());
+                    this.id_map.insert(first.clone(), stage_id.clone());
 
-                    if self.peek_after_ws() == Some('{') {
-                        self.expect('{')?;
-                        loop {
-                            self.skip_ws();
-                            if self.peek() == Some('}') {
-                                self.advance();
-                                break;
-                            }
-                            if self.at_end() {
-                                return Err(self.error("unexpected EOF in stage"));
-                            }
-                            let prop = self.parse_ident()?;
+                    if this.peek_after_ws() == Some('{') {
+                        let stage_id_for_body = stage_id.clone();
+                        this.parse_braced("stage", |this| {
+                            let prop = this.parse_ident()?;
                             match prop.as_str() {
                                 "needs" => {
-                                    let dep = self.parse_ident()?;
-                                    let dep_full = self.resolve_ref(&dep);
-                                    self.model.stage_links.push(StageLink {
+                                    let dep = this.parse_ident()?;
+                                    let dep_full = this.resolve_ref(&dep);
+                                    this.model.stage_links.push(StageLink {
                                         frm: dep_full,
-                                        to: stage_id.clone(),
+                                        to: stage_id_for_body.clone(),
                                     });
                                 }
                                 "step" => {
-                                    self.parse_string()?;
+                                    this.parse_string()?;
                                 }
                                 "environment" => {
-                                    let env = self.parse_ident()?;
+                                    let env = this.parse_ident()?;
                                     el.properties.insert("environment".into(), env);
                                 }
                                 "tags" => {
-                                    while self.peek_after_ws() == Some('"') {
-                                        el.tags.push(self.parse_string()?);
+                                    while this.peek_after_ws() == Some('"') {
+                                        el.tags.push(this.parse_string()?);
                                     }
                                 }
                                 "gate" => {
-                                    let gate_name = self.parse_string()?;
-                                    let gate_id = format!("{}.gate", stage_id);
+                                    let gate_name = this.parse_string()?;
+                                    let gate_id = format!("{}.gate", stage_id_for_body);
                                     let mut gate =
                                         Element::new(&gate_id, ElementKind::Gate, &gate_name);
-                                    gate.parent = Some(stage_id.clone());
-                                    if self.peek_after_ws() == Some('{') {
-                                        self.expect('{')?;
-                                        loop {
-                                            self.skip_ws();
-                                            if self.peek() == Some('}') {
-                                                self.advance();
-                                                break;
+                                    gate.parent = Some(stage_id_for_body.clone());
+                                    if this.peek_after_ws() == Some('{') {
+                                        this.parse_braced("gate", |this| {
+                                            let gp = this.parse_ident()?;
+                                            if this.peek_after_ws() == Some('"') {
+                                                gate.properties.insert(gp, this.parse_string()?);
                                             }
-                                            let gp = self.parse_ident()?;
-                                            if self.peek_after_ws() == Some('"') {
-                                                gate.properties.insert(gp, self.parse_string()?);
-                                            }
-                                        }
+                                            Ok(())
+                                        })?;
                                     }
-                                    self.model.add_element(gate);
+                                    this.model.add_element(gate);
                                 }
                                 _ => {
                                     return Err(
-                                        self.error(format!("unknown stage keyword '{}'", prop))
+                                        this.error(format!("unknown stage keyword '{}'", prop))
                                     );
                                 }
                             }
-                        }
+                            Ok(())
+                        })?;
                     }
-                    self.model.add_element(el);
+                    this.model.add_element(el);
                 } else {
-                    return Err(self.error(format!(
+                    return Err(this.error(format!(
                         "unknown pipeline element kind '{}', expected 'stage'",
                         kind_str
                     )));
                 }
-                continue;
+                return Ok(());
             }
 
-            return Err(self.error(format!("unknown pipeline keyword '{}'", first)));
-        }
+            Err(this.error(format!("unknown pipeline keyword '{}'", first)))
+        })
     }
 }

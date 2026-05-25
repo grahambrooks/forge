@@ -25,9 +25,31 @@ mod fixture_tests;
 
 use std::path::{Path, PathBuf};
 
+use walkdir::{DirEntry, WalkDir};
+
 use crate::model::Model;
 
 use container_index::ContainerIndex;
+
+/// Iterate file `DirEntry` values under `root`, applying `config.exclude` and
+/// an optional `max_depth`. Each yielded entry is a file (not a dir) whose
+/// path passed [`AnalyzeConfig::should_exclude`]. Replaces ~8 hand-rolled
+/// `WalkDir` chains across scanners.
+pub(crate) fn iter_source_files<'a>(
+    root: &Path,
+    config: &'a AnalyzeConfig,
+    max_depth: Option<usize>,
+) -> impl Iterator<Item = DirEntry> + 'a {
+    let mut walker = WalkDir::new(root);
+    if let Some(d) = max_depth {
+        walker = walker.max_depth(d);
+    }
+    walker
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| !config.should_exclude(e.path()))
+}
 
 /// Configuration for an analyze run.
 #[derive(Debug, Clone)]
