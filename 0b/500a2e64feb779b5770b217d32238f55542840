@@ -1,0 +1,27 @@
+.github/workflows/release.yml
+  s_524af62fcb4284::t_45306c509257e1 1-9,14,21,24-51,53-54,60,62-63,65,67-68,71,74,77-90,93-94,96,98-102,104-141
+.release.env
+  s_524af62fcb4284::t_1adb4ee4149335 1-6
+forge/Cargo.lock
+  s_524af62fcb4284::t_50c5b814ec6a45 685
+forge/Cargo.toml
+  s_524af62fcb4284::t_84aa5cd967f382 3
+scripts/render-formula.py
+  s_524af62fcb4284::t_6e972a2ee4866b 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0b500a2e64feb779b5770b217d32238f55542840",
+  "prompts": {},
+  "sessions": {
+    "s_524af62fcb4284": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d34aaefe-f594-4e94-b5db-35e086bd65df",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
