@@ -1,0 +1,23 @@
+.github/workflows/release.yml
+  s_524af62fcb4284::t_7ee8b5c9a231ca 86-88
+forge/Cargo.lock
+  s_524af62fcb4284::t_f3884517870258 685
+forge/Cargo.toml
+  s_524af62fcb4284::t_cc9a919ee053c3 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b14e99bbf9bb591072ddf7790226f9187ecfe89b",
+  "prompts": {},
+  "sessions": {
+    "s_524af62fcb4284": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d34aaefe-f594-4e94-b5db-35e086bd65df",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
