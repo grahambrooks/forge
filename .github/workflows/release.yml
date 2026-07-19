@@ -1,110 +1,141 @@
-name: Release
+# Release workflow for forge.
+#
+# forge is a workspace-less repo whose crate lives in the `forge/` subdirectory
+# (package `forge-dsl`, binary `forge`), so this is a variant of the standard
+# release-kit workflow: it builds with `working-directory: forge` and reads the
+# version from forge/Cargo.toml. Everything else — CalVer tag, standard tarball
+# names, sha256, and the shared render-formula.py → in-repo Formula/forge.rb — is
+# identical to every other grahambrooks project.
+name: release
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
 
 permissions:
   contents: write
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
+  verify:
+    name: verify version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Tag matches forge/Cargo.toml
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          crate=$(awk -F'"' '/^version = / { print $2; exit }' forge/Cargo.toml)
+          if [ "$tag" != "$crate" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match forge/Cargo.toml version $crate"
+            exit 1
+          fi
+          echo "Tag $GITHUB_REF_NAME matches forge/Cargo.toml version $crate"
+
+  create-release:
+    name: create github release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: taiki-e/create-gh-release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   build:
-    name: Build ${{ matrix.target }}
+    name: build (${{ matrix.target }})
+    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-musl
+          - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact: forge-linux-x86_64
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            artifact: forge-linux-aarch64
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            artifact: forge-macos-x86_64
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
           - target: aarch64-apple-darwin
-            os: macos-latest
-            artifact: forge-macos-aarch64
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            artifact: forge-windows-x86_64.exe
-
+            os: macos-14
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-
-      - name: Install musl tools (Linux)
-        if: contains(matrix.target, 'musl')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
-          if [[ "${{ matrix.target }}" == "aarch64"* ]]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu
-            echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
-          fi
-          # tree-sitter (pulled in via symgraph) compiles a C runtime with
-          # the host gcc, which defaults to `-D_FORTIFY_SOURCE=2` on modern
-          # Ubuntu. That emits glibc-only `__fprintf_chk` / `__snprintf_chk`
-          # / `__vsnprintf_chk` stubs that musl libc doesn't provide, so
-          # the final static link fails. Disable FORTIFY for both musl
-          # targets so the C code uses the plain libc functions that musl
-          # does expose.
-          echo "CFLAGS_x86_64_unknown_linux_musl=-U_FORTIFY_SOURCE" >> "$GITHUB_ENV"
-          echo "CFLAGS_aarch64_unknown_linux_musl=-U_FORTIFY_SOURCE" >> "$GITHUB_ENV"
-
-      - uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc # v2.9.1
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: forge
-          key: ${{ matrix.target }}
-
+          key: release-${{ matrix.target }}
       - name: Build
         working-directory: forge
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} --bin forge
+      - name: Package + upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          asset="forge-${tag}-${{ matrix.target }}.tar.gz"
+          tar -C "forge/target/${{ matrix.target }}/release" -czf "$asset" forge
+          sha256sum "$asset" > "$asset.sha256"
+          gh release upload "$tag" "$asset" "$asset.sha256" --clobber
 
-      - name: Rename binary (Unix)
-        if: runner.os != 'Windows'
-        run: cp "forge/target/${{ matrix.target }}/release/forge" "${{ matrix.artifact }}"
-
-      - name: Rename binary (Windows)
-        if: runner.os == 'Windows'
-        run: cp "forge/target/${{ matrix.target }}/release/forge.exe" "${{ matrix.artifact }}"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}
-
-  release:
-    name: Create Release
+  update-formula:
+    name: update homebrew formula
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/checkout@v6
         with:
-          path: artifacts
-
-      - name: Collect binaries and generate checksums
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Load release config
+        run: grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .release.env >> "$GITHUB_ENV"
+      - name: Render formula
         run: |
-          mkdir release
-          find artifacts -type f -exec mv {} release/ \;
-          cd release && sha256sum * > checksums.txt
-          cat checksums.txt
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          mkdir -p Formula
+          sleep 10
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          files: release/*
-          generate_release_notes: true
+          empty_sha=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+          fetch() {
+            local target="$1"
+            local url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/forge-${tag}-${target}.tar.gz"
+            local sha
+            sha=$(curl -sL "$url" | sha256sum | awk '{print $1}')
+            if [ -z "$sha" ] || [ "$sha" = "$empty_sha" ]; then
+              echo "::error::could not fetch $url" >&2
+              exit 1
+            fi
+            echo "$sha"
+          }
+
+          sha_darwin_arm=$(fetch aarch64-apple-darwin)
+          sha_linux_arm=$(fetch aarch64-unknown-linux-gnu)
+          sha_linux_intel=$(fetch x86_64-unknown-linux-gnu)
+
+          python3 scripts/render-formula.py \
+            "$version" "$sha_darwin_arm" "$sha_linux_arm" "$sha_linux_intel" \
+            > Formula/forge.rb
+      - name: Commit updated formula
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/forge.rb
+          if git diff --cached --quiet; then
+            echo "Formula unchanged"
+            exit 0
+          fi
+          git commit -m "Update Homebrew formula for ${GITHUB_REF_NAME}"
+          git push origin main
