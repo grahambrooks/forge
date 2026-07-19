@@ -83,8 +83,9 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           asset="forge-${tag}-${{ matrix.target }}.tar.gz"
           tar -C "forge/target/${{ matrix.target }}/release" -czf "$asset" forge
-          sha256sum "$asset" > "$asset.sha256"
-          gh release upload "$tag" "$asset" "$asset.sha256" --clobber
+          # no sha256 here — macOS runners lack `sha256sum`, and update-formula
+          # recomputes the hash from the published tarball anyway.
+          gh release upload "$tag" "$asset" --clobber
 
   update-formula:
     name: update homebrew formula
