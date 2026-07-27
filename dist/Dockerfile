@@ -1,4 +1,4 @@
-FROM rust:1.88-bookworm AS builder
+FROM rust:1.97-bookworm AS builder
 
 # musl-tools provides `musl-gcc` needed by the C build scripts in the
 # tree-sitter grammar crates that symgraph pulls in. Without it the
