@@ -126,8 +126,11 @@ jobs:
           if [ "$code" = "200" ]; then
             echo "forge-dsl ${version} is already on crates.io — skipping publish"
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
+          elif [ "$code" = "404" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::unexpected status ${code} from crates.io when checking forge-dsl ${version}"
+            exit 1
           fi
       - name: cargo publish
         if: steps.published.outputs.skip == 'false'
