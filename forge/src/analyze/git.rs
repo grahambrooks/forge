@@ -665,19 +665,41 @@ mod tests {
         assert_eq!(platform.owns, vec!["misc".to_string()]);
     }
 
+    /// Build a minimal on-disk git repository with the given local branches.
+    ///
+    /// Deliberately hand-rolled rather than scanning the ambient checkout: CI
+    /// clones land on a detached HEAD with no `refs/heads/*` entries, so a test
+    /// that reads the surrounding repo passes locally and fails in CI.
+    fn fixture_repo(branches: &[&str]) -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let git = tmp.path().join(".git");
+        std::fs::create_dir_all(git.join("objects")).unwrap();
+        std::fs::create_dir_all(git.join("refs/heads")).unwrap();
+        std::fs::write(
+            git.join("config"),
+            "[core]\n\trepositoryformatversion = 0\n\tbare = false\n",
+        )
+        .unwrap();
+        std::fs::write(git.join("HEAD"), "ref: refs/heads/main\n").unwrap();
+
+        // Refs only need a well-formed object id; nothing here resolves them.
+        let oid = "0123456789abcdef0123456789abcdef01234567";
+        for branch in branches {
+            let path = git.join("refs/heads").join(branch);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, format!("{oid}\n")).unwrap();
+        }
+        tmp
+    }
+
     #[test]
-    fn scan_current_repo() {
-        // Test against the forge repo itself
+    fn scan_reads_local_branches_from_repo() {
+        let tmp = fixture_repo(&["main", "develop", "feature/checkout"]);
+
         let mut model = Model::default();
         let config = AnalyzeConfig::default();
-        // Git root is one level up from the forge crate directory
-        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .to_path_buf();
-        scan(&mut model, &root, &config);
+        scan(&mut model, tmp.path(), &config);
 
-        // Should find at least the main branch
         let branches: Vec<_> = model
             .elements
             .values()
@@ -690,6 +712,21 @@ mod tests {
             .iter()
             .any(|b| b.properties.contains_key("strategy"));
         assert!(has_strategy, "should infer a branching strategy");
+    }
+
+    #[test]
+    fn scan_tolerates_repo_without_local_branches() {
+        // A CI checkout is a detached HEAD with no refs/heads entries.
+        let tmp = fixture_repo(&[]);
+
+        let mut model = Model::default();
+        let config = AnalyzeConfig::default();
+        scan(&mut model, tmp.path(), &config);
+
+        assert!(!model
+            .elements
+            .values()
+            .any(|e| e.kind == ElementKind::Branch));
     }
 
     #[test]
