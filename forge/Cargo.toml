@@ -1,6 +1,6 @@
 [package]
 name = "forge-dsl"
-version = "2026.7.1"
+version = "2026.7.27"
 edition = "2021"
 description = "A unified software modeling DSL — architecture diagrams, documentation sites, and lint from a single file"
 license = "MIT"
