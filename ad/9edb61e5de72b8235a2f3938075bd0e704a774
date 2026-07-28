@@ -1,0 +1,20 @@
+forge/src/analyze/git.rs
+  s_242e6b75402023::t_8c12c57fbe4a17 668-694,696-698,701-702,717-730
+  s_242e6b75402023::t_6f72e3b38544d5 731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ad9edb61e5de72b8235a2f3938075bd0e704a774",
+  "prompts": {},
+  "sessions": {
+    "s_242e6b75402023": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f781260c-ac30-43b8-acc0-a90ffb95af3b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
