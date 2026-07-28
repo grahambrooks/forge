@@ -1,0 +1,50 @@
+scripts/render-formula.py
+  s_242e6b75402023::t_04c9288407a8e6 89
+  s_242e6b75402023::t_56ca046b8b38b0 7
+  s_242e6b75402023::t_fdb39a01359ea0 77-79
+  s_242e6b75402023::t_cd09cf643d0767 37
+README.md
+  s_242e6b75402023::t_17647a6a4aa801 8
+  s_242e6b75402023::t_80720cdb59f58c 9
+  s_242e6b75402023::t_08f848e9a76697 69-71,74-76,79-80,82-83,85,89,103-109,113
+  s_242e6b75402023::t_b67cffdb93aef6 91-98,101-102
+  s_242e6b75402023::t_438e6c47d4eae8 329-334
+  s_242e6b75402023::t_f76e419027c3f5 90
+integrations/claude-plugin/forge-architect/README.md
+  s_242e6b75402023::t_369a5690662749 18-23
+.github/workflows/release.yml
+  s_242e6b75402023::t_1bf442ad262230 93-138
+  s_242e6b75402023::t_1e47978d21512e 9-11
+docs/user-guide/install.md
+  s_242e6b75402023::t_00b6e74bbb1e36 6-36,53
+  s_242e6b75402023::t_5a516b86fa7d4e 50-52,54-56
+  s_242e6b75402023::t_0483d91a777fb4 60-61
+  s_242e6b75402023::t_ba89186ea8f923 57
+Formula/forge.rb
+  s_242e6b75402023::t_658cbb72c3c8e6 13
+CONTRIBUTING.md
+  s_242e6b75402023::t_a15ed603a45f65 1-3,6-193
+  s_242e6b75402023::t_d4a3b2f4adc7fb 4-5
+.release.env
+  s_242e6b75402023::t_6cc35c9ba6a4ca 3
+Makefile
+  s_242e6b75402023::t_233c23650451bb 61,64-65
+  s_242e6b75402023::t_c982483bc87bb5 2
+  s_242e6b75402023::t_89392ef0ad8978 66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ea8a0ebf0f0838c97ab812f9fcdf90d80665c409",
+  "prompts": {},
+  "sessions": {
+    "s_242e6b75402023": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f781260c-ac30-43b8-acc0-a90ffb95af3b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
