@@ -13,14 +13,14 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Forge
         run: |
           curl -L https://github.com/grahambrooks/forge/releases/latest/download/forge-linux-x86_64 -o /usr/local/bin/forge
           chmod +x /usr/local/bin/forge
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
 
