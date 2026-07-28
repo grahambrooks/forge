@@ -4,6 +4,7 @@
 Project metadata comes from the environment (loaded from .release.env):
     GITHUB_REPOSITORY   e.g. grahambrooks/forge
     BIN_NAME            installed binary name, e.g. forge
+    CRATE_NAME          cargo package name (default: BIN_NAME), e.g. forge-dsl
     FORMULA_NAME        formula file/name, e.g. forge
     FORMULA_CLASS       Ruby class name, e.g. Forge
     FORMULA_DESC        one-line description
@@ -33,7 +34,7 @@ class {cls} < Formula
       sha256 "{sha_darwin_arm}"
     end
     on_intel do
-      odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/{repo} --locked` to build from source."
+      odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/{repo} {crate} --locked` to build from source."
     end
   end
 
@@ -73,6 +74,9 @@ def main(argv: list[str]) -> int:
         print(f"render-formula: missing required env var {exc}", file=sys.stderr)
         return 2
     license_id = env.get("FORMULA_LICENSE", "MIT")
+    # The repo carries example crates too, so `cargo install --git` needs an
+    # explicit package name to disambiguate.
+    crate = env.get("CRATE_NAME", binn)
 
     sys.stdout.write(
         TEMPLATE.format(
@@ -82,6 +86,7 @@ def main(argv: list[str]) -> int:
             version=argv[1],
             license=license_id,
             bin=binn,
+            crate=crate,
             sha_darwin_arm=argv[2],
             sha_linux_arm=argv[3],
             sha_linux_intel=argv[4],

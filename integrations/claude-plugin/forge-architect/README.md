@@ -15,7 +15,12 @@ A Claude Code plugin that gives Claude the ability to **model, review, and autho
 
 ## Prerequisites
 
-- `forge` binary on `PATH`. Build from source:
+- `forge` binary on `PATH`. Install a release:
+  ```bash
+  brew tap grahambrooks/forge https://github.com/grahambrooks/forge
+  brew install grahambrooks/forge/forge
+  ```
+  or build from source in a checkout:
   ```bash
   cargo install --path forge --locked
   ```

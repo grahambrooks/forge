@@ -1,5 +1,5 @@
 .PHONY: help \
-	build release release-docker release-github \
+	build release release-docker release-github publish-check \
 	test test-verbose \
 	lint fmt fmt-check check pre-commit \
 	run \
@@ -58,8 +58,11 @@ release-github: pre-commit ## Tag and push a calver release (vYYYY.MM.DD) to tri
 	git tag -a "$$TAG" -m "Release $$TAG"; \
 	git push origin main "$$TAG"; \
 	echo "Pushed $$TAG — GitHub Actions will build and publish the release"; \
-	echo "The homebrew formula will be updated automatically after the release is published"; \
+	echo "The homebrew formula is updated and forge-dsl is published to crates.io automatically"; \
 	'
+
+publish-check: ## Dry-run the crates.io package step (what the release workflow publishes)
+	cd forge && $(CARGO) publish --locked --dry-run
 
 ##@ Test
 

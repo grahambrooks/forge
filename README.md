@@ -5,8 +5,8 @@ A unified software modeling DSL and toolchain. Describe your architecture — st
 ## Quick Start
 
 ```bash
-# Install
-cargo install --path forge
+# Install (see Install below for Homebrew and prebuilt binaries)
+cargo install --locked forge-dsl
 
 # Create a model
 cat > architecture.forge << 'EOF'
@@ -61,38 +61,56 @@ forge analyze ./my-project -o discovered.forge
 
 ### Homebrew
 
-The repo is private, so Homebrew needs a GitHub token. If you have the GitHub CLI authenticated:
-
 ```bash
-export HOMEBREW_GITHUB_API_TOKEN=$(gh auth token)
 brew tap grahambrooks/forge https://github.com/grahambrooks/forge
 brew install grahambrooks/forge/forge
 ```
 
+The formula lives in this repo rather than a separate `homebrew-forge` tap, so
+the tap URL is required. No GitHub token is needed.
+
 ### Download a binary
 
-Download the latest release from [GitHub Releases](https://github.com/grahambrooks/forge/releases):
+Each release publishes tarballs on
+[GitHub Releases](https://github.com/grahambrooks/forge/releases) for Linux
+(x86_64 and aarch64) and macOS (Apple Silicon):
 
 ```bash
-# Linux (x86_64)
-curl -L https://github.com/grahambrooks/forge/releases/latest/download/forge-linux-x86_64 -o forge
-chmod +x forge && sudo mv forge /usr/local/bin/
+TAG=$(curl -sL https://api.github.com/repos/grahambrooks/forge/releases/latest \
+      | grep -m1 '"tag_name"' | cut -d'"' -f4)
 
-# macOS (Apple Silicon)
-curl -L https://github.com/grahambrooks/forge/releases/latest/download/forge-macos-aarch64 -o forge
-chmod +x forge && sudo mv forge /usr/local/bin/
+# One of: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, aarch64-apple-darwin
+TARGET=aarch64-apple-darwin
 
-# macOS (Intel)
-curl -L https://github.com/grahambrooks/forge/releases/latest/download/forge-macos-x86_64 -o forge
+curl -L "https://github.com/grahambrooks/forge/releases/download/${TAG}/forge-${TAG}-${TARGET}.tar.gz" | tar xz
 chmod +x forge && sudo mv forge /usr/local/bin/
+```
+
+Intel Macs have no prebuilt binary — build from source instead.
+
+### With cargo
+
+The crate is published as `forge-dsl` and installs a `forge` binary:
+
+```bash
+cargo install --locked forge-dsl
 ```
 
 ### Build from source
 
+To install unreleased changes from `main`, no clone required. The package name
+is needed because the repo also carries example crates:
+
+```bash
+cargo install --git https://github.com/grahambrooks/forge forge-dsl --locked
+```
+
+Or clone first if you want to work on Forge itself:
+
 ```bash
 git clone https://github.com/grahambrooks/forge.git
 cd forge/forge
-cargo install --path .
+cargo install --locked --path .
 ```
 
 ## Commands
@@ -307,6 +325,12 @@ rule "max-container-coupling" {
 forge check -s arch.forge --rules team-rules.forge-rules
 forge check -s arch.forge -f sarif > results.sarif
 ```
+
+## Contributing
+
+See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for setup, the `make pre-commit`
+gate, testing conventions, and the release process. [DESIGN.md](./DESIGN.md) is
+the source of truth for design decisions.
 
 ## License
 
