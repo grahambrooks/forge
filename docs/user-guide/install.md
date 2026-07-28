@@ -3,7 +3,39 @@
 Forge ships as a single binary called `forge`. You need it on your `$PATH`
 before you can run any of the other commands in this guide.
 
-## From crates.io (recommended)
+## Homebrew (recommended)
+
+```bash
+brew tap grahambrooks/forge https://github.com/grahambrooks/forge
+brew install grahambrooks/forge/forge
+```
+
+The formula lives in the Forge repo itself rather than a separate
+`homebrew-forge` tap, so the tap URL is required. The repo is public — no
+GitHub token or `HOMEBREW_GITHUB_API_TOKEN` is needed.
+
+Covers macOS on Apple Silicon and Linux on x86_64 and aarch64. Intel Macs
+have no prebuilt binary; use [From source](#from-source).
+
+## Prebuilt binary
+
+Each release publishes tarballs on
+[GitHub Releases](https://github.com/grahambrooks/forge/releases):
+
+```bash
+TAG=$(curl -sL https://api.github.com/repos/grahambrooks/forge/releases/latest \
+      | grep -m1 '"tag_name"' | cut -d'"' -f4)
+
+# One of: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu, aarch64-apple-darwin
+TARGET=aarch64-apple-darwin
+
+curl -L "https://github.com/grahambrooks/forge/releases/download/${TAG}/forge-${TAG}-${TARGET}.tar.gz" | tar xz
+chmod +x forge
+mkdir -p ~/.local/bin
+mv forge ~/.local/bin/forge
+```
+
+## With cargo
 
 The binary crate is published as `forge-dsl`. This installs a `forge`
 executable under `~/.cargo/bin`:
@@ -17,10 +49,18 @@ Prerequisites: a stable Rust toolchain (1.80 or newer) and a C toolchain for
 building the tree-sitter grammars that `symgraph` pulls in (Xcode Command
 Line Tools on macOS; `build-essential` on Debian/Ubuntu).
 
+To install unreleased changes from `main`, point cargo at the repo instead.
+The `forge-dsl` package name is required because the repo also carries example
+crates:
+
+```bash
+cargo install --git https://github.com/grahambrooks/forge forge-dsl --locked
+```
+
 ## From source
 
-Clone the repo and build in release mode. This is the fastest way to try
-unreleased features that are on `main` but not yet published to crates.io.
+Clone the repo and build in release mode. This is the way to work on Forge
+itself, or to try changes on `main` that are not in a release yet.
 
 ```bash
 git clone https://github.com/grahambrooks/forge.git

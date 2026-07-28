@@ -10,7 +10,7 @@ class Forge < Formula
       sha256 "c44f817d7ce59852a1b3366a39171e2337f4bf6217a8046e08eb186a5813cbbd"
     end
     on_intel do
-      odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/grahambrooks/forge --locked` to build from source."
+      odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/grahambrooks/forge forge-dsl --locked` to build from source."
     end
   end
 

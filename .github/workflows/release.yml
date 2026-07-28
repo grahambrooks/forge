@@ -6,6 +6,9 @@
 # version from forge/Cargo.toml. Everything else — CalVer tag, standard tarball
 # names, sha256, and the shared render-formula.py → in-repo Formula/forge.rb — is
 # identical to every other grahambrooks project.
+#
+# Publishing to crates.io needs a CARGO_REGISTRY_TOKEN repo secret (crates.io →
+# Account Settings → API Tokens, scoped publish-update for forge-dsl).
 name: release
 
 on:
@@ -86,6 +89,55 @@ jobs:
           # no sha256 here — macOS runners lack `sha256sum`, and update-formula
           # recomputes the hash from the published tarball anyway.
           gh release upload "$tag" "$asset" --clobber
+
+  publish-crate:
+    name: publish to crates.io
+    # Runs last, and only once the binaries are built: a crates.io publish
+    # cannot be undone (only yanked), so nothing irreversible happens until
+    # the rest of the release has succeeded.
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: forge
+          key: publish
+      - name: Require registry token
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -z "${CARGO_REGISTRY_TOKEN}" ]; then
+            echo "::error::CARGO_REGISTRY_TOKEN secret is not set — cannot publish forge-dsl"
+            exit 1
+          fi
+      - name: Skip if this version is already published
+        id: published
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          # crates.io rejects requests without a descriptive User-Agent.
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                 -A "forge-release (github-actions; +https://github.com/${GITHUB_REPOSITORY})" \
+                 "https://crates.io/api/v1/crates/forge-dsl/${version}")
+          if [ "$code" = "200" ]; then
+            echo "forge-dsl ${version} is already on crates.io — skipping publish"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" = "404" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::unexpected status ${code} from crates.io when checking forge-dsl ${version}"
+            exit 1
+          fi
+      - name: cargo publish
+        if: steps.published.outputs.skip == 'false'
+        working-directory: forge
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --locked
 
   update-formula:
     name: update homebrew formula
