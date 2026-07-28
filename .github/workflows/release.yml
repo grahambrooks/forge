@@ -25,7 +25,7 @@ jobs:
     name: verify version
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Tag matches forge/Cargo.toml
         run: |
           set -euo pipefail
@@ -44,7 +44,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: taiki-e/create-gh-release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -64,7 +64,7 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-14
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -94,7 +94,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
