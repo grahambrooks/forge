@@ -30,7 +30,9 @@ TAG=$(curl -sL https://api.github.com/repos/grahambrooks/forge/releases/latest \
 TARGET=aarch64-apple-darwin
 
 curl -L "https://github.com/grahambrooks/forge/releases/download/${TAG}/forge-${TAG}-${TARGET}.tar.gz" | tar xz
-chmod +x forge && mv forge ~/.local/bin/forge
+chmod +x forge
+mkdir -p ~/.local/bin
+mv forge ~/.local/bin/forge
 ```
 
 ## With cargo
