@@ -1,0 +1,24 @@
+Formula/forge.rb
+  s_242e6b75402023::t_2176d1dc6d3a3c 4,9-10,19-20,23-24
+CONTRIBUTING.md
+  s_242e6b75402023::t_dfbb0f098c6f4f 186-190
+.github/workflows/release.yml
+  s_242e6b75402023::t_3ff1d2decdf376 148
+  s_242e6b75402023::t_b37f42e7c0e528 184-191,201-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "47c0bcc4e0bbb9abcd60ec25533e57f4de4f2756",
+  "prompts": {},
+  "sessions": {
+    "s_242e6b75402023": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f781260c-ac30-43b8-acc0-a90ffb95af3b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
