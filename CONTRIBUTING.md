@@ -157,7 +157,7 @@ merge `main` into your branch rather than force-pushing a rebase.
 
 ## Releases
 
-Releases are CalVer (`vYYYY.MM.DD`) and are cut from `main`:
+Releases are CalVer and are cut from `main`:
 
 ```bash
 make release-github
@@ -165,7 +165,15 @@ make release-github
 
 That target runs the pre-commit gate, stamps the date-based version into
 `forge/Cargo.toml`, verifies the built binary reports that version, commits,
-tags, and pushes. Pushing the tag triggers
+tags, and pushes.
+
+The date has two spellings and they are not interchangeable. Semver forbids
+leading zeros, so `forge/Cargo.toml` and the git tag both use the unpadded form
+(`2026.7.1` / `v2026.7.1`); `build.rs` bakes the zero-padded form (`2026.07.01`)
+into `forge --version` for display only. The release fails at the first step if
+the tag and `forge/Cargo.toml` disagree.
+
+Pushing the tag triggers
 [`.github/workflows/release.yml`](.github/workflows/release.yml), which:
 
 1. Verifies the tag matches `forge/Cargo.toml`, and fails the release if not.

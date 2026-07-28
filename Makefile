@@ -33,12 +33,18 @@ release-docker: ## Build Linux release binaries (glibc + musl) in Docker → dis
 	docker build -f dist/Dockerfile --output type=local,dest=dist .
 	@echo "Built: dist/forge-gnu (glibc), dist/forge-musl (static musl)"
 
-release-github: pre-commit ## Tag and push a calver release (vYYYY.MM.DD) to trigger GitHub Actions release
+# Two spellings of the same date, and they are not interchangeable:
+#   CARGO_VERSION (2026.7.1)  — semver forbids leading zeros, so this goes in
+#                               Cargo.toml AND in the tag. release.yml fails the
+#                               release if the tag and Cargo.toml disagree.
+#   VERSION       (2026.07.01) — zero-padded calver that build.rs bakes into
+#                               `forge --version` for display only.
+release-github: pre-commit ## Tag and push a calver release (vYYYY.M.D) to trigger GitHub Actions release
 	@bash -ec '\
 	VERSION=$$(date +%Y.%m.%d); \
 	CARGO_VERSION=$$(date +%Y.%-m.%-d); \
-	TAG="v$$VERSION"; \
-	echo "Releasing $$TAG (version $$VERSION) ..."; \
+	TAG="v$$CARGO_VERSION"; \
+	echo "Releasing $$TAG (cargo $$CARGO_VERSION, cli $$VERSION) ..."; \
 	sed -i "" "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml; \
 	cd forge && cargo build --release --quiet && cd ..; \
 	BUILT_VERSION=$$(./forge/target/release/forge --version 2>&1 | awk "{print \$$2}"); \
