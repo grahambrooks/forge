@@ -1,13 +1,13 @@
 class Forge < Formula
   desc "Unified software modeling DSL — architecture diagrams, docs, and lint from code"
   homepage "https://github.com/grahambrooks/forge"
-  version "2026.7.1"
+  version "2026.7.28"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.7.1/forge-v2026.7.1-aarch64-apple-darwin.tar.gz"
-      sha256 "c44f817d7ce59852a1b3366a39171e2337f4bf6217a8046e08eb186a5813cbbd"
+      url "https://github.com/grahambrooks/forge/releases/download/v2026.7.28/forge-v2026.7.28-aarch64-apple-darwin.tar.gz"
+      sha256 "500d8211e4941f2e79808d6906b4cfceaf748012ed3c08396896f3fc541541c7"
     end
     on_intel do
       odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/grahambrooks/forge forge-dsl --locked` to build from source."
@@ -16,12 +16,12 @@ class Forge < Formula
 
   on_linux do
     on_arm do
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.7.1/forge-v2026.7.1-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "f0d3a6018a3258440a38f3a042493254462172e765b6d801f9845a79d9c886c7"
+      url "https://github.com/grahambrooks/forge/releases/download/v2026.7.28/forge-v2026.7.28-aarch64-unknown-linux-gnu.tar.gz"
+      sha256 "6ec6da6dde3dd2b35d633e5c0252dc83d6938950dd8200ebf04ea3ff4cca091d"
     end
     on_intel do
-      url "https://github.com/grahambrooks/forge/releases/download/v2026.7.1/forge-v2026.7.1-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "f4c241075424c0e2e632dbb0b20457c4f611badc5a4fd647f3948a5fb128cc9b"
+      url "https://github.com/grahambrooks/forge/releases/download/v2026.7.28/forge-v2026.7.28-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "7597d5cd936fb20e6eda3c229a91825af80c4be229d6e768611ee9c43cbb20f1"
     end
   end
 
