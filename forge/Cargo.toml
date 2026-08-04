@@ -30,7 +30,7 @@ ab_glyph = "0.2"
 symgraph = { version = "2026.4.13", default-features = false }
 toml = "1"
 regex = "1"
-resvg = { version = "0.47", default-features = false, features = ["text"] }
+resvg = { version = "0.48", default-features = false, features = ["text"] }
 
 [dev-dependencies]
 tempfile = "3"
