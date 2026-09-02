@@ -6,8 +6,8 @@ class Forge < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/grahambrooks/forge/archive/refs/tags/v2026.8.1.tar.gz"
-      sha256 "49a08547b2c99446207e15e06a01b47a0ebcd15de04dd123e9603ad893c085f7"
+      url "https://github.com/grahambrooks/forge/archive/refs/tags/v2026.9.1.tar.gz"
+      sha256 "e16dfeef108922c37a258ca921300b3021712f4e936427b85b646513b17d4d8b"
     end
     on_intel do
       odie "Intel Mac binaries are not provided. Run `cargo install --git https://github.com/grahambrooks/forge forge-dsl --locked` to build from source."
