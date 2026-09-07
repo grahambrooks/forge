@@ -1,0 +1,24 @@
+name: tmp-verify-pr-perm
+on:
+  push:
+    branches: [test/actions-pr-permission]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Reproduce the release workflow's gh pr create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr create --base main --head test/actions-pr-permission \
+                 --title "TEMP: verify Actions can create PRs" \
+                 --body "Throwaway probe for the release workflow's update-formula step. Closed automatically." \
+               | awk -F/ '{print $NF}')
+          echo "created PR #${pr}"
+          gh pr close "$pr"
+          echo "PROBE_RESULT=createPullRequest permitted"
