@@ -1,0 +1,19 @@
+tests/integration/Dockerfile
+  s_508a7799e6b2d3::t_6c352a1f3a1c70 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "e57ae55fdbbee726016e1b56747ac9460aa58b2d",
+  "prompts": {},
+  "sessions": {
+    "s_508a7799e6b2d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a95ef32c-eddc-4588-a841-3de36c5b62a7",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
