@@ -642,7 +642,7 @@ dependencies = [
 
 [[package]]
 name = "forge-dsl"
-version = "2026.7.28"
+version = "2026.9.7"
 dependencies = [
  "ab_glyph",
  "clap",
