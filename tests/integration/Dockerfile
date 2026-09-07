@@ -1,4 +1,8 @@
-FROM rust:1.88-bookworm AS builder
+# Floating major tag rather than a pinned minor: Renovate's default ignorePaths
+# excludes **/tests/**, so a pin here is never bumped and silently rots until a
+# dependency raises its MSRV (which is exactly how this image got stuck on 1.88
+# and broke the Integration Tests job for every PR).
+FROM rust:1-bookworm AS builder
 WORKDIR /build
 COPY forge/ ./forge/
 RUN cd forge && cargo build --release
