@@ -1,0 +1,19 @@
+.github/workflows/tmp-verify-pr-perm.yml
+  s_508a7799e6b2d3::t_e235b516631ca0 13,18-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a2ab002361837a9bf35454555ac90485e94a7600",
+  "prompts": {},
+  "sessions": {
+    "s_508a7799e6b2d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a95ef32c-eddc-4588-a841-3de36c5b62a7",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
