@@ -21,6 +21,10 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <!-- JCEF is part of the core platform up to 2025.x and a separate plugin from 2026.2. The
+         optional dependency links in that plugin's classes where it exists; on older builds it is
+         absent and JCEF comes from the core. -->
+    <depends optional="true" config-file="forge-jcef.xml">com.intellij.modules.jcef</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="Forge" implementationClass="com.grahambrooks.forge.ForgeFileType" fieldName="INSTANCE"

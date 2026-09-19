@@ -15,8 +15,8 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.ColorUtil
 import com.intellij.ui.JBColor
-import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.dsl.listCellRenderer.textListCellRenderer
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.util.ui.JBUI
@@ -41,7 +41,7 @@ class ForgePreviewPanel(private val onRefresh: () -> Unit) : JPanel(BorderLayout
     private val views = DefaultComboBoxModel<ForgeView>()
     private var replacingViews = false
     private val viewPicker = ComboBox(views).apply {
-        renderer = SimpleListCellRenderer.create("") { it.title }
+        renderer = textListCellRenderer { it?.title }
         addActionListener { if (!replacingViews) showSelected() }
     }
     private val errorBanner = JBLabel().apply {

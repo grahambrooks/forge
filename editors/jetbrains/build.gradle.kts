@@ -1,3 +1,4 @@
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -60,7 +61,10 @@ intellijPlatform {
 
     pluginVerification {
         ides {
+            // recommended() stops at 2025.2, the last separate Community release, so the unified
+            // IDEA distribution is listed explicitly. 2026.2 is where JCEF moved out of the core.
             recommended()
+            create(IntelliJPlatformType.IntellijIdea, "2026.2.3")
         }
     }
 }
@@ -75,6 +79,16 @@ tasks.runIde {
     // -PopenFile=<path relative to the examples> also opens that file, e.g. -PopenFile=payments.forge
     providers.gradleProperty("openFile").orNull?.let {
         args(crateDir.dir("examples").file(it).asFile.absolutePath)
+    }
+}
+
+// ./gradlew runRustRover -PrustRoverPath=<RustRover.app/Contents> runs the plugin in a local
+// RustRover install, to check a platform newer than the one it is compiled against.
+val runRustRover by intellijPlatformTesting.runIde.registering {
+    providers.gradleProperty("rustRoverPath").orNull?.let { localPath = file(it) }
+    task {
+        args(crateDir.dir("examples").asFile.absolutePath)
+        args(crateDir.dir("examples").file("payments.forge").asFile.absolutePath)
     }
 }
 

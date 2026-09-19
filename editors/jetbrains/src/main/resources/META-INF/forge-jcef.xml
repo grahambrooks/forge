@@ -1,0 +1,2 @@
+<!-- Intentionally empty: the dependency in plugin.xml exists only for classloading. -->
+<idea-plugin/>

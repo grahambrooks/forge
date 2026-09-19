@@ -7,7 +7,7 @@ import com.grahambrooks.forge.cli.RenderResult
 import com.grahambrooks.forge.settings.ForgeSettings
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -77,7 +77,7 @@ class ForgePreviewFileEditor(private val file: VirtualFile) : UserDataHolderBase
     /** Runs on a pooled thread. */
     private fun render(ticket: Int) {
         if (!file.isValid) return
-        val source = ReadAction.compute<ForgeSource, RuntimeException> { currentSource() }
+        val source = runReadAction { currentSource() }
         val settings = ForgeSettings.get()
         val result = ForgeCli(settings.binary, EnvironmentUtil.getEnvironmentMap())
             .render(source, settings.style)

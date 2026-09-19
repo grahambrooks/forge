@@ -48,8 +48,22 @@ Needs JDK 21. Gradle picks it up through toolchains.
 cd editors/jetbrains
 ./gradlew test          # unit tests, plus CLI tests against ../../forge/target/debug/forge
 ./gradlew buildPlugin   # → build/distributions/forge-preview-<version>.zip
-./gradlew runIde -PopenFile=payments.forge   # sandbox IDE on forge/examples
+./gradlew runIde -PopenFile=payments.forge   # sandbox IDE (the version it is compiled against)
+./gradlew verifyPlugin  # JetBrains Plugin Verifier, against 2025.2 and 2026.2
 ```
+
+The plugin is compiled against 2025.2 and loads in later releases too, so a newer IDE is only
+exercised by running one. `runRustRover` starts a sandbox on a local install:
+
+```bash
+./gradlew runRustRover -PrustRoverPath=$HOME/Applications/RustRover.app/Contents
+```
+
+Do that after changing anything the platform has moved between releases. JCEF is the example:
+it is part of the core up to 2025.x and a separate plugin from 2026.2, which the optional
+`com.intellij.modules.jcef` dependency in `plugin.xml` covers. The Plugin Verifier does **not**
+catch that kind of breakage — it reported the plugin as compatible with 2026.2 while the preview
+failed to open there with `NoClassDefFoundError: JBCefApp`. Only running it catches that.
 
 The CLI tests are skipped if the debug binary hasn't been built (in CI they fail instead). Run `make build` from the repo
 root first.
