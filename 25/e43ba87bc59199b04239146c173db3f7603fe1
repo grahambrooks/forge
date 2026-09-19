@@ -1,0 +1,80 @@
+editors/jetbrains/README.md
+  s_d254f720f74001::t_3824b3ee58f7e3 1-58
+editors/jetbrains/gradle/libs.versions.toml
+  s_d254f720f74001::t_56c31344ca9a43 1-17
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/cli/ForgeCli.kt
+  s_d254f720f74001::t_b81fbb3e4fadbf 1-143
+CLAUDE.md
+  s_d254f720f74001::t_3824b3ee58f7e3 41-42
+editors/jetbrains/gradle/wrapper/gradle-wrapper.properties
+  s_d254f720f74001::t_56c31344ca9a43 1-9
+editors/jetbrains/src/main/resources/icons/forge.svg
+  s_d254f720f74001::t_0536d4278eeabf 1-6
+forge/tests/stdin_source.rs
+  s_d254f720f74001::t_24cb71044283f0 1-39,45-52,54-55,57-63,69-70
+  s_d254f720f74001::t_c3b3077b206d77 40-44,53,64-68
+  s_d254f720f74001::t_a5a9f1d6cef901 56
+editors/jetbrains/build.gradle.kts
+  s_d254f720f74001::t_a639ca733c7b80 1-91
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/preview/ForgePreviewEditorProvider.kt
+  s_d254f720f74001::t_b5fcde24d2ab88 1-32
+editors/jetbrains/gradlew
+  s_d254f720f74001::t_56c31344ca9a43 1-248
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/preview/ForgePreviewFileEditor.kt
+  s_d254f720f74001::t_b5fcde24d2ab88 1-41,45-86,88-122,126-130
+  s_d254f720f74001::t_7eb1018e49dc94 42-44,87,123-125
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/settings/ForgeSettings.kt
+  s_d254f720f74001::t_5877dff6f20205 1-75
+forge/EDITORS.md
+  s_d254f720f74001::t_3824b3ee58f7e3 258-263
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/ForgeFileType.kt
+  s_d254f720f74001::t_bb1446f5061404 13,21
+  s_d254f720f74001::t_5877dff6f20205 1-12,14-20,22-26
+editors/jetbrains/src/main/resources/META-INF/plugin.xml
+  s_d254f720f74001::t_0536d4278eeabf 1-33
+editors/jetbrains/settings.gradle.kts
+  s_d254f720f74001::t_56c31344ca9a43 1-5
+editors/jetbrains/gradlew.bat
+  s_d254f720f74001::t_56c31344ca9a43 1-82
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/preview/PreviewHtml.kt
+  s_d254f720f74001::t_befccaa17ec47d 1-112
+editors/jetbrains/src/main/resources/icons/forge_dark.svg
+  s_d254f720f74001::t_0536d4278eeabf 1-6
+editors/jetbrains/src/test/kotlin/com/grahambrooks/forge/cli/ForgeBinaryTest.kt
+  s_d254f720f74001::t_e7e64d5a9d06a8 1-32
+editors/jetbrains/gradle.properties
+  s_d254f720f74001::t_a639ca733c7b80 1-20
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/preview/ForgePreviewPanel.kt
+  s_d254f720f74001::t_17721d26da1c88 63-66
+  s_d254f720f74001::t_f3cc5c00070570 29,55,95,104,131,140-145,148,160
+  s_d254f720f74001::t_0fcbeafbc7e906 1-28,30-41,43-44,46-54,56-62,67-94,96-103,105-108,118,124-130,132-139,146-147,149-159,161-173
+  s_d254f720f74001::t_0536d4278eeabf 42,45,109-117,119-123
+editors/jetbrains/src/test/kotlin/com/grahambrooks/forge/cli/ForgeCliTest.kt
+  s_d254f720f74001::t_e7e64d5a9d06a8 1-76
+editors/jetbrains/src/main/kotlin/com/grahambrooks/forge/cli/ForgeBinary.kt
+  s_d254f720f74001::t_b81fbb3e4fadbf 1-23
+editors/jetbrains/.gitignore
+  s_d254f720f74001::t_17721d26da1c88 1-4
+forge/src/commands/util.rs
+  s_d254f720f74001::t_24cb71044283f0 4,10-12,14-24
+editors/jetbrains/src/test/kotlin/com/grahambrooks/forge/preview/PreviewHtmlTest.kt
+  s_d254f720f74001::t_e7e64d5a9d06a8 1-32
+forge/src/main.rs
+  s_d254f720f74001::t_24cb71044283f0 47,74,181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "25e43ba87bc59199b04239146c173db3f7603fe1",
+  "prompts": {},
+  "sessions": {
+    "s_d254f720f74001": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0cac3c2c-c99d-4533-8b00-322fe4bc5ec6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
