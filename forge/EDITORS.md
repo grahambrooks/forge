@@ -255,6 +255,12 @@ Alternatively, with the older [LSP Support](https://plugins.jetbrains.com/plugin
    - **Path:** path to `forge` binary
    - **Args:** `lsp`
 
+### Diagram preview
+
+The **Forge Preview** plugin in [`editors/jetbrains`](../editors/jetbrains) opens `.forge` files in a
+split editor with the rendered diagrams beside the source. It works alongside LSP4IJ. See its
+[README](../editors/jetbrains/README.md) to build and install it.
+
 ---
 
 ## Emacs

@@ -38,6 +38,8 @@ model-diagram/
     ├── PUBLISHING.md            # GitHub Pages + Backstage TechDocs deployment
     ├── Cargo.toml               # Dependencies: clap, serde, tokio, tower-lsp, notify, pulldown-cmark
     └── Makefile                 # build, test, lint, fmt, pre-commit, run
+editors/
+└── jetbrains/                   # IntelliJ "Forge Preview" plugin (Kotlin/Gradle) — renders via the forge CLI
 ```
 
 ## Current State (139 tests, all passing)

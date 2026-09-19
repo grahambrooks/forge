@@ -44,7 +44,7 @@ struct Cli {
 enum Commands {
     /// Parse .forge files and render SVG diagrams
     Build {
-        /// Input .forge file
+        /// Input .forge file (`-` reads stdin; includes resolve from the working directory)
         #[arg(short, long, default_value = "forge.forge")]
         source: PathBuf,
 
@@ -71,7 +71,7 @@ enum Commands {
 
     /// Lint and validate a model against architectural rules
     Check {
-        /// Input .forge file
+        /// Input .forge file (`-` reads stdin; includes resolve from the working directory)
         #[arg(short, long, default_value = "forge.forge")]
         source: PathBuf,
 
@@ -178,7 +178,7 @@ enum Commands {
 
     /// Export model as JSON or YAML
     Export {
-        /// Input .forge file
+        /// Input .forge file (`-` reads stdin; includes resolve from the working directory)
         #[arg(short, long, default_value = "forge.forge")]
         source: PathBuf,
 
