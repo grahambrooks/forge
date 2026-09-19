@@ -112,7 +112,7 @@ class ForgeCli(
         // Releases before stdin support treat `-` as a file name.
         if (source is ForgeSource.InMemory && output.stderr.contains("-: No such file")) {
             return "This forge release cannot render unsaved changes. " +
-                "Save the file to preview it, or upgrade forge."
+                "Save the file to preview it, or upgrade forge to 2026.9.8 or later."
         }
         val errors = output.stderr.lines()
             .filter { it.startsWith("Error:") }

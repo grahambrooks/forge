@@ -15,7 +15,8 @@
             <li>Zoom, fit-to-width, and a palette that follows the IDE theme</li>
             <li>Model errors reported above the last good diagram instead of blanking it</li>
         </ul>
-        <p>Rendering is done by the <code>forge</code> CLI, which must be installed
+        <p>Rendering is done by the <code>forge</code> CLI, which must be installed (2026.9.8 or
+        later to preview unsaved changes)
         (<code>brew install grahambrooks/forge/forge</code> or <code>cargo install</code>). Its location
         can be set under <b>Settings | Tools | Forge Preview</b>.</p>
     ]]></description>

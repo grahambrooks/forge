@@ -23,8 +23,8 @@ The SVGs are shown in an embedded (JCEF) browser, so preview output is exactly w
 `forge build` produces.
 
 A saved file is rendered from disk. Unsaved edits go to the CLI through `--source -`, with
-includes resolved from the file's directory. `--source -` is newer than forge 2026.9.7. With an
-older forge, the preview asks you to save or upgrade.
+includes resolved from the file's directory. `--source -` needs forge 2026.9.8 or later; with an
+older one the preview asks you to save or upgrade.
 
 ## Requirements
 
