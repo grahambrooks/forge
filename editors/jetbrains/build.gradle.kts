@@ -1,4 +1,5 @@
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -29,12 +30,14 @@ dependencies {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         pluginVerifier()
         zipSigner()
+        testFramework(TestFrameworkType.Platform)
     }
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit4)
     testRuntimeOnly(libs.junit.platform.launcher)
-    testRuntimeOnly(libs.junit4)
+    testRuntimeOnly(libs.junit.vintage.engine)
 }
 
 intellijPlatform {
