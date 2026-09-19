@@ -7,13 +7,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-/** Drives the crate's debug build (`make build`); skipped when it has not been built. */
+/** Drives the crate's debug build (`make build`); skipped locally when it has not been built. */
 class ForgeCliTest {
     private val binary = File(System.getProperty("forge.binary", ""))
     private val examples = File(System.getProperty("forge.examples", ""))
 
     private fun cli(): ForgeCli {
-        assumeTrue(binary.canExecute(), "forge debug binary not built: $binary")
+        val message = "forge debug binary not built: $binary"
+        // Skipping is a convenience for local runs; in CI a missing binary must fail the build.
+        if (System.getenv("CI") == "true") assertTrue(binary.canExecute(), message)
+        assumeTrue(binary.canExecute(), message)
         return ForgeCli(binary.path)
     }
 

@@ -65,6 +65,32 @@ jobs:
           echo "Built $(ls /tmp/forge-ci/*.svg | wc -l) SVGs"
           echo "Generated $(find /tmp/forge-site -name '*.html' | wc -l) HTML pages"
 
+  jetbrains-plugin:
+    name: JetBrains Plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: forge
+      # The plugin's CLI tests drive this debug build.
+      - name: Build forge
+        working-directory: forge
+        run: cargo build
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Test and build plugin
+        working-directory: editors/jetbrains
+        run: ./gradlew test buildPlugin verifyPluginStructure
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: forge-preview-plugin
+          path: editors/jetbrains/build/distributions/*.zip
+
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest

@@ -51,7 +51,7 @@ cd editors/jetbrains
 ./gradlew runIde -PopenFile=payments.forge   # sandbox IDE on forge/examples
 ```
 
-The CLI tests are skipped if the debug binary hasn't been built. Run `make build` from the repo
+The CLI tests are skipped if the debug binary hasn't been built (in CI they fail instead). Run `make build` from the repo
 root first.
 
 To install a local build, choose **Settings | Plugins | ⚙ | Install Plugin from Disk…** and pick
