@@ -7,7 +7,7 @@
 	integration-test integration-test-local \
 	install-test install-test-debian install-test-ubuntu install-test-fedora \
 	install-test-alpine install-test-homebrew install-test-cargo \
-	update outdated clean
+	update outdated clean watch-ci
 
 CARGO         := cargo
 SOURCE        := forge/examples/payments.forge
@@ -183,3 +183,9 @@ outdated: ## Show outdated dependencies (requires cargo-outdated)
 clean: ## Remove Rust build artifacts and Docker release outputs
 	cd forge && $(CARGO) clean
 	rm -rf dist/forge-gnu dist/forge-musl
+
+##@ CI
+
+watch-ci: ## After pushing, wait for every CI run on HEAD; fails if any run fails
+	@command -v watch-ci >/dev/null || { echo "watch-ci not on PATH: ln -s ~/dev/projects/agentic-twin/scripts/watch-ci.sh ~/.local/bin/watch-ci" >&2; exit 1; }
+	watch-ci
