@@ -1,0 +1,44 @@
+forge/src/scene.rs
+  s_d7782172923615::t_d2d2578f2566e9 1-561
+  s_d7782172923615::t_2ddb3ac89975f7 562-730
+README.md
+  s_d7782172923615::t_b1fbe6c347dae8 239-257
+forge/Cargo.lock
+  s_d7782172923615::t_cd46a01d6b2e95 438-442,626
+forge/Cargo.toml
+  s_d7782172923615::t_bedd178ea1931e 14-20,24-43,47-61
+forge/src/layout/branching.rs
+  s_d7782172923615::t_0533d356e3eacc 12
+forge/src/layout/component.rs
+  s_d7782172923615::t_f3ba14bb7fd44c 9
+forge/src/layout/container.rs
+  s_d7782172923615::t_9c9d7c7e9ee74c 11
+forge/src/layout/deployment.rs
+  s_d7782172923615::t_6deab21eaa6c46 16,59,123
+forge/src/layout/pipeline.rs
+  s_d7782172923615::t_962bf63bb2d027 8,51
+forge/src/lib.rs
+  s_d7782172923615::t_731992dc3179a7 1-73
+forge/src/main.rs
+  s_d7782172923615::t_7ae26ec479e15b 2-3
+forge/src/model.rs
+  s_d7782172923615::t_0ea90d551cf9be 322-324,350-352,356-373
+forge/src/text.rs
+  s_d7782172923615::t_e0bf275773b543 95-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "797b3ecbe4160956936a8deb25220a1e7adfa127",
+  "prompts": {},
+  "sessions": {
+    "s_d7782172923615": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "506037c1-7fb7-4578-b793-43e4dc2baa8c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
