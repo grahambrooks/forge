@@ -13,8 +13,7 @@ pub(super) fn layout_deployment(model: &Model, view: &View, _tm: &TextMeasurer) 
 
     // Find top-level deployment nodes for this environment
     let top_nodes: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| {
             e.kind == ElementKind::DeploymentNode
                 && e.properties.get("environment").map(|s| s.as_str()) == Some(env_id)
@@ -57,8 +56,7 @@ pub(super) fn layout_deployment(model: &Model, view: &View, _tm: &TextMeasurer) 
 /// Recursively measure a deployment node to determine its required (w, h).
 fn measure_deploy_node(model: &Model, el: &Element) -> (f64, f64) {
     let child_nodes: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| e.kind == ElementKind::DeploymentNode && e.parent.as_deref() == Some(&el.id))
         .collect();
 
@@ -122,8 +120,7 @@ pub(super) fn layout_deploy_node(
     let (w, h) = measure_deploy_node(model, el);
 
     let child_elements: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| e.kind == ElementKind::DeploymentNode && e.parent.as_deref() == Some(&el.id))
         .collect();
 

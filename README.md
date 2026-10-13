@@ -236,6 +236,25 @@ Forge exposes an MCP server for AI agents:
 
 Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client.
 
+## As a Library
+
+The `forge_dsl` library parses a model (resolving `!include`) and lays its
+views out as [`diagram-scene`](https://github.com/grahambrooks/diagram-scene)
+scenes, for a host that draws them natively in its own theme. The emx editor
+previews `.forge` files this way. Without the default `cli` feature it has
+none of the command line's dependencies:
+
+```toml
+forge-dsl = { git = "https://github.com/grahambrooks/forge", default-features = false }
+```
+
+```rust
+let model = forge_dsl::parse_file("architecture.forge")?;
+for view in forge_dsl::views(&model) {
+    let scene = forge_dsl::scene(&model, &view.key, &measure);
+}
+```
+
 ## Integrations
 
 ### MkDocs

@@ -92,6 +92,12 @@ pub struct TextMeasurer {
     bold: FontArc,
 }
 
+impl Default for TextMeasurer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextMeasurer {
     pub fn new() -> Self {
         Self {

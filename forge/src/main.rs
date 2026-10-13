@@ -1,4 +1,6 @@
 mod analyze;
+// The modelling core lives in the library, shared with hosts like emx.
+use forge_dsl::{layout, model, parser, preprocess, text};
 mod animate;
 mod catalog_parser;
 mod check;
@@ -8,16 +10,11 @@ mod diff;
 mod export;
 mod generate;
 mod import;
-mod layout;
 mod lsp;
 mod mcp;
-mod model;
-mod parser;
 mod png;
-mod preprocess;
 mod render;
 mod serve;
-mod text;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

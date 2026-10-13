@@ -5,8 +5,7 @@ pub(super) fn layout_pipeline(model: &Model, view: &View, tm: &TextMeasurer) -> 
     let pipeline = model.elements.get(pipeline_id);
 
     let mut stages: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| e.parent.as_deref() == Some(pipeline_id) && e.kind == ElementKind::Stage)
         .collect();
 
@@ -49,8 +48,7 @@ pub(super) fn layout_pipeline(model: &Model, view: &View, tm: &TextMeasurer) -> 
 
         // Gates — auto-size based on name
         let gates: Vec<&Element> = model
-            .elements
-            .values()
+            .elements_ordered()
             .filter(|e| e.kind == ElementKind::Gate && e.parent.as_deref() == Some(&stage.id))
             .collect();
         for g in gates {

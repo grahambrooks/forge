@@ -11,26 +11,54 @@ keywords = ["architecture", "c4-model", "diagram", "documentation", "dsl"]
 categories = ["command-line-utilities", "development-tools", "visualization"]
 exclude = ["examples/", "output/", "_site/", "target/"]
 
+# The library: parse a model and lay its views out as `diagram-scene`
+# scenes, for hosts (the emx editor) that draw them natively. It needs
+# none of the command line's dependencies.
+[lib]
+name = "forge_dsl"
+path = "src/lib.rs"
+
 [[bin]]
 name = "forge"
 path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = ["cli"]
+cli = [
+    "dep:clap",
+    "dep:serde",
+    "dep:serde_yaml_ng",
+    "dep:serde_json",
+    "dep:walkdir",
+    "dep:pulldown-cmark",
+    "dep:tower-lsp",
+    "dep:tokio",
+    "dep:notify",
+    "dep:gix",
+    "dep:symgraph",
+    "dep:toml",
+    "dep:regex",
+    "dep:resvg",
+]
 
 [dependencies]
-clap = { version = "4", features = ["derive"] }
-serde = { version = "1", features = ["derive"] }
-serde_yaml_ng = "0.10"
-serde_json = "1"
-walkdir = "2"
-pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
-tower-lsp = "0.20"
-tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util", "time", "sync", "fs"] }
-notify = { version = "8", default-features = false, features = ["macos_kqueue"] }
-gix = { version = "0.88", default-features = false, features = ["max-performance-safe", "sha1"] }
 ab_glyph = "0.2"
-symgraph = { version = "2026.4.13", default-features = false }
-toml = "1"
-regex = "1"
-resvg = { version = "0.48", default-features = false, features = ["text"] }
+diagram-scene = { git = "https://github.com/grahambrooks/diagram-scene", tag = "v2026.10.0", default-features = false }
+clap = { version = "4", features = ["derive"], optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde_yaml_ng = { version = "0.10", optional = true }
+serde_json = { version = "1", optional = true }
+walkdir = { version = "2", optional = true }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"], optional = true }
+tower-lsp = { version = "0.20", optional = true }
+tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util", "time", "sync", "fs"], optional = true }
+notify = { version = "8", default-features = false, features = ["macos_kqueue"], optional = true }
+gix = { version = "0.88", default-features = false, features = ["max-performance-safe", "sha1"], optional = true }
+symgraph = { version = "2026.4.13", default-features = false, optional = true }
+toml = { version = "1", optional = true }
+regex = { version = "1", optional = true }
+resvg = { version = "0.48", default-features = false, features = ["text"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"

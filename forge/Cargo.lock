@@ -436,6 +436,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "diagram-scene"
+version = "2026.10.0"
+source = "git+https://github.com/grahambrooks/diagram-scene?tag=v2026.10.0#c49b0802763390cb2200d9041bae4c19ddfa4def"
+
+[[package]]
 name = "digest"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -618,6 +623,7 @@ version = "2026.10.1"
 dependencies = [
  "ab_glyph",
  "clap",
+ "diagram-scene",
  "gix",
  "notify",
  "pulldown-cmark",

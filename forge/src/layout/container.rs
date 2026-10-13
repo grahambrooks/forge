@@ -8,8 +8,7 @@ pub(super) fn layout_container(model: &Model, view: &View, tm: &TextMeasurer) ->
     let system = model.elements.get(scope_id);
 
     let containers: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Container)
         .collect();
 

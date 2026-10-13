@@ -6,8 +6,7 @@ pub(super) fn layout_component(model: &Model, view: &View, tm: &TextMeasurer) ->
     let container = model.elements.get(scope_id);
 
     let components: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| e.parent.as_deref() == Some(scope_id) && e.kind == ElementKind::Component)
         .collect();
 

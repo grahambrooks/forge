@@ -9,8 +9,7 @@ pub(super) fn layout_branching(model: &Model, view: &View, _tm: &TextMeasurer) -
     let strategy_id = view.scope.as_deref().unwrap_or("");
 
     let branches: Vec<&Element> = model
-        .elements
-        .values()
+        .elements_ordered()
         .filter(|e| {
             e.kind == ElementKind::Branch
                 && e.properties.get("strategy").map(|s| s.as_str()) == Some(strategy_id)

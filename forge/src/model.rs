@@ -319,6 +319,9 @@ pub struct Model {
     pub name: String,
     pub description: String,
     pub elements: HashMap<String, Element>,
+    /// Element ids in the order `add_element` saw them, so layouts place
+    /// elements in declaration order rather than the map's (random) one.
+    pub element_order: Vec<String>,
     pub relationships: Vec<Relationship>,
     pub views: Vec<View>,
     pub stage_links: Vec<StageLink>,
@@ -344,7 +347,28 @@ impl Model {
                 }
             }
         }
+        if !self.elements.contains_key(&el.id) {
+            self.element_order.push(el.id.clone());
+        }
         self.elements.insert(el.id.clone(), el);
+    }
+
+    /// Every element, in declaration order; any added straight to the map
+    /// follow, by id. Layouts iterate this, never the map, so a view comes
+    /// out the same every time.
+    pub fn elements_ordered(&self) -> impl Iterator<Item = &Element> {
+        let declared: std::collections::HashSet<&str> =
+            self.element_order.iter().map(String::as_str).collect();
+        let mut rest: Vec<&Element> = self
+            .elements
+            .values()
+            .filter(|e| !declared.contains(e.id.as_str()))
+            .collect();
+        rest.sort_by(|a, b| a.id.cmp(&b.id));
+        self.element_order
+            .iter()
+            .filter_map(|id| self.elements.get(id))
+            .chain(rest)
     }
 
     pub fn add_relationship(&mut self, rel: Relationship) {
