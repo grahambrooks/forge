@@ -54,7 +54,7 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 tower-lsp = { version = "0.20", optional = true }
 tokio = { version = "1", features = ["rt", "macros", "io-std", "net", "io-util", "time", "sync", "fs"], optional = true }
 notify = { version = "8", default-features = false, features = ["macos_kqueue"], optional = true }
-gix = { version = "0.88", default-features = false, features = ["max-performance-safe", "sha1"], optional = true }
+gix = { version = "0.90", default-features = false, features = ["max-performance", "sha1"], optional = true }
 symgraph = { version = "2026.4.13", default-features = false, optional = true }
 toml = { version = "1", optional = true }
 regex = { version = "1", optional = true }
