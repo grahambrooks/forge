@@ -1,0 +1,23 @@
+forge/Cargo.lock
+  s_0c7b5d39344b95::t_ff4930e4c4c4a8 440-441
+forge/Cargo.toml
+  s_0c7b5d39344b95::t_21924b1e6169c3 47
+forge/src/scene.rs
+  s_0c7b5d39344b95::t_01ed7f6a69b155 26-27,35,75,517,696-705
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cdfc38109eb5e21b2035950e5bd832f69e44db72",
+  "prompts": {},
+  "sessions": {
+    "s_0c7b5d39344b95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7ddb829-8b8a-4e74-b861-93398a7d9c8c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
