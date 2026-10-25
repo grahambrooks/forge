@@ -11,7 +11,11 @@
 
 CARGO         := cargo
 SOURCE        := forge/examples/payments.forge
-RELEASE_FORGE := forge/target/release/forge
+# Build into the repo, whatever a user's cargo config says: the targets that
+# run the binary (release-github's version check, evals, integration tests)
+# need to know where it is. An explicit CARGO_TARGET_DIR still wins.
+export CARGO_TARGET_DIR ?= $(CURDIR)/forge/target
+RELEASE_FORGE := $(CARGO_TARGET_DIR)/release/forge
 
 ##@ General
 
@@ -47,7 +51,7 @@ release-github: pre-commit ## Tag and push a calver release (vYYYY.M.D) to trigg
 	echo "Releasing $$TAG (cargo $$CARGO_VERSION, cli $$VERSION) ..."; \
 	sed -i "" "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml; \
 	cd forge && cargo build --release --quiet && cd ..; \
-	BUILT_VERSION=$$(./forge/target/release/forge --version 2>&1 | awk "{print \$$2}"); \
+	BUILT_VERSION=$$($(RELEASE_FORGE) --version 2>&1 | awk "{print \$$2}"); \
 	if [ "$$BUILT_VERSION" != "$$VERSION" ]; then \
 		echo "Error: binary reports version $$BUILT_VERSION but expected $$VERSION"; \
 		exit 1; \
@@ -107,16 +111,16 @@ run: build ## Build and render every view from the bundled example
 # See eval/README.md for the corpus definition and scoring model.
 
 eval: release ## Run the baseline evaluation driver (tier 1+2, ~15 min)
-	cd eval && ./run.py --forge ../$(RELEASE_FORGE)
+	cd eval && ./run.py --forge $(RELEASE_FORGE)
 
 eval-smoke: release ## Run the tier-1 smoke evaluation (~2 min, suitable as a CI gate)
-	cd eval && ./run.py --tier 1 --forge ../$(RELEASE_FORGE)
+	cd eval && ./run.py --tier 1 --forge $(RELEASE_FORGE)
 
 eval-all: release ## Run every tier (1+2+3) including stretch-tier monorepos
-	cd eval && ./run.py --tier all --forge ../$(RELEASE_FORGE)
+	cd eval && ./run.py --tier all --forge $(RELEASE_FORGE)
 
 eval-claude: release ## Run the Claude-driven companion evaluation (tier 1, billed)
-	cd eval && ./run_claude.py --forge ../$(RELEASE_FORGE)
+	cd eval && ./run_claude.py --forge $(RELEASE_FORGE)
 
 eval-compare: ## Diff baseline vs Claude results into results-claude/compare.md
 	cd eval && ./compare.py
@@ -138,7 +142,7 @@ integration-test: ## Run integration tests in Docker
 	docker compose -f tests/integration/docker-compose.yml down
 
 integration-test-local: release ## Run integration tests using the local release binary (no Docker)
-	FORGE=./forge/target/release/forge FIXTURES=./tests/integration/fixtures ./tests/integration/run-tests.sh
+	FORGE=$(RELEASE_FORGE) FIXTURES=./tests/integration/fixtures ./tests/integration/run-tests.sh
 
 ##@ Install Tests (Docker)
 
