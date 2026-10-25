@@ -23,6 +23,8 @@ const COMMIT_RADIUS: f32 = 8.0;
 pub fn from_layout(layout: &Layout, measure: &dyn diagram_scene::Measure) -> Scene {
     let mut scene = Scene::new(layout.width as f32, layout.height as f32);
     scene.font_size = FONT_SIZE;
+    // The view's title doubles as the SVG's <title>, for screen readers.
+    scene.accessibility.title = layout.title.clone();
     if let Some(title) = &layout.title {
         scene.title = Some(Text {
             pos: Point::new(scene.width / 2.0, 30.0),
@@ -30,6 +32,7 @@ pub fn from_layout(layout: &Layout, measure: &dyn diagram_scene::Measure) -> Sce
             line: TextLine::new(title.clone(), Font::Title),
             paint: Paint::Role(Role::Text),
             backed: false,
+            rotate: 0.0,
         });
     }
 
@@ -69,6 +72,7 @@ pub fn from_layout(layout: &Layout, measure: &dyn diagram_scene::Measure) -> Sce
                         line: TextLine::new(line, Font::Small),
                         paint: Paint::Role(Role::Muted),
                         backed: true,
+                        rotate: 0.0,
                     });
                 }
                 nodes.push(gate);
@@ -510,6 +514,7 @@ fn branch(scene: &mut Scene, n: &LayoutNode) {
         line: TextLine::new(n.label.clone(), Font::Bold),
         paint: lane.color,
         backed: false,
+        rotate: 0.0,
     });
     scene.edges.push(Edge {
         pen: Pen {
@@ -685,6 +690,16 @@ mod tests {
             for n in &scene.nodes {
                 assert!(!matches!(n.style.fill, Paint::Rgb(..)), "{}", n.id);
             }
+        }
+    }
+
+    #[test]
+    fn every_titled_view_names_itself_for_screen_readers() {
+        let model = model();
+        for view in crate::views(&model) {
+            let scene = crate::scene(&model, &view.key, &diagram_scene::Estimate).unwrap();
+            let shown = scene.title.as_ref().map(|t| t.line.plain());
+            assert_eq!(scene.accessibility.title, shown, "{}", view.key);
         }
     }
 

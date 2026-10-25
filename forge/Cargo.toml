@@ -44,7 +44,7 @@ cli = [
 
 [dependencies]
 ab_glyph = "0.2"
-diagram-scene = { git = "https://github.com/grahambrooks/diagram-scene", tag = "v2026.10.0", default-features = false }
+diagram-scene = { git = "https://github.com/grahambrooks/diagram-scene", tag = "v2026.10.25", default-features = false }
 clap = { version = "4", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 serde_yaml_ng = { version = "0.10", optional = true }
