@@ -26,7 +26,7 @@ jobs:
         working-directory: forge
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Installs the toolchain (and rustfmt/clippy) pinned in forge/rust-toolchain.toml.
+      # Installs the toolchain (and rustfmt/clippy) pinned in the root rust-toolchain.toml.
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           declared=$(grep -m1 -E '^rust-version *=' Cargo.toml | cut -d'"' -f2)
-          pinned=$(grep -m1 -E '^channel *=' rust-toolchain.toml | cut -d'"' -f2)
+          pinned=$(grep -m1 -E '^channel *=' ../rust-toolchain.toml | cut -d'"' -f2)
           echo "rust-version=$declared  channel=$pinned"
           if [ "$declared" != "$pinned" ]; then
             echo "::error::rust-version ($declared) and rust-toolchain.toml channel ($pinned) have drifted"
@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Installs the toolchain pinned in forge/rust-toolchain.toml.
+      # Installs the toolchain pinned in the root rust-toolchain.toml.
       - run: rustup toolchain install
         working-directory: forge
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Installs the toolchain pinned in forge/rust-toolchain.toml.
+      # Installs the toolchain pinned in the root rust-toolchain.toml.
       - run: rustup toolchain install
         working-directory: forge
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
