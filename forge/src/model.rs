@@ -340,12 +340,11 @@ pub struct Model {
 
 impl Model {
     pub fn add_element(&mut self, el: Element) {
-        if let Some(ref parent_id) = el.parent {
-            if let Some(parent) = self.elements.get_mut(parent_id) {
-                if !parent.children.contains(&el.id) {
-                    parent.children.push(el.id.clone());
-                }
-            }
+        if let Some(ref parent_id) = el.parent
+            && let Some(parent) = self.elements.get_mut(parent_id)
+            && !parent.children.contains(&el.id)
+        {
+            parent.children.push(el.id.clone());
         }
         if !self.elements.contains_key(&el.id) {
             self.element_order.push(el.id.clone());

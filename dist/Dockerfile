@@ -17,14 +17,16 @@ RUN cd forge && cargo build --release
 # Detect architecture for correct musl target. We point `cc-rs` at
 # `musl-gcc` for both triples so the tree-sitter grammar build scripts
 # don't look for `<triple>-gcc` binaries that Debian doesn't ship.
+# `rustup target add` runs inside forge/ so the target lands on the toolchain
+# pinned by forge/rust-toolchain.toml, which is the one cargo uses there.
 RUN ARCH="$(dpkg --print-architecture)" && \
     case "$ARCH" in \
       amd64)  TARGET="x86_64-unknown-linux-musl" ;; \
       arm64)  TARGET="aarch64-unknown-linux-musl" ;; \
       *)      echo "Unsupported arch: $ARCH" && exit 1 ;; \
     esac && \
-    rustup target add "$TARGET" && \
     cd forge && \
+    rustup target add "$TARGET" && \
     CC_x86_64_unknown_linux_musl=musl-gcc \
     CC_aarch64_unknown_linux_musl=musl-gcc \
     cargo build --release --target "$TARGET" && \

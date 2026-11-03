@@ -227,33 +227,33 @@ fn render_box(o: &mut Vec<String>, n: &LayoutNode) {
         cls: "name",
         text: n.label.clone(),
     });
-    if lines.len() < max_lines {
-        if let Some(kl) = kind_label(n.kind) {
+    if lines.len() < max_lines
+        && let Some(kl) = kind_label(n.kind)
+    {
+        lines.push(TextLine {
+            cls: "kind",
+            text: format!("[{}]", kl),
+        });
+    }
+    if lines.len() < max_lines
+        && let Some(ref desc) = n.description
+    {
+        let wrapped = TM.wrap(desc, max_text_w, &FONT_DESC);
+        let take = (max_lines - lines.len()).min(3);
+        for line in wrapped.into_iter().take(take) {
             lines.push(TextLine {
-                cls: "kind",
-                text: format!("[{}]", kl),
+                cls: "desc",
+                text: line,
             });
         }
     }
-    if lines.len() < max_lines {
-        if let Some(ref desc) = n.description {
-            let wrapped = TM.wrap(desc, max_text_w, &FONT_DESC);
-            let take = (max_lines - lines.len()).min(3);
-            for line in wrapped.into_iter().take(take) {
-                lines.push(TextLine {
-                    cls: "desc",
-                    text: line,
-                });
-            }
-        }
-    }
-    if lines.len() < max_lines {
-        if let Some(ref sub) = n.sublabel {
-            lines.push(TextLine {
-                cls: "tech",
-                text: sub.clone(),
-            });
-        }
+    if lines.len() < max_lines
+        && let Some(ref sub) = n.sublabel
+    {
+        lines.push(TextLine {
+            cls: "tech",
+            text: sub.clone(),
+        });
     }
 
     let total_h = lines.len() as f64 * FONT_NAME.line_height;

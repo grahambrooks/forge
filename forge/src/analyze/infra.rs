@@ -7,7 +7,7 @@ use super::iter_source_files;
 use crate::model::*;
 
 use super::provenance::mark_inferred;
-use super::{slugify, AnalyzeConfig};
+use super::{AnalyzeConfig, slugify};
 
 const SCANNER: &str = "infra";
 
@@ -30,10 +30,10 @@ fn scan_cloudformation(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
         if !is_yaml && !is_json {
             continue;
         }
-        if let Ok(text) = std::fs::read_to_string(path) {
-            if text.contains("AWSTemplateFormatVersion") || text.contains("AWS::") {
-                parse_cft(model, &text);
-            }
+        if let Ok(text) = std::fs::read_to_string(path)
+            && (text.contains("AWSTemplateFormatVersion") || text.contains("AWS::"))
+        {
+            parse_cft(model, &text);
         }
     }
 }
@@ -160,7 +160,7 @@ fn parse_terraform(model: &mut Model, text: &str) {
     while pos < text.len() {
         if let Some(idx) = text[pos..].find("resource ") {
             let start = pos + idx + 9; // after "resource "
-                                       // Extract "type" "name"
+            // Extract "type" "name"
             let rest = &text[start..];
             let parts: Vec<&str> = rest.splitn(3, '"').collect();
             if parts.len() >= 4 {
@@ -168,21 +168,21 @@ fn parse_terraform(model: &mut Model, text: &str) {
                 // Actually: split on " gives: empty, type, space, name, rest
             }
             // Simpler: find the two quoted strings
-            if let (Some(rt), remaining) = extract_tf_string(rest) {
-                if let (Some(rn), _) = extract_tf_string(remaining) {
-                    let (kind, technology, tags) = classify_tf_resource(&rt);
-                    if let Some(k) = kind {
-                        let el_id = format!("tf.{}", slugify(&rn));
-                        let mut el = Element::new(&el_id, k, &rn);
-                        el.technology = Some(technology);
-                        mark_inferred(&mut el, SCANNER, None);
-                        el.tags.push("terraform".into());
-                        for tag in tags {
-                            el.tags.push(tag.into());
-                        }
-                        el.description = Some(format!("Terraform: {}", rt));
-                        model.add_element(el);
+            if let (Some(rt), remaining) = extract_tf_string(rest)
+                && let (Some(rn), _) = extract_tf_string(remaining)
+            {
+                let (kind, technology, tags) = classify_tf_resource(&rt);
+                if let Some(k) = kind {
+                    let el_id = format!("tf.{}", slugify(&rn));
+                    let mut el = Element::new(&el_id, k, &rn);
+                    el.technology = Some(technology);
+                    mark_inferred(&mut el, SCANNER, None);
+                    el.tags.push("terraform".into());
+                    for tag in tags {
+                        el.tags.push(tag.into());
                     }
+                    el.description = Some(format!("Terraform: {}", rt));
+                    model.add_element(el);
                 }
             }
             pos = start + 1;
@@ -325,12 +325,11 @@ fn scan_openapi(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     for entry in iter_source_files(root, config, Some(5)) {
         let path = entry.path();
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if name.starts_with("openapi") || name.starts_with("swagger") {
-            if let Ok(text) = std::fs::read_to_string(path) {
-                if text.contains("openapi") || text.contains("swagger") {
-                    parse_openapi(model, &text, path, root);
-                }
-            }
+        if (name.starts_with("openapi") || name.starts_with("swagger"))
+            && let Ok(text) = std::fs::read_to_string(path)
+            && (text.contains("openapi") || text.contains("swagger"))
+        {
+            parse_openapi(model, &text, path, root);
         }
     }
 }
@@ -435,18 +434,22 @@ Resources:
         parse_cft(&mut model, yaml);
         assert!(model.elements.contains_key("cft.paymentfunction"));
         assert!(model.elements.contains_key("cft.orderstable"));
-        assert!(model
-            .elements
-            .get("cft.orderstable")
-            .unwrap()
-            .tags
-            .contains(&"database".to_string()));
-        assert!(model
-            .elements
-            .get("cft.paymentqueue")
-            .unwrap()
-            .tags
-            .contains(&"messaging".to_string()));
+        assert!(
+            model
+                .elements
+                .get("cft.orderstable")
+                .unwrap()
+                .tags
+                .contains(&"database".to_string())
+        );
+        assert!(
+            model
+                .elements
+                .get("cft.paymentqueue")
+                .unwrap()
+                .tags
+                .contains(&"messaging".to_string())
+        );
     }
 
     #[test]
@@ -469,12 +472,14 @@ resource "aws_sqs_queue" "notifications" {
         parse_terraform(&mut model, tf);
         assert!(model.elements.contains_key("tf.api"));
         assert!(model.elements.contains_key("tf.orders"));
-        assert!(model
-            .elements
-            .get("tf.orders")
-            .unwrap()
-            .tags
-            .contains(&"database".to_string()));
+        assert!(
+            model
+                .elements
+                .get("tf.orders")
+                .unwrap()
+                .tags
+                .contains(&"database".to_string())
+        );
     }
 
     #[test]
@@ -490,20 +495,24 @@ resource "google_sql_database_instance" "db" {
         let mut model = Model::default();
         parse_terraform(&mut model, tf);
         assert!(model.elements.contains_key("tf.api"));
-        assert!(model
-            .elements
-            .get("tf.api")
-            .unwrap()
-            .technology
-            .as_ref()
-            .unwrap()
-            .contains("Cloud Run"));
-        assert!(model
-            .elements
-            .get("tf.db")
-            .unwrap()
-            .tags
-            .contains(&"database".to_string()));
+        assert!(
+            model
+                .elements
+                .get("tf.api")
+                .unwrap()
+                .technology
+                .as_ref()
+                .unwrap()
+                .contains("Cloud Run")
+        );
+        assert!(
+            model
+                .elements
+                .get("tf.db")
+                .unwrap()
+                .tags
+                .contains(&"database".to_string())
+        );
     }
 
     #[test]

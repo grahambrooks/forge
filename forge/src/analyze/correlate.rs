@@ -446,15 +446,19 @@ mod tests {
         run(&mut model);
 
         // Stale inferred edge is gone.
-        assert!(!model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "api" && r.to == "_inferred_postgresql"));
+        assert!(
+            !model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "api" && r.to == "_inferred_postgresql")
+        );
         // Concrete edge replaces it.
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "api" && r.to == "postgres"));
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "api" && r.to == "postgres")
+        );
     }
 
     #[test]
@@ -521,10 +525,12 @@ mod tests {
 
         run(&mut model);
 
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "api" && r.to == "cache" && r.label == "uses (REDIS_URL)"));
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "api" && r.to == "cache" && r.label == "uses (REDIS_URL)")
+        );
     }
 
     #[test]
@@ -585,16 +591,22 @@ mod tests {
         assert!(env.tags.iter().any(|t| t == "inferred"));
 
         // Stage → env edge
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "deploy.prod-job" && r.to == "env.prod" && r.label == "deploys to"));
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "deploy.prod-job"
+                    && r.to == "env.prod"
+                    && r.label == "deploys to")
+        );
 
         // Env → deployment edge
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "env.prod" && r.to == "k8s.prod.api" && r.label == "hosts"));
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "env.prod" && r.to == "k8s.prod.api" && r.label == "hosts")
+        );
     }
 
     #[test]
@@ -609,10 +621,12 @@ mod tests {
         run(&mut model);
 
         assert!(model.elements.contains_key("env.staging"));
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "deploy.staging-job" && r.to == "env.staging"));
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "deploy.staging-job" && r.to == "env.staging")
+        );
     }
 
     #[test]

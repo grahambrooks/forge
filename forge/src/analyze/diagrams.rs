@@ -20,7 +20,7 @@ use crate::import;
 use crate::model::*;
 
 use super::provenance::mark_inferred;
-use super::{slugify, AnalyzeConfig};
+use super::{AnalyzeConfig, slugify};
 
 const DIAGRAM_EXTS: &[&str] = &["puml", "plantuml", "iuml", "mmd", "mermaid"];
 const SCANNER_NAME: &str = "diagrams";
@@ -41,11 +41,11 @@ pub fn scan(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
                 }
                 continue;
             }
-            if ext == "md" || ext == "markdown" {
-                if let Ok(text) = std::fs::read_to_string(path) {
-                    for (idx, block) in extract_mermaid_blocks(&text).into_iter().enumerate() {
-                        import_text_into_model(model, &block, &mark_block(path, idx));
-                    }
+            if (ext == "md" || ext == "markdown")
+                && let Ok(text) = std::fs::read_to_string(path)
+            {
+                for (idx, block) in extract_mermaid_blocks(&text).into_iter().enumerate() {
+                    import_text_into_model(model, &block, &mark_block(path, idx));
                 }
             }
         }
@@ -82,10 +82,10 @@ fn import_text_into_model(model: &mut Model, text: &str, source: &Path) {
     // Second pass: rewrite parent and children references to the new ids.
     for (orig_id, new_id) in &id_map {
         if let Some(el) = model.elements.get_mut(new_id) {
-            if let Some(p) = el.parent.as_ref() {
-                if let Some(mapped) = id_map.get(p) {
-                    el.parent = Some(mapped.clone());
-                }
+            if let Some(p) = el.parent.as_ref()
+                && let Some(mapped) = id_map.get(p)
+            {
+                el.parent = Some(mapped.clone());
             }
             el.children = el
                 .children
@@ -198,14 +198,18 @@ mod tests {
         };
         scan(&mut model, dir.path(), &cfg);
 
-        assert!(model
-            .elements
-            .values()
-            .any(|el| el.name == "Customer" && el.kind == ElementKind::Person));
-        assert!(model
-            .elements
-            .values()
-            .any(|el| el.name == "Payments" && el.kind == ElementKind::System));
+        assert!(
+            model
+                .elements
+                .values()
+                .any(|el| el.name == "Customer" && el.kind == ElementKind::Person)
+        );
+        assert!(
+            model
+                .elements
+                .values()
+                .any(|el| el.name == "Payments" && el.kind == ElementKind::System)
+        );
         assert_eq!(model.relationships.len(), 1);
         assert_eq!(model.relationships[0].label, "makes payments");
     }

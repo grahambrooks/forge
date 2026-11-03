@@ -13,7 +13,7 @@
 use std::path::PathBuf;
 
 use super::merge;
-use super::{analyze, AnalyzeConfig};
+use super::{AnalyzeConfig, analyze};
 use crate::model::ElementKind;
 use crate::parser;
 
@@ -98,10 +98,11 @@ fn python_fastapi_fixture() {
 
     // MongoDB URL in source → inferred infra container and relationship.
     assert!(m.elements.contains_key("_inferred_mongodb"));
-    assert!(m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "catalog" && r.to == "_inferred_mongodb"));
+    assert!(
+        m.relationships
+            .iter()
+            .any(|r| r.frm == "catalog" && r.to == "_inferred_mongodb")
+    );
 }
 
 #[test]
@@ -122,14 +123,16 @@ fn cargo_monorepo_fixture() {
     // Path-prefix attribution: worker source with redis literal → inferred
     // redis container linked to worker, not api.
     assert!(m.elements.contains_key("_inferred_redis"));
-    assert!(m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "worker" && r.to == "_inferred_redis"));
-    assert!(!m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "api" && r.to == "_inferred_redis"));
+    assert!(
+        m.relationships
+            .iter()
+            .any(|r| r.frm == "worker" && r.to == "_inferred_redis")
+    );
+    assert!(
+        !m.relationships
+            .iter()
+            .any(|r| r.frm == "api" && r.to == "_inferred_redis")
+    );
 }
 
 #[test]
@@ -190,10 +193,11 @@ fn pipeline_env_fixture_links_stages_k8s_and_db() {
 
     // And the stale _inferred_postgresql edge semantic.rs would otherwise
     // produce should be gone, since the reader now has a concrete target.
-    assert!(!m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "billing" && r.to.starts_with("_inferred_")));
+    assert!(
+        !m.relationships
+            .iter()
+            .any(|r| r.frm == "billing" && r.to.starts_with("_inferred_"))
+    );
 
     // 2. Pipeline-env correlation: the deploy workflow has `staging` and
     //    `prod` stages. Each becomes an Environment element and gets a
@@ -202,22 +206,25 @@ fn pipeline_env_fixture_links_stages_k8s_and_db() {
     assert!(m.elements.contains_key("env.staging"));
     assert!(m.elements.contains_key("env.prod"));
 
-    assert!(m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "deploy.deploy-staging"
-            && r.to == "env.staging"
-            && r.label == "deploys to"));
-    assert!(m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "deploy.deploy-prod" && r.to == "env.prod" && r.label == "deploys to"));
+    assert!(
+        m.relationships
+            .iter()
+            .any(|r| r.frm == "deploy.deploy-staging"
+                && r.to == "env.staging"
+                && r.label == "deploys to")
+    );
+    assert!(
+        m.relationships.iter().any(|r| r.frm == "deploy.deploy-prod"
+            && r.to == "env.prod"
+            && r.label == "deploys to")
+    );
 
     // env.prod hosts k8s.prod.billing (namespace match).
-    assert!(m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "env.prod" && r.to == "k8s.prod.billing" && r.label == "hosts"));
+    assert!(
+        m.relationships
+            .iter()
+            .any(|r| r.frm == "env.prod" && r.to == "k8s.prod.billing" && r.label == "hosts")
+    );
 }
 
 #[test]
@@ -250,10 +257,11 @@ fn k8s_deployment_env_reaches_container_and_correlate() {
     // Correlate should NOT emit a self-edge (orders reads and provides the
     // same vars), and without a separate provider the orders container has
     // no `uses (...)` edge to anywhere.
-    assert!(!m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "orders" && r.to == "orders"));
+    assert!(
+        !m.relationships
+            .iter()
+            .any(|r| r.frm == "orders" && r.to == "orders")
+    );
 }
 
 #[test]
@@ -356,10 +364,12 @@ forge "monorepo" {
     assert!(existing.elements.contains_key("user"));
 
     // User relationship to a user element survives.
-    assert!(existing
-        .relationships
-        .iter()
-        .any(|r| r.frm == "user" && r.to == "billing"));
+    assert!(
+        existing
+            .relationships
+            .iter()
+            .any(|r| r.frm == "user" && r.to == "billing")
+    );
 
     // The stale inferred container is gone, along with the relationship
     // that pointed at it.

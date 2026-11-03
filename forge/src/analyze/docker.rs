@@ -7,7 +7,7 @@ use super::iter_source_files;
 use crate::model::*;
 
 use super::provenance::mark_inferred;
-use super::{slugify, AnalyzeConfig};
+use super::{AnalyzeConfig, slugify};
 
 const SCANNER: &str = "docker";
 
@@ -22,10 +22,10 @@ fn scan_dockerfiles(model: &mut Model, root: &Path, config: &AnalyzeConfig) {
     for entry in iter_source_files(root, config, None) {
         let path = entry.path();
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if name == "Dockerfile" || name.starts_with("Dockerfile.") {
-            if let Ok(text) = std::fs::read_to_string(path) {
-                parse_dockerfile(model, path, &text, root);
-            }
+        if (name == "Dockerfile" || name.starts_with("Dockerfile."))
+            && let Ok(text) = std::fs::read_to_string(path)
+        {
+            parse_dockerfile(model, path, &text, root);
         }
     }
 }
@@ -171,10 +171,10 @@ fn scan_compose(model: &mut Model, root: &Path) {
         "compose.yaml",
     ] {
         let path = root.join(name);
-        if path.is_file() {
-            if let Ok(text) = std::fs::read_to_string(&path) {
-                parse_compose(model, &text);
-            }
+        if path.is_file()
+            && let Ok(text) = std::fs::read_to_string(&path)
+        {
+            parse_compose(model, &text);
         }
     }
 }
@@ -375,14 +375,18 @@ services:
         assert_eq!(redis.technology.as_deref(), Some("Redis"));
 
         // api depends on db and redis
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "api" && r.to == "db"));
-        assert!(model
-            .relationships
-            .iter()
-            .any(|r| r.frm == "api" && r.to == "redis"));
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "api" && r.to == "db")
+        );
+        assert!(
+            model
+                .relationships
+                .iter()
+                .any(|r| r.frm == "api" && r.to == "redis")
+        );
     }
 
     #[test]

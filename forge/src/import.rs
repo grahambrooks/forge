@@ -264,10 +264,10 @@ fn parse_mermaid_node(s: &str) -> (String, String) {
     // `-->|label|` lands the leading `|label|` on the right-hand node;
     // strip it so the id doesn't end up as "|label| B".
     let mut s = s.trim();
-    if let Some(rest) = s.strip_prefix('|') {
-        if let Some(end) = rest.find('|') {
-            s = rest[end + 1..].trim_start();
-        }
+    if let Some(rest) = s.strip_prefix('|')
+        && let Some(end) = rest.find('|')
+    {
+        s = rest[end + 1..].trim_start();
     }
     let s = s.trim_end_matches('|');
     if let Some(bracket) = s.find('[') {

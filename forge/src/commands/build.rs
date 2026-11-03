@@ -34,10 +34,10 @@ pub fn cmd_build(
     fs::create_dir_all(out).unwrap_or_else(|e| die(&format!("creating output dir: {}", e)));
 
     for v in &model.views {
-        if let Some(filter) = view {
-            if v.key != filter {
-                continue;
-            }
+        if let Some(filter) = view
+            && v.key != filter
+        {
+            continue;
         }
 
         let static_svg = render::render_view(&model, v, style);

@@ -26,12 +26,16 @@ fn payments_missing_descriptions_on_databases() {
         .filter(|v| v.rule == "missing-descriptions")
         .collect();
     assert_eq!(missing_desc.len(), 2);
-    assert!(missing_desc
-        .iter()
-        .any(|v| v.element_id.as_deref() == Some("payments.db")));
-    assert!(missing_desc
-        .iter()
-        .any(|v| v.element_id.as_deref() == Some("payments.cache")));
+    assert!(
+        missing_desc
+            .iter()
+            .any(|v| v.element_id.as_deref() == Some("payments.db"))
+    );
+    assert!(
+        missing_desc
+            .iter()
+            .any(|v| v.element_id.as_deref() == Some("payments.cache"))
+    );
 }
 
 #[test]
@@ -72,9 +76,11 @@ fn detects_missing_description() {
     let mut model = Model::default();
     model.add_element(Element::new("svc", ElementKind::Container, "My Service"));
     let violations = check(&model, Severity::Warning);
-    assert!(violations
-        .iter()
-        .any(|v| v.rule == "missing-descriptions" && v.element_id.as_deref() == Some("svc")));
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule == "missing-descriptions" && v.element_id.as_deref() == Some("svc"))
+    );
 }
 
 #[test]
@@ -84,9 +90,11 @@ fn detects_missing_technology() {
     el.description = Some("A service".into());
     model.add_element(el);
     let violations = check(&model, Severity::Warning);
-    assert!(violations
-        .iter()
-        .any(|v| v.rule == "missing-technology" && v.element_id.as_deref() == Some("svc")));
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule == "missing-technology" && v.element_id.as_deref() == Some("svc"))
+    );
 }
 
 #[test]
@@ -96,9 +104,11 @@ fn detects_orphaned_element() {
     el.description = Some("No friends".into());
     model.add_element(el);
     let violations = check(&model, Severity::Info);
-    assert!(violations
-        .iter()
-        .any(|v| v.rule == "orphaned-elements" && v.element_id.as_deref() == Some("lonely")));
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule == "orphaned-elements" && v.element_id.as_deref() == Some("lonely"))
+    );
 }
 
 #[test]
@@ -143,9 +153,11 @@ fn detects_database_direct_access() {
         order: None,
     });
     let violations = check(&model, Severity::Error);
-    assert!(violations
-        .iter()
-        .any(|v| v.rule == "database-direct-access"));
+    assert!(
+        violations
+            .iter()
+            .any(|v| v.rule == "database-direct-access")
+    );
 }
 
 #[test]

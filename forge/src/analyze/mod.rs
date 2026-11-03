@@ -39,7 +39,7 @@ pub(crate) fn iter_source_files<'a>(
     root: &Path,
     config: &'a AnalyzeConfig,
     max_depth: Option<usize>,
-) -> impl Iterator<Item = DirEntry> + 'a {
+) -> impl Iterator<Item = DirEntry> + 'a + use<'a> {
     let mut walker = WalkDir::new(root);
     if let Some(d) = max_depth {
         walker = walker.max_depth(d);

@@ -343,7 +343,9 @@ forge "Test" {
 
     #[test]
     fn if_true_includes_block() {
-        env::set_var("FORGE_TEST_ENV", "production");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::set_var("FORGE_TEST_ENV", "production") };
         let input = r#"
 !if env("FORGE_TEST_ENV") == "production" {
   included_content
@@ -353,12 +355,16 @@ rest
         let result = preprocess(input, Path::new(".")).unwrap();
         assert!(result.contains("included_content"));
         assert!(result.contains("rest"));
-        env::remove_var("FORGE_TEST_ENV");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::remove_var("FORGE_TEST_ENV") };
     }
 
     #[test]
     fn if_false_excludes_block() {
-        env::remove_var("FORGE_TEST_MISSING");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::remove_var("FORGE_TEST_MISSING") };
         let input = r#"
 !if env("FORGE_TEST_MISSING") == "yes" {
   should_not_appear
@@ -372,11 +378,15 @@ rest
 
     #[test]
     fn if_truthy_env_var() {
-        env::set_var("FORGE_TEST_TRUTHY", "1");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::set_var("FORGE_TEST_TRUTHY", "1") };
         let input = "!if env(\"FORGE_TEST_TRUTHY\") {\n  visible\n}\n";
         let result = preprocess(input, Path::new(".")).unwrap();
         assert!(result.contains("visible"));
-        env::remove_var("FORGE_TEST_TRUTHY");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::remove_var("FORGE_TEST_TRUTHY") };
     }
 
     #[test]
@@ -390,13 +400,17 @@ rest
 
     #[test]
     fn evaluate_condition_eq() {
-        env::set_var("FORGE_COND_TEST", "prod");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::set_var("FORGE_COND_TEST", "prod") };
         assert!(evaluate_condition(r#"env("FORGE_COND_TEST") == "prod""#));
         assert!(!evaluate_condition(
             r#"env("FORGE_COND_TEST") == "staging""#
         ));
         assert!(evaluate_condition(r#"env("FORGE_COND_TEST") != "staging""#));
-        env::remove_var("FORGE_COND_TEST");
+        // SAFETY: test-only; std serialises its own env access and this variable
+        // name is unique to this test, so no other code reads or writes it.
+        unsafe { env::remove_var("FORGE_COND_TEST") };
     }
 
     #[test]

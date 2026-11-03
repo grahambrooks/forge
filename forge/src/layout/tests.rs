@@ -17,7 +17,7 @@ fn system_context_layout() {
     // 1 actor (Customer) + 1 system (Payment Service)
     assert_eq!(lo.nodes.len(), 2);
     // collapsed relationships (customer->payments + internal self-edge)
-    assert!(lo.edges.len() >= 1);
+    assert!(!lo.edges.is_empty());
     assert!(lo.width > 0.0);
     assert!(lo.height > 0.0);
 }
@@ -42,10 +42,11 @@ fn container_layout() {
 #[test]
 fn container_layout_has_database() {
     let lo = payments_layout("Containers");
-    assert!(lo
-        .nodes
-        .iter()
-        .any(|n| n.tags.contains(&"database".to_string())));
+    assert!(
+        lo.nodes
+            .iter()
+            .any(|n| n.tags.contains(&"database".to_string()))
+    );
 }
 
 #[test]

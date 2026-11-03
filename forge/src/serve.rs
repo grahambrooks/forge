@@ -4,8 +4,8 @@
 //! `forge serve` — same as watch but also serves the site on localhost with live reload
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use notify::{Event, RecursiveMode, Watcher};
@@ -296,13 +296,12 @@ fn inject_into_html_files(dir: &Path, script: &str) {
         let path = entry.path();
         if path.is_dir() {
             inject_into_html_files(&path, script);
-        } else if path.extension().and_then(|e| e.to_str()) == Some("html") {
-            if let Ok(html) = std::fs::read_to_string(&path) {
-                if !html.contains("__reload") {
-                    let patched = html.replace("</body>", &format!("{}\n</body>", script));
-                    let _ = std::fs::write(&path, patched);
-                }
-            }
+        } else if path.extension().and_then(|e| e.to_str()) == Some("html")
+            && let Ok(html) = std::fs::read_to_string(&path)
+            && !html.contains("__reload")
+        {
+            let patched = html.replace("</body>", &format!("{}\n</body>", script));
+            let _ = std::fs::write(&path, patched);
         }
     }
 }

@@ -300,14 +300,14 @@ pub(super) fn render_view_page(
     main.push_str(&format!("<h1>{}</h1>", esc(view_title)));
 
     // Diff legend if changes exist
-    if let Some(dr) = diff {
-        if !dr.is_empty() {
-            main.push_str(r#"<div class="forge-diff-legend">"#);
-            main.push_str(r#"<span class="forge-diff--added">&#9632; Added</span> "#);
-            main.push_str(r#"<span class="forge-diff--modified">&#9632; Modified</span> "#);
-            main.push_str(r#"<span class="forge-diff--removed">&#9632; Removed</span>"#);
-            main.push_str("</div>");
-        }
+    if let Some(dr) = diff
+        && !dr.is_empty()
+    {
+        main.push_str(r#"<div class="forge-diff-legend">"#);
+        main.push_str(r#"<span class="forge-diff--added">&#9632; Added</span> "#);
+        main.push_str(r#"<span class="forge-diff--modified">&#9632; Modified</span> "#);
+        main.push_str(r#"<span class="forge-diff--removed">&#9632; Removed</span>"#);
+        main.push_str("</div>");
     }
 
     main.push_str(&format!(r#"<div class="forge-diagram-wrap">{}</div>"#, svg));
@@ -547,7 +547,7 @@ pub(super) fn render_doc_page(
 }
 
 pub(super) fn render_markdown(md: &str) -> String {
-    use pulldown_cmark::{html, Options, Parser};
+    use pulldown_cmark::{Options, Parser, html};
     let opts = Options::ENABLE_TABLES
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_TASKLISTS

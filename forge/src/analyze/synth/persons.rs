@@ -3,7 +3,7 @@
 
 use crate::model::*;
 
-use super::{unique_id, SCANNER};
+use super::{SCANNER, unique_id};
 use crate::analyze::provenance::mark_inferred;
 
 /// Add a User and/or Developer actor when the model has evidence for them.

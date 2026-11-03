@@ -13,11 +13,11 @@ pub(super) fn inject_diff_highlights(svg: &str, diff: &DiffResult) -> String {
     }
     for id in &diff.modified_ids {
         let needle = format!(r#"data-id="{}""#, id);
-        if let Some(pos) = result.find(&needle) {
-            if let Some(class_start) = result[..pos].rfind("class=\"") {
-                let insert_at = class_start + 7;
-                result.insert_str(insert_at, "forge-diff-highlight--modified ");
-            }
+        if let Some(pos) = result.find(&needle)
+            && let Some(class_start) = result[..pos].rfind("class=\"")
+        {
+            let insert_at = class_start + 7;
+            result.insert_str(insert_at, "forge-diff-highlight--modified ");
         }
     }
     // Inject diff CSS into the SVG <style> block

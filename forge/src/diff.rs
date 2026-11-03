@@ -388,9 +388,10 @@ mod tests {
     use super::*;
 
     fn make_model(name: &str) -> Model {
-        let mut m = Model::default();
-        m.name = name.into();
-        m
+        Model {
+            name: name.into(),
+            ..Default::default()
+        }
     }
 
     #[test]

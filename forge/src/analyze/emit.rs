@@ -573,8 +573,10 @@ mod tests {
 
     #[test]
     fn roundtrip_data_classes() {
-        let mut model = Model::default();
-        model.name = "Classified".into();
+        let mut model = Model {
+            name: "Classified".into(),
+            ..Default::default()
+        };
         let mut db = Element::new("db", ElementKind::Container, "Ledger DB");
         db.technology = Some("PostgreSQL".into());
         db.tags.push("database".into());
@@ -598,8 +600,10 @@ mod tests {
 
     #[test]
     fn emit_minimal_model() {
-        let mut model = Model::default();
-        model.name = "Test".into();
+        let mut model = Model {
+            name: "Test".into(),
+            ..Default::default()
+        };
         let mut el = Element::new("svc", ElementKind::Container, "My Service");
         el.technology = Some("Rust".into());
         el.description = Some("A service".into());
@@ -614,8 +618,10 @@ mod tests {
 
     #[test]
     fn emits_strategy_block_with_trunk_branch() {
-        let mut model = Model::default();
-        model.name = "svc".into();
+        let mut model = Model {
+            name: "svc".into(),
+            ..Default::default()
+        };
         let mut trunk = Element::new("github-flow.trunk", ElementKind::Branch, "main");
         trunk.parent = Some("github-flow".into());
         trunk
@@ -637,8 +643,10 @@ mod tests {
 
     #[test]
     fn roundtrips_git_flow_strategy_through_emit_and_parse() {
-        let mut model = Model::default();
-        model.name = "svc".into();
+        let mut model = Model {
+            name: "svc".into(),
+            ..Default::default()
+        };
 
         let mut trunk = Element::new("git-flow.trunk", ElementKind::Branch, "main");
         trunk.parent = Some("git-flow".into());
@@ -688,8 +696,10 @@ mod tests {
 
     #[test]
     fn emit_pipeline_model() {
-        let mut model = Model::default();
-        model.name = "CI".into();
+        let mut model = Model {
+            name: "CI".into(),
+            ..Default::default()
+        };
         model.add_element(Element::new("ci", ElementKind::Pipeline, "CI Pipeline"));
         let mut stage = Element::new("ci.build", ElementKind::Stage, "Build");
         stage.parent = Some("ci".into());

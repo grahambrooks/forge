@@ -20,7 +20,7 @@ use crate::model::*;
 
 use super::container_index::ContainerIndex;
 use super::provenance::mark_inferred;
-use super::{slugify, AnalyzeConfig};
+use super::{AnalyzeConfig, slugify};
 
 const SCANNER: &str = "code";
 
@@ -73,10 +73,10 @@ pub fn scan(model: &mut Model, index: &mut ContainerIndex, root: &Path, config: 
             continue;
         }
 
-        if let Some(dir) = path.parent() {
-            if workspace_handled.contains(dir) {
-                continue;
-            }
+        if let Some(dir) = path.parent()
+            && workspace_handled.contains(dir)
+        {
+            continue;
         }
 
         handle_manifest_file(model, index, path, &text, root);
@@ -327,11 +327,7 @@ fn detect_cargo_workspace(text: &str, parent: &Path) -> Option<Vec<PathBuf>> {
         let Some(glob) = m.as_str() else { continue };
         expand_glob(parent, glob, &mut out);
     }
-    if out.is_empty() {
-        None
-    } else {
-        Some(out)
-    }
+    if out.is_empty() { None } else { Some(out) }
 }
 
 fn detect_npm_workspace(text: &str, parent: &Path) -> Option<Vec<PathBuf>> {
@@ -351,11 +347,7 @@ fn detect_npm_workspace(text: &str, parent: &Path) -> Option<Vec<PathBuf>> {
             expand_glob(parent, s, &mut out);
         }
     }
-    if out.is_empty() {
-        None
-    } else {
-        Some(out)
-    }
+    if out.is_empty() { None } else { Some(out) }
 }
 
 /// Expand a workspace glob relative to `base`. Supports the common patterns:

@@ -331,15 +331,15 @@ fn main() {
             present,
         } => cmd_serve(source, out, style, port, baseline, present),
         Commands::Mcp { source } => {
-            if let Some(path) = &source {
-                if !path.exists() {
-                    eprintln!(
-                        "Warning: source {} does not exist; starting with empty model.",
-                        path.display()
-                    );
-                    mcp::run(None);
-                    return;
-                }
+            if let Some(path) = &source
+                && !path.exists()
+            {
+                eprintln!(
+                    "Warning: source {} does not exist; starting with empty model.",
+                    path.display()
+                );
+                mcp::run(None);
+                return;
             }
             mcp::run(source);
         }

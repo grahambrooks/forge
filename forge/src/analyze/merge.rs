@@ -137,10 +137,12 @@ mod tests {
         assert!(existing.elements.contains_key("new-service"));
         // The stale relationship was dropped because its target vanished.
         assert!(existing.relationships.iter().any(|r| r.to == "new-service"));
-        assert!(!existing
-            .relationships
-            .iter()
-            .any(|r| r.to == "stale-service"));
+        assert!(
+            !existing
+                .relationships
+                .iter()
+                .any(|r| r.to == "stale-service")
+        );
     }
 
     #[test]

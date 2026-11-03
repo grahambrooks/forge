@@ -107,10 +107,10 @@ pub fn evaluate_rules(rules: &[CustomRule], model: &Model) -> Vec<Violation> {
                     _ => None,
                 };
                 for el in model.elements.values() {
-                    if let Some(tk) = target_kind {
-                        if el.kind != tk {
-                            continue;
-                        }
+                    if let Some(tk) = target_kind
+                        && el.kind != tk
+                    {
+                        continue;
                     }
                     if check_conditions(&rule.conditions, el, model) {
                         let msg = render_message(&rule.message_template, el, model);
@@ -228,11 +228,11 @@ fn eval_string_comparison(expr: &str, value: &str) -> bool {
 fn check_rel_conditions(conditions: &[String], rel: &Relationship, model: &Model) -> bool {
     conditions.iter().all(|c| {
         let c = c.trim();
-        if let Some(rest) = c.strip_prefix("source.kind") {
-            if let Some(source) = model.elements.get(&rel.frm) {
-                let kind_str = format!("{:?}", source.kind).to_lowercase();
-                return eval_string_comparison(rest.trim(), &kind_str);
-            }
+        if let Some(rest) = c.strip_prefix("source.kind")
+            && let Some(source) = model.elements.get(&rel.frm)
+        {
+            let kind_str = format!("{:?}", source.kind).to_lowercase();
+            return eval_string_comparison(rest.trim(), &kind_str);
         }
         if let Some(rest) = c.strip_prefix("technology") {
             let tech = rel.technology.as_deref().unwrap_or("");

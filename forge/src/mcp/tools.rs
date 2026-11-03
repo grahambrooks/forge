@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use super::{element_json, element_kind_counts, load_model, McpServer};
+use super::{McpServer, element_json, element_kind_counts, load_model};
 use crate::analyze;
 use crate::check;
 use crate::layout;
@@ -219,20 +219,20 @@ impl McpServer {
             .elements
             .values()
             .filter(|el| {
-                if let Some(k) = kind {
-                    if format!("{:?}", el.kind).to_lowercase() != k.to_lowercase() {
-                        return false;
-                    }
+                if let Some(k) = kind
+                    && format!("{:?}", el.kind).to_lowercase() != k.to_lowercase()
+                {
+                    return false;
                 }
-                if let Some(t) = tag {
-                    if !el.tags.iter().any(|et| et.eq_ignore_ascii_case(t)) {
-                        return false;
-                    }
+                if let Some(t) = tag
+                    && !el.tags.iter().any(|et| et.eq_ignore_ascii_case(t))
+                {
+                    return false;
                 }
-                if let Some(n) = name {
-                    if !el.name.to_lowercase().contains(&n.to_lowercase()) {
-                        return false;
-                    }
+                if let Some(n) = name
+                    && !el.name.to_lowercase().contains(&n.to_lowercase())
+                {
+                    return false;
                 }
                 true
             })

@@ -131,15 +131,15 @@ pub(super) fn check_dependency_cycles(model: &Model, violations: &mut Vec<Violat
     let mut path = Vec::new();
 
     for &node in &relevant {
-        if !visited.contains(node) {
-            if let Some(cycle) = dfs_cycle(node, &adj, &mut visited, &mut on_stack, &mut path) {
-                violations.push(Violation {
-                    rule: "dependency-cycles",
-                    severity: Severity::Error,
-                    message: format!("Circular dependency detected: {}", cycle.join(" → ")),
-                    element_id: Some(cycle[0].to_string()),
-                });
-            }
+        if !visited.contains(node)
+            && let Some(cycle) = dfs_cycle(node, &adj, &mut visited, &mut on_stack, &mut path)
+        {
+            violations.push(Violation {
+                rule: "dependency-cycles",
+                severity: Severity::Error,
+                message: format!("Circular dependency detected: {}", cycle.join(" → ")),
+                element_id: Some(cycle[0].to_string()),
+            });
         }
     }
 }
@@ -190,25 +190,25 @@ pub(super) fn check_database_direct_access(model: &Model, violations: &mut Vec<V
         if !db_ids.contains(r.to.as_str()) {
             continue;
         }
-        if let Some(source) = model.elements.get(&r.frm) {
-            if matches!(source.kind, ElementKind::Person | ElementKind::System) {
-                let db = model
-                    .elements
-                    .get(&r.to)
-                    .map(|e| e.name.as_str())
-                    .unwrap_or(&r.to);
-                violations.push(Violation {
-                    rule: "database-direct-access",
-                    severity: Severity::Error,
-                    message: format!(
-                        "{} '{}' accesses database '{}' directly (should go through a service layer)",
-                        kind_name(source.kind),
-                        source.name,
-                        db
-                    ),
-                    element_id: Some(r.frm.clone()),
-                });
-            }
+        if let Some(source) = model.elements.get(&r.frm)
+            && matches!(source.kind, ElementKind::Person | ElementKind::System)
+        {
+            let db = model
+                .elements
+                .get(&r.to)
+                .map(|e| e.name.as_str())
+                .unwrap_or(&r.to);
+            violations.push(Violation {
+                rule: "database-direct-access",
+                severity: Severity::Error,
+                message: format!(
+                    "{} '{}' accesses database '{}' directly (should go through a service layer)",
+                    kind_name(source.kind),
+                    source.name,
+                    db
+                ),
+                element_id: Some(r.frm.clone()),
+            });
         }
     }
 }

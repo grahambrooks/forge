@@ -2,7 +2,7 @@ use crate::model::*;
 
 use super::run;
 use super::tech_stack::{
-    classify_tech_layer, LAYER_APP, LAYER_INFRASTRUCTURE, LAYER_PERSISTENCE, LAYER_SERVICE,
+    LAYER_APP, LAYER_INFRASTRUCTURE, LAYER_PERSISTENCE, LAYER_SERVICE, classify_tech_layer,
 };
 
 fn container(id: &str, tech: &str) -> Element {
@@ -13,8 +13,10 @@ fn container(id: &str, tech: &str) -> Element {
 
 #[test]
 fn synthesizes_system_around_orphan_containers() {
-    let mut model = Model::default();
-    model.name = "example".into();
+    let mut model = Model {
+        name: "example".into(),
+        ..Default::default()
+    };
     model.add_element(container("api", "Rust / Axum"));
     model.add_element(container("db", "PostgreSQL"));
 
@@ -28,13 +30,15 @@ fn synthesizes_system_around_orphan_containers() {
     assert_eq!(systems.len(), 1);
     let sys = systems[0];
     assert_eq!(sys.children.len(), 2);
-    assert!(model
-        .elements
-        .get("api")
-        .unwrap()
-        .parent
-        .as_deref()
-        .is_some());
+    assert!(
+        model
+            .elements
+            .get("api")
+            .unwrap()
+            .parent
+            .as_deref()
+            .is_some()
+    );
 }
 
 #[test]
@@ -43,14 +47,18 @@ fn synthesizes_user_for_web_container() {
     model.add_element(container("api", "Python / Flask"));
     run(&mut model);
 
-    assert!(model
-        .elements
-        .values()
-        .any(|e| e.kind == ElementKind::Person && e.name == "User"));
-    assert!(model
-        .relationships
-        .iter()
-        .any(|r| r.label == "uses" && r.to == "api"));
+    assert!(
+        model
+            .elements
+            .values()
+            .any(|e| e.kind == ElementKind::Person && e.name == "User")
+    );
+    assert!(
+        model
+            .relationships
+            .iter()
+            .any(|r| r.label == "uses" && r.to == "api")
+    );
 }
 
 #[test]
@@ -62,16 +70,20 @@ fn synthesizes_developer_for_pipeline() {
 
     run(&mut model);
 
-    assert!(model
-        .elements
-        .values()
-        .any(|e| e.kind == ElementKind::Person && e.name == "Developer"));
+    assert!(
+        model
+            .elements
+            .values()
+            .any(|e| e.kind == ElementKind::Person && e.name == "Developer")
+    );
 }
 
 #[test]
 fn emits_default_views_for_present_kinds() {
-    let mut model = Model::default();
-    model.name = "example".into();
+    let mut model = Model {
+        name: "example".into(),
+        ..Default::default()
+    };
     model.add_element(container("api", "Go / Gin"));
     let mut p = Element::new("ci", ElementKind::Pipeline, "CI");
     p.tags.push("inferred".into());
@@ -88,8 +100,10 @@ fn emits_default_views_for_present_kinds() {
 
 #[test]
 fn synthesis_is_idempotent() {
-    let mut model = Model::default();
-    model.name = "example".into();
+    let mut model = Model {
+        name: "example".into(),
+        ..Default::default()
+    };
     model.add_element(container("api", "Rust / Axum"));
     run(&mut model);
     let before = (
@@ -129,8 +143,10 @@ fn does_not_wrap_when_system_already_exists() {
 
 #[test]
 fn synthesises_default_branching_strategy_when_none_exists() {
-    let mut model = Model::default();
-    model.name = "example".into();
+    let mut model = Model {
+        name: "example".into(),
+        ..Default::default()
+    };
     model.add_element(container("api", "Rust / Axum"));
 
     run(&mut model);
@@ -174,8 +190,10 @@ fn synthesises_default_branching_strategy_when_none_exists() {
 
 #[test]
 fn preserves_existing_branching_strategy() {
-    let mut model = Model::default();
-    model.name = "example".into();
+    let mut model = Model {
+        name: "example".into(),
+        ..Default::default()
+    };
     model.add_element(container("api", "Rust / Axum"));
 
     let mut trunk = Element::new("trunk-based.trunk", ElementKind::Branch, "main");

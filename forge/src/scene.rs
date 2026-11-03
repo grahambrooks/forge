@@ -5,9 +5,9 @@
 //! as theme roles so a host draws it in its own theme.
 
 use diagram_scene::{
-    route, Anchor, Badge, Cardinality, Container, ContainerKind, Dash, Edge, EdgeLabel, Font,
-    Legend, LegendEntry, Marker, Node, Paint, Pen, Point, Rect, Role, Scene, Seg, Shape, Style,
-    Text, TextLine, Weight,
+    Anchor, Badge, Cardinality, Container, ContainerKind, Dash, Edge, EdgeLabel, Font, Legend,
+    LegendEntry, Marker, Node, Paint, Pen, Point, Rect, Role, Scene, Seg, Shape, Style, Text,
+    TextLine, Weight, route,
 };
 
 use crate::layout::{Layout, LayoutEdge, LayoutNode};
@@ -393,7 +393,7 @@ fn edge(
 /// between the sides facing along the main axis, else the other axis,
 /// else arcing over or under.
 fn avoiding(from: Rect, to: Rect, others: &[Rect]) -> Vec<Seg> {
-    use diagram_scene::route::{port, Side};
+    use diagram_scene::route::{Side, port};
     let (a, b) = (from.center(), to.center());
     let horizontal = (b.x - a.x).abs() > (b.y - a.y).abs();
     let crosses = |path: &[Seg]| {
@@ -404,11 +404,7 @@ fn avoiding(from: Rect, to: Rect, others: &[Rect]) -> Vec<Seg> {
     };
     let arc = |side: f32, lift: f32| {
         let s = if horizontal {
-            if side < 0.0 {
-                Side::Top
-            } else {
-                Side::Bottom
-            }
+            if side < 0.0 { Side::Top } else { Side::Bottom }
         } else if side < 0.0 {
             Side::Left
         } else {

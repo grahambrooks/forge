@@ -1,9 +1,15 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # weekly, so new RustSec advisories surface without a push
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,49 +18,79 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Test
+  check:
+    name: fmt, clippy, test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forge
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+      # Installs the toolchain (and rustfmt/clippy) pinned in forge/rust-toolchain.toml.
+      - run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: forge
-      - name: Run tests
-        working-directory: forge
-        run: cargo test --all
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --all-features --locked
 
-  lint:
-    name: Lint
+  msrv:
+    name: msrv — rust-version is the toolchain we build with
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forge
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        with:
-          components: clippy, rustfmt
+      - name: rust-version and rust-toolchain.toml agree
+        id: floor
+        run: |
+          set -euo pipefail
+          declared=$(grep -m1 -E '^rust-version *=' Cargo.toml | cut -d'"' -f2)
+          pinned=$(grep -m1 -E '^channel *=' rust-toolchain.toml | cut -d'"' -f2)
+          echo "rust-version=$declared  channel=$pinned"
+          if [ "$declared" != "$pinned" ]; then
+            echo "::error::rust-version ($declared) and rust-toolchain.toml channel ($pinned) have drifted"
+            exit 1
+          fi
+          echo "version=$declared" >> "$GITHUB_OUTPUT"
+      - run: rustup toolchain install ${{ steps.floor.outputs.version }} --profile minimal
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: forge
-      - name: Check formatting
+      # `cargo +<floor>` explicitly, not bare `cargo`: rust-toolchain.toml would
+      # otherwise override whatever was installed and the job would test nothing.
+      - run: cargo +${{ steps.floor.outputs.version }} check --workspace --all-targets --all-features --locked
+
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
         working-directory: forge
-        run: cargo fmt -- --check
-      - name: Clippy
-        working-directory: forge
-        run: cargo clippy -- -D warnings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2.89.1
+        with:
+          tool: cargo-audit
+      # Honors .cargo/audit.toml (justified ignores only).
+      - run: cargo audit
 
   build-example:
     name: Build Example
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+      # Installs the toolchain pinned in forge/rust-toolchain.toml.
+      - run: rustup toolchain install
+        working-directory: forge
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: forge
       - name: Build forge
         working-directory: forge
-        run: cargo build --release
+        run: cargo build --release --locked
       - name: Build payments example
         working-directory: forge
         run: |
@@ -70,14 +106,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+      # Installs the toolchain pinned in forge/rust-toolchain.toml.
+      - run: rustup toolchain install
+        working-directory: forge
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: forge
       # The plugin's CLI tests drive this debug build.
       - name: Build forge
         working-directory: forge
-        run: cargo build
+        run: cargo build --locked
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
@@ -94,7 +132,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [test, lint]
+    needs: [check]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Build and run integration tests
@@ -103,7 +141,7 @@ jobs:
   install-test:
     name: "Install (${{ matrix.method }})"
     runs-on: ubuntu-latest
-    needs: [test, lint]
+    needs: [check]
     strategy:
       fail-fast: false
       matrix:

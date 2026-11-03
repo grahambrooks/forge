@@ -129,10 +129,11 @@ forge "Login" {
     assert!(ordered.contains(&("app.api", "app.db", 3)));
 
     // The unordered relationship from the model block is preserved
-    assert!(m
-        .relationships
-        .iter()
-        .any(|r| r.frm == "user" && r.to == "app.web" && r.order.is_none()));
+    assert!(
+        m.relationships
+            .iter()
+            .any(|r| r.frm == "user" && r.to == "app.web" && r.order.is_none())
+    );
 }
 
 #[test]
@@ -232,10 +233,11 @@ fn parse_stages() {
 fn parse_stage_links() {
     let m = payments_model();
     assert_eq!(m.stage_links.len(), 3);
-    assert!(m
-        .stage_links
-        .iter()
-        .any(|l| l.frm == "payments-ci.build" && l.to == "payments-ci.security"));
+    assert!(
+        m.stage_links
+            .iter()
+            .any(|l| l.frm == "payments-ci.build" && l.to == "payments-ci.security")
+    );
 }
 
 #[test]
@@ -378,11 +380,12 @@ fn parse_deployment_nodes() {
 
     // Check container instances
     let rds = deploy_nodes.iter().find(|e| e.name == "RDS").unwrap();
-    assert!(rds
-        .properties
-        .get("container_instances")
-        .unwrap()
-        .contains("payments.db"));
+    assert!(
+        rds.properties
+            .get("container_instances")
+            .unwrap()
+            .contains("payments.db")
+    );
 }
 
 #[test]
@@ -475,10 +478,11 @@ fn parse_data_model() {
     assert!(txn.owner.is_some());
 
     assert_eq!(m.data_relations.len(), 3);
-    assert!(m
-        .data_relations
-        .iter()
-        .any(|r| r.from_entity == "Customer" && r.to_entity == "Transaction"));
+    assert!(
+        m.data_relations
+            .iter()
+            .any(|r| r.from_entity == "Customer" && r.to_entity == "Transaction")
+    );
 }
 
 #[test]

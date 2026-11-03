@@ -11,7 +11,7 @@ use crate::model::{Catalog, CatalogProject, Model};
 use crate::parser;
 use crate::preprocess;
 
-use super::{generate, GenerateConfig};
+use super::{GenerateConfig, generate};
 
 /// Configuration for catalog site generation.
 pub struct CatalogGenerateConfig {

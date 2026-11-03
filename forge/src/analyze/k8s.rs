@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::model::*;
 
 use super::provenance::mark_inferred;
-use super::{iter_source_files, slugify, AnalyzeConfig};
+use super::{AnalyzeConfig, iter_source_files, slugify};
 
 const SCANNER: &str = "k8s";
 
@@ -143,24 +143,23 @@ fn parse_k8s_workload(
     // `docker.rs` enriches containers the code scanner already discovered.
     if !env_names.is_empty() {
         let container_id = slugify(name);
-        if container_id != node_id {
-            if let Some(container) = model.elements.get_mut(&container_id) {
-                if container.kind == ElementKind::Container {
-                    let mut merged: Vec<String> = container
-                        .properties
-                        .get("forge:env_provides")
-                        .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
-                        .unwrap_or_default();
-                    for n in &env_names {
-                        if !merged.iter().any(|m| m == n) {
-                            merged.push(n.clone());
-                        }
-                    }
-                    container
-                        .properties
-                        .insert("forge:env_provides".into(), merged.join(","));
+        if container_id != node_id
+            && let Some(container) = model.elements.get_mut(&container_id)
+            && container.kind == ElementKind::Container
+        {
+            let mut merged: Vec<String> = container
+                .properties
+                .get("forge:env_provides")
+                .map(|s| s.split(',').map(|x| x.trim().to_string()).collect())
+                .unwrap_or_default();
+            for n in &env_names {
+                if !merged.iter().any(|m| m == n) {
+                    merged.push(n.clone());
                 }
             }
+            container
+                .properties
+                .insert("forge:env_provides".into(), merged.join(","));
         }
     }
 }
@@ -177,10 +176,11 @@ fn extract_k8s_env_names(container: Option<&serde_yaml_ng::Value>, model: &Model
     // Direct `env:` entries.
     if let Some(env) = container.get("env").and_then(|v| v.as_sequence()) {
         for item in env {
-            if let Some(name) = item.get("name").and_then(|v| v.as_str()) {
-                if !name.is_empty() && !names.iter().any(|n| n == name) {
-                    names.push(name.to_string());
-                }
+            if let Some(name) = item.get("name").and_then(|v| v.as_str())
+                && !name.is_empty()
+                && !names.iter().any(|n| n == name)
+            {
+                names.push(name.to_string());
             }
         }
     }
@@ -244,12 +244,12 @@ fn parse_k8s_service(model: &mut Model, doc: &serde_yaml_ng::Value, name: &str, 
 
     // Try to find a matching workload by name
     let target_id = format!("k8s.{}.{}", namespace, slugify(name));
-    if model.elements.contains_key(&target_id) {
-        if let Some(el) = model.elements.get_mut(&target_id) {
-            el.properties.insert("service_type".into(), svc_type.into());
-            if !ports.is_empty() {
-                el.properties.insert("ports".into(), ports.join(", "));
-            }
+    if model.elements.contains_key(&target_id)
+        && let Some(el) = model.elements.get_mut(&target_id)
+    {
+        el.properties.insert("service_type".into(), svc_type.into());
+        if !ports.is_empty() {
+            el.properties.insert("ports".into(), ports.join(", "));
         }
     }
 }

@@ -626,9 +626,11 @@ mod tests {
         assert!(model.is_some());
         assert!(locations.contains_key("a"));
         // May have info-level diagnostics (orphaned elements) but no errors
-        assert!(!diags
-            .iter()
-            .any(|d| d.severity == Some(DiagnosticSeverity::ERROR)));
+        assert!(
+            !diags
+                .iter()
+                .any(|d| d.severity == Some(DiagnosticSeverity::ERROR))
+        );
     }
 
     #[test]
@@ -636,8 +638,10 @@ mod tests {
         let text = r#"not valid forge"#;
         let (model, _, diags) = analyze_document(text);
         assert!(model.is_none());
-        assert!(diags
-            .iter()
-            .any(|d| d.severity == Some(DiagnosticSeverity::ERROR)));
+        assert!(
+            diags
+                .iter()
+                .any(|d| d.severity == Some(DiagnosticSeverity::ERROR))
+        );
     }
 }

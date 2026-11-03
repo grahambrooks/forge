@@ -25,8 +25,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::{Element, ElementKind, Model, Relationship};
 
-use super::provenance::mark_inferred;
 use super::AnalyzeConfig;
+use super::provenance::mark_inferred;
 
 const PROTOCOL: u32 = 1;
 

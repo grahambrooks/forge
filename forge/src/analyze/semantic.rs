@@ -24,9 +24,9 @@ use symgraph::types::NodeKind;
 
 use crate::model::*;
 
+use super::AnalyzeConfig;
 use super::container_index::ContainerIndex;
 use super::provenance::mark_inferred;
-use super::AnalyzeConfig;
 
 const SCANNER: &str = "semantic";
 
@@ -85,10 +85,10 @@ fn scan_file(
     // 1) Cross-container import edges from symgraph
     let result = extractor.extract_file(path, text);
     for node in result.nodes.iter().filter(|n| n.kind == NodeKind::Import) {
-        if let (Some(from), Some(to)) = (container_id, resolve_import(&node.name, known_ids)) {
-            if from != to {
-                add_relationship_if_new(model, from, to, "imports");
-            }
+        if let (Some(from), Some(to)) = (container_id, resolve_import(&node.name, known_ids))
+            && from != to
+        {
+            add_relationship_if_new(model, from, to, "imports");
         }
     }
 
@@ -337,10 +337,10 @@ fn extract_env_reads(line: &str, ext: &str, out: &mut Vec<String>) {
                 let after = rest.1;
                 if let Some(name) = after.strip_prefix('.') {
                     push_ident(name, out);
-                } else if let Some(name) = after.strip_prefix('[') {
-                    if let Some(q) = extract_quoted_string(name) {
-                        push_name(&q, out);
-                    }
+                } else if let Some(name) = after.strip_prefix('[')
+                    && let Some(q) = extract_quoted_string(name)
+                {
+                    push_name(&q, out);
                 }
             }
         }
@@ -544,10 +544,10 @@ fn add_relationship_if_new(model: &mut Model, from: &str, to: &str, label: &str)
 
 fn extract_quoted_string(s: &str) -> Option<String> {
     for quote in &['"', '\''] {
-        if let Some(start) = s.find(*quote) {
-            if let Some(end) = s[start + 1..].find(*quote) {
-                return Some(s[start + 1..start + 1 + end].to_string());
-            }
+        if let Some(start) = s.find(*quote)
+            && let Some(end) = s[start + 1..].find(*quote)
+        {
+            return Some(s[start + 1..start + 1 + end].to_string());
         }
     }
     None

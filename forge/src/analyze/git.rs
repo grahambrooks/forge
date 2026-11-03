@@ -6,8 +6,8 @@ use std::path::Path;
 
 use crate::model::*;
 
-use super::provenance::mark_inferred;
 use super::AnalyzeConfig;
+use super::provenance::mark_inferred;
 
 const SCANNER: &str = "git";
 
@@ -134,22 +134,20 @@ fn use_custom_patterns(model: &mut Model, branch_names: &[String], config: &Anal
                     .insert("strategy".into(), strategy_id.clone());
 
                 // Set branch relationship properties if this is a non-trunk branch
-                if !is_trunk {
-                    if let Some(trunk) = &trunk_id {
-                        // Feature/dev branches typically branch from and merge to trunk
-                        if pattern.role == "feature"
-                            || pattern.role == "develop"
-                            || pattern.role == "bugfix"
-                            || pattern.role == "hotfix"
-                            || pattern.role == "task"
-                        {
-                            branch
-                                .properties
-                                .insert("branches-from".into(), trunk.clone());
-                            branch
-                                .properties
-                                .insert("merges-into".into(), trunk.clone());
-                        }
+                if !is_trunk && let Some(trunk) = &trunk_id {
+                    // Feature/dev branches typically branch from and merge to trunk
+                    if pattern.role == "feature"
+                        || pattern.role == "develop"
+                        || pattern.role == "bugfix"
+                        || pattern.role == "hotfix"
+                        || pattern.role == "task"
+                    {
+                        branch
+                            .properties
+                            .insert("branches-from".into(), trunk.clone());
+                        branch
+                            .properties
+                            .insert("merges-into".into(), trunk.clone());
                     }
                 }
 
@@ -165,32 +163,33 @@ fn use_custom_patterns(model: &mut Model, branch_names: &[String], config: &Anal
 
         // Create relationships based on role connections
         for pattern in &patterns {
-            if pattern.role != "trunk" && pattern.role != "main" {
-                if let Some(trunk) = &trunk_id {
-                    let branch_id = format!("{}.{}", strategy_id, pattern.role);
+            if pattern.role != "trunk"
+                && pattern.role != "main"
+                && let Some(trunk) = &trunk_id
+            {
+                let branch_id = format!("{}.{}", strategy_id, pattern.role);
 
-                    // Feature/dev branches typically branch from and merge to trunk
-                    if pattern.role == "feature"
-                        || pattern.role == "develop"
-                        || pattern.role == "bugfix"
-                        || pattern.role == "hotfix"
-                        || pattern.role == "task"
-                    {
-                        model.add_relationship(Relationship {
-                            frm: trunk.clone(),
-                            to: branch_id.clone(),
-                            label: "branches from".into(),
-                            technology: None,
-                            order: None,
-                        });
-                        model.add_relationship(Relationship {
-                            frm: branch_id,
-                            to: trunk.clone(),
-                            label: "merges into".into(),
-                            technology: None,
-                            order: None,
-                        });
-                    }
+                // Feature/dev branches typically branch from and merge to trunk
+                if pattern.role == "feature"
+                    || pattern.role == "develop"
+                    || pattern.role == "bugfix"
+                    || pattern.role == "hotfix"
+                    || pattern.role == "task"
+                {
+                    model.add_relationship(Relationship {
+                        frm: trunk.clone(),
+                        to: branch_id.clone(),
+                        label: "branches from".into(),
+                        technology: None,
+                        order: None,
+                    });
+                    model.add_relationship(Relationship {
+                        frm: branch_id,
+                        to: trunk.clone(),
+                        label: "merges into".into(),
+                        technology: None,
+                        order: None,
+                    });
                 }
             }
         }
@@ -723,10 +722,12 @@ mod tests {
         let config = AnalyzeConfig::default();
         scan(&mut model, tmp.path(), &config);
 
-        assert!(!model
-            .elements
-            .values()
-            .any(|e| e.kind == ElementKind::Branch));
+        assert!(
+            !model
+                .elements
+                .values()
+                .any(|e| e.kind == ElementKind::Branch)
+        );
     }
 
     #[test]
@@ -759,24 +760,26 @@ mod tests {
             "bugfix/urgent-fix".to_string(),
         ];
 
-        let mut config = AnalyzeConfig::default();
-        config.branch_patterns = vec![
-            super::super::BranchPattern {
-                role: "trunk".to_string(),
-                pattern: "main".to_string(),
-                strategy: "custom-strategy".to_string(),
-            },
-            super::super::BranchPattern {
-                role: "task".to_string(),
-                pattern: "task/*".to_string(),
-                strategy: "custom-strategy".to_string(),
-            },
-            super::super::BranchPattern {
-                role: "bugfix".to_string(),
-                pattern: "bugfix/*".to_string(),
-                strategy: "custom-strategy".to_string(),
-            },
-        ];
+        let config = AnalyzeConfig {
+            branch_patterns: vec![
+                super::super::BranchPattern {
+                    role: "trunk".to_string(),
+                    pattern: "main".to_string(),
+                    strategy: "custom-strategy".to_string(),
+                },
+                super::super::BranchPattern {
+                    role: "task".to_string(),
+                    pattern: "task/*".to_string(),
+                    strategy: "custom-strategy".to_string(),
+                },
+                super::super::BranchPattern {
+                    role: "bugfix".to_string(),
+                    pattern: "bugfix/*".to_string(),
+                    strategy: "custom-strategy".to_string(),
+                },
+            ],
+            ..Default::default()
+        };
 
         use_custom_patterns(&mut model, &branch_names, &config);
 

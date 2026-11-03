@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::model::*;
 use crate::parser;

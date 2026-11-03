@@ -69,12 +69,12 @@ impl Parser {
             if this.peek_after_ws() == Some('{') {
                 this.parse_view_body(&mut view)?;
             }
-            if view.kind == ViewKind::Composite {
-                if let Some(comp) = view.composite.as_mut() {
-                    if !comp.cells.is_empty() && comp.rows * comp.cols < comp.cells.len() as u32 {
-                        comp.rows = comp.cells.len().div_ceil(comp.cols.max(1) as usize) as u32;
-                    }
-                }
+            if view.kind == ViewKind::Composite
+                && let Some(comp) = view.composite.as_mut()
+                && !comp.cells.is_empty()
+                && comp.rows * comp.cols < comp.cells.len() as u32
+            {
+                comp.rows = comp.cells.len().div_ceil(comp.cols.max(1) as usize) as u32;
             }
             this.model.views.push(view);
             Ok(())

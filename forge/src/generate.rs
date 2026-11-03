@@ -32,7 +32,7 @@ mod util;
 #[cfg(test)]
 mod tests;
 
-pub use catalog::{generate_catalog, CatalogGenerateConfig};
+pub use catalog::{CatalogGenerateConfig, generate_catalog};
 
 use css::CSS;
 use diff_svg::inject_diff_highlights;

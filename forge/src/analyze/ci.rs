@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::model::*;
 
 use super::provenance::mark_inferred;
-use super::{slugify, AnalyzeConfig};
+use super::{AnalyzeConfig, slugify};
 
 const SCANNER: &str = "ci";
 
@@ -147,18 +147,16 @@ fn parse_github_workflow(model: &mut Model, path: &Path, text: &str) {
         }
 
         // Check for environment protection (implies a gate)
-        if job_val.get("environment").is_some() {
-            if let Some(env_val) = job_val.get("environment") {
-                if env_val.is_mapping() {
-                    // environment: { name: ..., url: ... } often implies approval
-                    let gate_id = format!("{}.gate", stage_id);
-                    let mut gate =
-                        Element::new(&gate_id, ElementKind::Gate, "environment-protection");
-                    gate.parent = Some(stage_id.clone());
-                    mark_inferred(&mut gate, SCANNER, None);
-                    model.add_element(gate);
-                }
-            }
+        if job_val.get("environment").is_some()
+            && let Some(env_val) = job_val.get("environment")
+            && env_val.is_mapping()
+        {
+            // environment: { name: ..., url: ... } often implies approval
+            let gate_id = format!("{}.gate", stage_id);
+            let mut gate = Element::new(&gate_id, ElementKind::Gate, "environment-protection");
+            gate.parent = Some(stage_id.clone());
+            mark_inferred(&mut gate, SCANNER, None);
+            model.add_element(gate);
         }
 
         prev_stage_id = Some(stage_id);
@@ -219,10 +217,12 @@ jobs:
         assert_eq!(test.name, "test");
 
         // needs: build creates a stage link
-        assert!(model
-            .stage_links
-            .iter()
-            .any(|l| l.frm == "ci.build" && l.to == "ci.test"));
+        assert!(
+            model
+                .stage_links
+                .iter()
+                .any(|l| l.frm == "ci.build" && l.to == "ci.test")
+        );
     }
 
     #[test]
@@ -269,7 +269,7 @@ jobs:
         );
 
         // Production with mapping environment gets a gate
-        assert!(model.elements.get("deploy.deploy-prod.gate").is_some());
+        assert!(model.elements.contains_key("deploy.deploy-prod.gate"));
     }
 
     #[test]
