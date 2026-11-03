@@ -29,7 +29,11 @@ impl Parser {
                 "event-flow-view" => (ViewKind::EventFlowView, false, AutoLayout::TopBottom),
                 "composite-view" => (ViewKind::Composite, false, AutoLayout::TopBottom),
                 _ => {
-                    return Err(this.error(format!("unknown view kind '{}'", kind_str)));
+                    return Err(this.error(format!(
+                        "unknown view kind '{}'{}",
+                        kind_str,
+                        renamed_hint(&kind_str)
+                    )));
                 }
             };
 
@@ -174,7 +178,11 @@ impl Parser {
                     }
                 }
                 _ => {
-                    return Err(this.error(format!("unknown view keyword '{}'", prop)));
+                    return Err(this.error(format!(
+                        "unknown view keyword '{}'{}",
+                        prop,
+                        renamed_hint(&prop)
+                    )));
                 }
             }
             Ok(())
@@ -318,4 +326,35 @@ impl Parser {
             Ok(())
         })
     }
+}
+
+/// View kinds and view keywords from before the DSL v2 keyword normalisation
+/// (docs/reference/grammar.md, "Consistency findings"), with their
+/// replacements, so a parse error can name the new spelling.
+const RENAMED: &[(&str, &str)] = &[
+    ("systemContext", "system-context-view"),
+    ("container", "container-view"),
+    ("component", "component-view"),
+    ("dynamic", "dynamic-view"),
+    ("composite", "composite-view"),
+    ("pipelineView", "pipeline-view"),
+    ("deploymentView", "deployment-view"),
+    ("branchingView", "branching-view"),
+    ("techStackView", "tech-stack-view"),
+    ("dataModelView", "data-model-view"),
+    ("trustBoundaryView", "trust-boundary-view"),
+    ("teamView", "team-view"),
+    ("apiCatalogView", "api-catalog-view"),
+    ("eventFlowView", "event-flow-view"),
+    ("autoLayout", "auto-layout"),
+    ("cellSize", "cell-size"),
+];
+
+/// ` (renamed to '<new>')` for a pre-v2 keyword, otherwise empty.
+fn renamed_hint(old: &str) -> String {
+    RENAMED
+        .iter()
+        .find(|(from, _)| *from == old)
+        .map(|(_, to)| format!(" (renamed to '{to}')"))
+        .unwrap_or_default()
 }

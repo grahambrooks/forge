@@ -41,6 +41,7 @@ forge "Hello" {
 
       db = container "Database" {
         technology "PostgreSQL 16"
+        description "Customers and their requests"
         tags "database"
       }
 
@@ -52,15 +53,15 @@ forge "Hello" {
   }
 
   views {
-    systemContext app "Context" {
+    system-context-view app "Context" {
       include *
-      autoLayout lr
+      auto-layout lr
       title "Hello App — System Context"
     }
 
-    container app "Containers" {
+    container-view app "Containers" {
       include *
-      autoLayout tb
+      auto-layout tb
       title "Hello App — Containers"
     }
   }

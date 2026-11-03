@@ -80,7 +80,7 @@ merge will preserve the description field if you've removed the
 `inferred` tags at the element level.
 
 **Add views.** Analyze doesn't emit any views by default. Add at
-least a `systemContext` and a `container` view so there's something
+least a `system-context-view` and a `container-view` so there's something
 to show when you run `forge generate`.
 
 **Cull noise.** Some inferred containers are probably wrong — an

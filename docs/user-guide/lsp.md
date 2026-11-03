@@ -131,12 +131,14 @@ Produces two kinds of items:
 
 Every known DSL keyword is offered as a completion item with kind
 `Keyword` and the detail `"Forge DSL keyword"`. The full list is
-currently 55 keywords including block names, element kinds, view
-kinds (`systemContext`, `container` as a view, `pipelineView`,
-`deploymentView`, `techStackView`, `branchingView`, `dataModelView`,
-`trustBoundaryView`, `teamView`), and structural keywords
-(`description`, `technology`, `tags`, `include`, `autoLayout`,
-`title`, etc.).
+currently 61 keywords including block names, element kinds, every
+view kind (`system-context-view`, `container-view`, `component-view`,
+`pipeline-view`, `deployment-view`, `tech-stack-view`, `branching-view`,
+`data-model-view`, `trust-boundary-view`, `team-view`,
+`api-catalog-view`, `event-flow-view`, `dynamic-view`,
+`composite-view`), and
+structural keywords (`description`, `technology`, `tags`, `include`,
+`auto-layout`, `title`, etc.).
 
 ### Element-id completions
 

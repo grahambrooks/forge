@@ -50,13 +50,13 @@ forge "My System" {
   }
 
   views {
-    systemContext app "Context" {
+    system-context-view app "Context" {
       include *
-      autoLayout lr
+      auto-layout lr
     }
-    container app "Containers" {
+    container-view app "Containers" {
       include *
-      autoLayout tb
+      auto-layout tb
     }
   }
 }
@@ -83,16 +83,16 @@ blocks next to `model`:
       system app
     }
 
-    strategy "trunk-based" {
+    trunk-based = strategy "Trunk-based" {
       trunk = branch "main"
       feature = branch "feature/*" {
-        branchesFrom trunk
-        mergesInto trunk
+        branches-from trunk
+        merges-into trunk
       }
     }
 
-    pipeline "ci" {
-      triggers repo.main on "push"
+    ci = pipeline "CI" {
+      triggers repo "push"
 
       build = stage "Build & Test" {
         step "cargo build --release"
@@ -112,19 +112,19 @@ blocks next to `model`:
     }
   }
 
-  deployment "production" {
-    node "AWS" {
+  deployment production "Production" {
+    node aws "AWS" {
       technology "Amazon Web Services"
-      node "us-east-1" {
+      node us-east-1 "us-east-1" {
         technology "AWS Region"
-        node "EKS" {
+        node eks "EKS" {
           technology "Kubernetes 1.29"
-          node "api-pods" {
+          node api-pods "API Pods" {
             technology "3 replicas"
             instance api
           }
         }
-        node "RDS" {
+        node rds "RDS" {
           technology "Managed PostgreSQL"
           instance db
         }
@@ -137,14 +137,14 @@ Then add the corresponding views:
 
 ```forge
   views {
-    // ... existing systemContext / container views ...
+    // ... existing system-context-view / container-view views ...
 
-    pipelineView "ci" "Pipeline" {
+    pipeline-view ci "Pipeline" {
       include *
       title "My System — CI/CD Pipeline"
     }
 
-    deploymentView "production" "Production Topology" {
+    deployment-view production "Production Topology" {
       include *
       title "My System — Production Topology"
     }

@@ -51,8 +51,8 @@ alongside the generated content:
 
 ```forge
 docs {
-  page "overview" "docs/overview.md" { order 1 }
-  page "adr-0001" "docs/adr-0001-rust-for-api.md" { order 2 }
+  doc "Overview" "docs/overview.md"
+  doc "ADR-0001: Rust for the API" "docs/adr-0001-rust-for-api.md"
 }
 ```
 

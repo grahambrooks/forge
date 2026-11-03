@@ -10,6 +10,7 @@ For the underlying design, see [`DESIGN.md`](../../DESIGN.md).
 Every `.forge` file starts with a top-level `forge` block. Everything
 else nests inside it.
 
+<!-- forge-docs-test: skip -->
 ```forge
 forge "Name" {
   description "Optional summary"
@@ -333,8 +334,8 @@ Markdown pages to include in generated sites.
 
 ```forge
 docs {
-  page "overview" "docs/overview.md" { order 1 }
-  page "adr-0001" "docs/adr-0001-rust-for-api.md" { order 2 }
+  doc "Overview" "docs/overview.md"
+  doc "ADR-0001: Rust for the API" "docs/adr-0001-rust-for-api.md"
 }
 ```
 
@@ -464,12 +465,13 @@ container-view payments "PaymentFlow" {
     }
     frame "Step 2: API validates" {
       include customer payments.api
-      highlight payments.api { pulse true }
+      highlight payments.api
+      state payments.api "validating" { pulse true }
     }
     frame "Step 3: Processor takes over" {
-      include-all
+      include *
       highlight payments.processor
-      state payments.api { color "blue" }
+      state payments.api "done" { color "blue" }
     }
   }
 }

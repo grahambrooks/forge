@@ -607,3 +607,37 @@ fn parse_dependencies() {
     assert_eq!(stripe.criticality, "critical");
     assert!(stripe.url.is_some());
 }
+
+#[test]
+fn renamed_view_keywords_name_their_replacement() {
+    let src = r#"forge "x" {
+  model { app = system "App" }
+  views { systemContext app "Context" }
+}"#;
+    let err = parse(src).unwrap_err();
+    assert!(
+        err.msg
+            .contains("unknown view kind 'systemContext' (renamed to 'system-context-view')"),
+        "{}",
+        err.msg
+    );
+
+    let src = r#"forge "x" {
+  model { app = system "App" }
+  views { system-context-view app "Context" { autoLayout lr } }
+}"#;
+    let err = parse(src).unwrap_err();
+    assert!(
+        err.msg
+            .contains("unknown view keyword 'autoLayout' (renamed to 'auto-layout')"),
+        "{}",
+        err.msg
+    );
+
+    // A kind that was never valid gets no hint.
+    let src = r#"forge "x" {
+  model { app = system "App" }
+  views { landscape app "L" }
+}"#;
+    assert_eq!(parse(src).unwrap_err().msg, "unknown view kind 'landscape'");
+}

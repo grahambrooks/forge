@@ -402,6 +402,7 @@ impl<'a> ForceDirectedSim<'a> {
 
 DSL:
 
+<!-- forge-docs-test: skip -->
 ```forge
 views {
   landscape "Enterprise" {
@@ -509,7 +510,7 @@ DSL:
 
 ```forge
 views {
-  dynamic app "LoginFlow" {
+  dynamic-view app "LoginFlow" {
     title "User Login Flow"
     1. customer -> web "submits credentials" "HTTPS"
     2. web -> api "POST /login"
@@ -604,7 +605,7 @@ DSL:
 
 ```forge
 views {
-  composite "Dashboard" {
+  composite-view "Dashboard" {
     grid 2 2
     cell "Context"
     cell "Containers"

@@ -237,7 +237,7 @@ id that no longer exists.
 
 **How to fix:**
 
-1. Check the scope. `systemContext payments` includes only things
+1. Check the scope. `system-context-view payments` includes only things
    in the `payments` system.
 2. Check the includes. `include foo bar` silently skips missing
    ids; if both `foo` and `bar` are typos, the view is empty.
