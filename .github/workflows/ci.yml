@@ -98,7 +98,7 @@ jobs:
           ./target/release/forge check -s examples/payments.forge --severity info
           ./target/release/forge generate -s examples/payments.forge -o /tmp/forge-site
           ./target/release/forge export -s examples/payments.forge -f json > /tmp/forge-ci/model.json
-          echo "Built $(ls /tmp/forge-ci/*.svg | wc -l) SVGs"
+          echo "Built $(find /tmp/forge-ci -maxdepth 1 -name '*.svg' | wc -l) SVGs"
           echo "Generated $(find /tmp/forge-site -name '*.html' | wc -l) HTML pages"
 
   jetbrains-plugin:

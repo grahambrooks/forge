@@ -37,7 +37,7 @@ model-diagram/
     ├── EDITORS.md               # LSP setup for 7 editors
     ├── PUBLISHING.md            # GitHub Pages + Backstage TechDocs deployment
     ├── Cargo.toml               # Dependencies: clap, serde, tokio, tower-lsp, notify, pulldown-cmark
-    └── Makefile                 # build, test, lint, fmt, pre-commit, run
+    └── Makefile                 # build, test, lint, fmt, check, run
 editors/
 └── jetbrains/                   # IntelliJ "Forge Preview" plugin (Kotlin/Gradle) — renders via the forge CLI
 ```
@@ -130,10 +130,10 @@ cargo run -- lsp
 
 ## Required pre-commit gate
 
-**Always run `make pre-commit` from the repo root before creating any commit.** It runs `cargo fmt --check`, `cargo clippy -D warnings`, and the full test suite — exactly what CI runs. Skipping it routinely lands formatting drift and clippy regressions on `main` that the build then fails on.
+**Always run `make check` from the repo root before creating any commit.** It runs `cargo fmt --check`, `cargo clippy -D warnings`, and the full test suite — exactly what the CI `check` job runs (`make pre-commit` is an alias). `make hooks` installs prek hooks that run it before every push. Skipping it routinely lands formatting drift and clippy regressions on `main` that the build then fails on.
 
-If `make pre-commit` fails:
-1. For `cargo fmt --check` failures, run `cd forge && cargo fmt` then re-run `make pre-commit`.
+If `make check` fails:
+1. For `cargo fmt --check` failures, run `cd forge && cargo fmt` then re-run `make check`.
 2. For clippy or test failures, fix the underlying issue and re-run — do **not** silence with `#[allow(...)]` or `--no-verify`.
 3. Only commit once `All pre-commit checks passed.` is printed.
 

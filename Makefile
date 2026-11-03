@@ -1,8 +1,8 @@
 .PHONY: help \
-	build release release-docker release-github publish-check \
+	build build-release release-docker publish-check \
 	test test-verbose \
-	lint fmt fmt-check check pre-commit \
-	run \
+	lint fmt fmt-check check pre-commit hooks \
+	run forge-check \
 	eval eval-smoke eval-all eval-claude eval-compare eval-site eval-report eval-clean \
 	integration-test integration-test-local \
 	install-test install-test-debian install-test-ubuntu install-test-fedora \
@@ -12,8 +12,8 @@
 CARGO         := cargo
 SOURCE        := forge/examples/payments.forge
 # Build into the repo, whatever a user's cargo config says: the targets that
-# run the binary (release-github's version check, evals, integration tests)
-# need to know where it is. An explicit CARGO_TARGET_DIR still wins.
+# run the binary (evals, integration tests) need to know where it is. An
+# explicit CARGO_TARGET_DIR still wins.
 export CARGO_TARGET_DIR ?= $(CURDIR)/forge/target
 RELEASE_FORGE := $(CARGO_TARGET_DIR)/release/forge
 
@@ -30,76 +30,47 @@ help: ## Show this help (grouped by section)
 build: ## Build the forge binary (debug)
 	cd forge && $(CARGO) build
 
-release: ## Build the forge binary (release, optimized)
+build-release: ## Build the forge binary (release, optimized)
 	cd forge && $(CARGO) build --release
 
 release-docker: ## Build Linux release binaries (glibc + musl) in Docker → dist/
 	docker build -f dist/Dockerfile --output type=local,dest=dist .
 	@echo "Built: dist/forge-gnu (glibc), dist/forge-musl (static musl)"
 
-# Two spellings of the same date, and they are not interchangeable:
-#   CARGO_VERSION (2026.7.1)  — semver forbids leading zeros, so this goes in
-#                               Cargo.toml AND in the tag. release.yml fails the
-#                               release if the tag and Cargo.toml disagree.
-#   VERSION       (2026.07.01) — zero-padded calver that build.rs bakes into
-#                               `forge --version` for display only.
-release-github: pre-commit ## Tag and push a calver release (vYYYY.M.D) to trigger GitHub Actions release
-	@bash -ec '\
-	VERSION=$$(date +%Y.%m.%d); \
-	CARGO_VERSION=$$(date +%Y.%-m.%-d); \
-	TAG="v$$CARGO_VERSION"; \
-	echo "Releasing $$TAG (cargo $$CARGO_VERSION, cli $$VERSION) ..."; \
-	sed -i "" "s/^version = \".*\"/version = \"$$CARGO_VERSION\"/" forge/Cargo.toml; \
-	cd forge && cargo build --release --quiet && cd ..; \
-	BUILT_VERSION=$$($(RELEASE_FORGE) --version 2>&1 | awk "{print \$$2}"); \
-	if [ "$$BUILT_VERSION" != "$$VERSION" ]; then \
-		echo "Error: binary reports version $$BUILT_VERSION but expected $$VERSION"; \
-		exit 1; \
-	fi; \
-	echo "Verified: binary version matches $$VERSION"; \
-	git add forge/Cargo.toml forge/Cargo.lock; \
-	git diff --cached --quiet || git commit -m "Release $$TAG"; \
-	if git rev-parse "$$TAG" >/dev/null 2>&1; then \
-		echo "Updating existing tag $$TAG ..."; \
-		gh release delete "$$TAG" --yes 2>/dev/null || true; \
-		git tag -d "$$TAG"; \
-		git push origin ":refs/tags/$$TAG"; \
-	fi; \
-	git tag -a "$$TAG" -m "Release $$TAG"; \
-	git push origin main "$$TAG"; \
-	echo "Pushed $$TAG — GitHub Actions will build and publish the release"; \
-	echo "The homebrew formula is updated and forge-dsl is published to crates.io automatically"; \
-	'
-
 publish-check: ## Dry-run the crates.io package step (what the release workflow publishes)
 	cd forge && $(CARGO) publish --locked --dry-run
 
 ##@ Test
 
-test: ## Run all unit + integration tests
-	cd forge && $(CARGO) test
+test: ## Run all unit + integration tests, as CI does
+	cd forge && $(CARGO) test --workspace --all-features --locked
 
 test-verbose: ## Run all tests with stdout/stderr streamed
 	cd forge && $(CARGO) test -- --nocapture
 
 ##@ Lint & Format
 
-lint: ## Run clippy with warnings-as-errors
-	cd forge && $(CARGO) clippy -- -D warnings
+lint: ## Run clippy with warnings-as-errors, as CI does
+	cd forge && $(CARGO) clippy --workspace --all-targets --all-features --locked -- -D warnings
 
 fmt: ## Format all Rust code
-	cd forge && $(CARGO) fmt
+	cd forge && $(CARGO) fmt --all
 
 fmt-check: ## Check formatting without modifying files
-	cd forge && $(CARGO) fmt -- --check
+	cd forge && $(CARGO) fmt --all --check
 
-check: ## Run `forge check` (architectural linting) on the bundled example
-	cd forge && $(CARGO) run -- check --source examples/payments.forge --severity info
-
-pre-commit: fmt-check lint test ## Run fmt-check + lint + test (CI-equivalent gate)
+check: fmt-check lint test ## The pre-push gate: exactly the CI check job (fmt, clippy, test)
 	@echo "All pre-commit checks passed."
 
+pre-commit: check ## Alias for check
+
+hooks: ## Install the prek git hooks (pre-commit and pre-push)
+	prek install
+
 ##@ Run & Demo
+
+forge-check: ## Run `forge check` (architectural linting) on the bundled example
+	cd forge && $(CARGO) run -- check --source examples/payments.forge --severity info
 
 run: build ## Build and render every view from the bundled example
 	cd forge && $(CARGO) run -- build --source examples/payments.forge --out output
@@ -110,16 +81,16 @@ run: build ## Build and render every view from the bundled example
 # All eval targets use the release binary so cold starts aren't noise.
 # See eval/README.md for the corpus definition and scoring model.
 
-eval: release ## Run the baseline evaluation driver (tier 1+2, ~15 min)
+eval: build-release ## Run the baseline evaluation driver (tier 1+2, ~15 min)
 	cd eval && ./run.py --forge $(RELEASE_FORGE)
 
-eval-smoke: release ## Run the tier-1 smoke evaluation (~2 min, suitable as a CI gate)
+eval-smoke: build-release ## Run the tier-1 smoke evaluation (~2 min, suitable as a CI gate)
 	cd eval && ./run.py --tier 1 --forge $(RELEASE_FORGE)
 
-eval-all: release ## Run every tier (1+2+3) including stretch-tier monorepos
+eval-all: build-release ## Run every tier (1+2+3) including stretch-tier monorepos
 	cd eval && ./run.py --tier all --forge $(RELEASE_FORGE)
 
-eval-claude: release ## Run the Claude-driven companion evaluation (tier 1, billed)
+eval-claude: build-release ## Run the Claude-driven companion evaluation (tier 1, billed)
 	cd eval && ./run_claude.py --forge $(RELEASE_FORGE)
 
 eval-compare: ## Diff baseline vs Claude results into results-claude/compare.md
@@ -141,7 +112,7 @@ integration-test: ## Run integration tests in Docker
 	docker compose -f tests/integration/docker-compose.yml up --build --exit-code-from integration-test
 	docker compose -f tests/integration/docker-compose.yml down
 
-integration-test-local: release ## Run integration tests using the local release binary (no Docker)
+integration-test-local: build-release ## Run integration tests using the local release binary (no Docker)
 	FORGE=$(RELEASE_FORGE) FIXTURES=./tests/integration/fixtures ./tests/integration/run-tests.sh
 
 ##@ Install Tests (Docker)
@@ -193,3 +164,9 @@ clean: ## Remove Rust build artifacts and Docker release outputs
 watch-ci: ## After pushing, wait for every CI run on HEAD; fails if any run fails
 	@command -v watch-ci >/dev/null || { echo "watch-ci not on PATH: ln -s ~/dev/projects/agentic-twin/scripts/watch-ci.sh ~/.local/bin/watch-ci" >&2; exit 1; }
 	watch-ci
+
+##@ Release
+
+# `make release` / `release-dry` / `release-version`: tag origin/main with the next
+# CalVer and push the tag; .github/workflows/release.yml does the rest.
+include release.mk

@@ -347,7 +347,7 @@ forge check -s arch.forge -f sarif > results.sarif
 
 ## Contributing
 
-See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for setup, the `make pre-commit`
+See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for setup, the `make check`
 gate, testing conventions, and the release process. [DESIGN.md](./DESIGN.md) is
 the source of truth for design decisions.
 
