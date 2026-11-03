@@ -37,7 +37,7 @@ release-docker: ## Build Linux release binaries (glibc + musl) in Docker → dis
 	docker build -f dist/Dockerfile --output type=local,dest=dist .
 	@echo "Built: dist/forge-gnu (glibc), dist/forge-musl (static musl)"
 
-publish-check: ## Dry-run the crates.io package step (what the release workflow publishes)
+publish-check: ## Dry-run the crates.io package step (publishing is manual: CONTRIBUTING.md)
 	cd forge && $(CARGO) publish --locked --dry-run
 
 ##@ Test
